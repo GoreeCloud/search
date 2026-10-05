@@ -1,7 +1,7 @@
 # GoreeCloud Search — Implemented Features
 
 **Record type:** Repository implemented-feature inventory  
-**Repository:** `GoreeCloud/goreecloud-search`  
+**Repository:** `GoreeCloud/search`  
 **Lifecycle:** Development / nonconformant  
 **Repository version:** `0.1.0.dev14`  
 **Migration state:** Authoritative repository record on protected `main`; legacy Drive feature/changelog sources retired and independently verified absent on September 22, 2026.  
@@ -14,11 +14,11 @@ This record describes behavior implemented in the current native GoreeCloud Sear
 
 A partially implemented capability can appear here for the verified portion that exists and in `PLANNED-FEATURES.md` for the remaining work. Historical maintained-fork, release-candidate, deployment, native-rebuild, and prior-repository evidence is preserved under `docs/changelog-history/`; historical lifecycle claims do not override current `main`.
 
-Draft or unmerged pull requests are not implementation authority. In particular, PR #29 remains a separate Draft security candidate and is not represented below as accepted behavior.
+Draft or unmerged pull requests are not implementation authority. Historical Draft PR #29 remains unmerged provenance; equivalent query-control hardening was independently replayed and merged as PR #34 on current `main`.
 
 ## Current verified Development baseline
 
-The latest runtime-bearing Search baseline remains `1bf27785cf5502e32155d3d3d31bc5cbd052d3d6`, the merge of PR #28, **Fail closed Search readiness until authority transports are accepted**. Exact-main CI run #78 / `35662686554` passed, and Platform Contract run #20 / `35662687737` passed on that exact runtime-bearing revision.
+PR #28 established the earlier readiness baseline at `1bf27785cf5502e32155d3d3d31bc5cbd052d3d6`. Current authoritative `main` is `66ff984b8dd79624a739ab6117c42a572dc44475`, merged through PR #34 after PR #33 corrected the repository identity. Exact-main CI #87 / `35791305078` and Platform Contract #29 / `35791305711` passed on that current revision.
 
 Repository-governance PR #30 then merged as `db15ea4c6e7e29c395204a94cad07d886f9242ff`; exact-main CI run #81 / `35732002017` and Platform Contract run #23 / `35732002972` passed. PR #30 changed documentation/governance only and did not alter Search runtime behavior.
 
@@ -74,7 +74,7 @@ The current line remains Development/nonconformant. The host-supplied authority-
 ### Authenticated Index HTTP source boundary
 
 - Bounded server-side endpoints `/api/v1/status`, `/api/v1/search`, `/healthz`, and `/readyz`.
-- Strict JSON/body/request bounds for the Index delegation carrier.
+- Strict JSON/body/request bounds for the Index delegation carrier, including accepted C0/DEL query rejection before authentication/provider execution on current `main`.
 - Injected GoreeCloud Identity bearer/requester verification requiring the expected `goreecloud-index` caller identity before query dispatch.
 - Injected Privacy Shield opaque capability-reference verification and consumption before provider execution.
 - Generic fail-closed authorization errors that do not disclose verifier internals.
@@ -93,6 +93,16 @@ The current line remains Development/nonconformant. The host-supplied authority-
 - Bounded signals for quoted phrases, title/snippet terms, explicit site/filetype/language matches, and source agreement.
 - Per-result ranking-signal records and human-readable “Why this result?” explanations.
 - No advertising-payment ranking, click-history profile, hidden provider-specific boost, or cross-query behavioral profile in the implemented ranker.
+
+### Bounded local snippet-generation foundation
+
+- Deterministic query-aware snippet generation for plain text the caller is already authorized to process.
+- Source processing is capped at 32,768 Unicode characters and generated output is capped at 280 characters.
+- Query phrases/terms can focus the selected window; no-match generation prefers a complete leading sentence when it fits.
+- Generated evidence records normalized-source offsets, query-match state, and source-truncation state without retaining full source text.
+- C0/C1 controls and Unicode bidirectional formatting controls are removed from snippet presentation input.
+- The helper performs no network or filesystem I/O and grants no content-fetch authority.
+- Provider/result-pipeline integration remains acceptance-gated and is retained in `PLANNED-FEATURES.md`.
 
 ### Repository and platform control plane
 

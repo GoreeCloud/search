@@ -2,13 +2,15 @@
 
 ## Current development baseline
 
-The latest runtime-bearing Search baseline is `1bf27785cf5502e32155d3d3d31bc5cbd052d3d6`, the merge of PR #28, **Fail closed Search readiness until authority transports are accepted**. Exact-main CI run #78 / `35662686554` and Platform Contract run #20 / `35662687737` passed on that revision. Search remains Development/nonconformant: live GoreeCloud Identity and Privacy Shield verifier transports, an approved external provider, deployment, representative runtime acceptance, Production acceptance, and Stable qualification remain open.
+Current authoritative `main` is `66ff984b8dd79624a739ab6117c42a572dc44475` (merged PR #34 on September 22, 2026). Exact-main CI #87 / `35791305078` and Platform Contract #29 / `35791305711` passed on that revision. Search remains Development/nonconformant: live GoreeCloud Identity and Privacy Shield verifier transports, an approved external provider, deployment, representative runtime acceptance, Production Acceptance, and Stable qualification remain open.
 
 Repository-governance PR #30 merged as `db15ea4c6e7e29c395204a94cad07d886f9242ff`. Exact-main CI run #81 / `35732002017` and Platform Contract run #23 / `35732002972` passed on that merged documentation/governance revision. `IMPLEMENTED-FEATURES.md`, `PLANNED-FEATURES.md`, and `CHANGELOGS.md` are now authoritative repository records; former root `FEATURE-ROADMAP.md` and `CHANGELOG.md` are retired.
 
 The two mapped legacy Drive feature/changelog sources were deleted only after the repository migration deletion gate passed. Independent Drive readback now returns 404 for `Change Log — Search.docx` (`1uEAtCFrxl8D3HnVxzRInMe92lRAiJKBv`) and `goreecloud-search-planned-features-and-capabilities.md` (`1Ja7M0-aWvhg9Zis6WIqeqirD1wTGAl4w`). Google Drive is no longer an active or mirrored Search feature/changelog authority.
 
-PR #29 is a separate Draft security candidate and is not authoritative current behavior unless and until it is accepted through the normal protected-branch workflow.
+Historical Draft PR #29 remains unmerged provenance; equivalent C0/DEL query-control hardening was independently replayed and accepted through PR #34 on current `main`.
+
+The bounded snippet-generation source foundation processes only already-authorized plain text, performs no network or filesystem I/O, caps retained output, removes unsafe display controls, and does not itself grant provider/content-fetch authority. Provider/result integration remains a separate acceptance obligation.
 
 ## Design decisions
 
