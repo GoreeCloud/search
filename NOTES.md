@@ -2,13 +2,13 @@
 
 ## Current development baseline
 
-The latest runtime-bearing Search baseline is `1bf27785cf5502e32155d3d3d31bc5cbd052d3d6`, the merge of PR #28, **Fail closed Search readiness until authority transports are accepted**. Exact-main CI run #78 / `35662686554` and Platform Contract run #20 / `35662687737` passed on that revision. Search remains Development/nonconformant: live GoreeCloud Identity and Privacy Shield verifier transports, an approved external provider, deployment, representative runtime acceptance, Production acceptance, and Stable qualification remain open.
+Authoritative `main`, verified October 5, 2026, is `39c1eec1851b0b11a3ecc4277ebc78f608b989d1` (PR #38 evidence migration). The latest runtime-bearing Search baseline is `66ff984b8dd79624a739ab6117c42a572dc44475` (PR #34 query-control hardening). Exact-main [CI run `36358514424`](https://github.com/GoreeCloud/search/actions/runs/36358514424) and [Platform Contract run `36358514745`](https://github.com/GoreeCloud/search/actions/runs/36358514745) passed on `39c1eec1851b0b11a3ecc4277ebc78f608b989d1`. Search remains Development/nonconformant: live GoreeCloud Identity and Privacy Shield verifier transports, an approved external provider, deployment, representative runtime acceptance, production acceptance, and Stable qualification remain open.
 
 Repository-governance PR #30 merged as `db15ea4c6e7e29c395204a94cad07d886f9242ff`. Exact-main CI run #81 / `35732002017` and Platform Contract run #23 / `35732002972` passed on that merged documentation/governance revision. `IMPLEMENTED-FEATURES.md`, `PLANNED-FEATURES.md`, and `CHANGELOGS.md` are now authoritative repository records; former root `FEATURE-ROADMAP.md` and `CHANGELOG.md` are retired.
 
 The two mapped legacy Drive feature/changelog sources were deleted only after the repository migration deletion gate passed. Independent Drive readback now returns 404 for `Change Log — Search.docx` (`1uEAtCFrxl8D3HnVxzRInMe92lRAiJKBv`) and `goreecloud-search-planned-features-and-capabilities.md` (`1Ja7M0-aWvhg9Zis6WIqeqirD1wTGAl4w`). Google Drive is no longer an active or mirrored Search feature/changelog authority.
 
-PR #29 is a separate Draft security candidate and is not authoritative current behavior unless and until it is accepted through the normal protected-branch workflow.
+PR #29 remains historical Draft provenance. Equivalent C0/DEL query-control hardening is accepted through PR #34; unmerged PR #35 and PR #37 work is carried forward by the October 5 stabilization candidate, not by treating their old checks as current-main authority.
 
 ## Design decisions
 
@@ -26,7 +26,21 @@ The dedicated Index-originated path is intentionally not the ordinary Search `IN
 
 The cycle-safe contract and its bounded authenticated HTTP carrier are accepted on authoritative `main`. The HTTP boundary requires an authenticated `goreecloud-index` application identity through an injected Identity verifier and an opaque `psc_*` Privacy Shield capability reference through an injected producer-authoritative verifier/consumer before dispatch. No live verifier service, real credential, approved external provider, deployment, or Production acceptance is implied.
 
-Authoritative `main` also carries the accepted Platform Contract 0.4 nine-system declaration from PR #22. Runtime Platform-System acceptance remains separate and blocked.
+Authoritative `main` also carries the legacy Platform Contract 0.4 nine-system declaration from PR #22, with the repository identity corrected by PR #33. The active System-Wide Platform Contract instruction is v2.0 and uses `seed`, `lab`, `forge`, `weave`, `seal`, `anchor`, `sunset`, and `archive`. The repository declaration and pinned validator require a staged compatibility migration before changing schema/lifecycle values. Passing the old validator does not establish current-governance or runtime Platform-System acceptance.
+
+## 2026-10-05 — Concurrent stabilization candidate
+
+Three bounded workstreams were integrated from the verified main baseline: HTTP request/authority handling, result URL/display normalization, and provider batch shape/cardinality validation. PR #35 and PR #37 source/test behavior was preserved and extended; PR #36 snippet generation remains a separate pending feature.
+
+- HTTP input rejects duplicate authority/media/length headers, transfer encoding, invalid or oversized ports, incomplete declared bodies, and query controls/surrogates before authorization or provider calls. Socket reads have a five-second timeout. Identity and Privacy verification require typed records, exact requester/consumer identities, and explicit `True` authorization/consumption decisions; malformed records return generic 401 errors.
+- Host and URL normalization supports canonical DNS/IPv4, bracketed IPv6, and a conservative NFC/IDNA roundtrip subset. It rejects ambiguous numeric hosts, scoped IPv6, credentials, unsafe schemes, invalid A-labels, and IDN mappings that change host identity. This does not claim complete IDNA2008 support. Actual navigation URLs are validated even when a supplied canonical alias is safe.
+- URL input is capped at 8192 characters. Display source fields are capped at 32768 characters; sanitized titles/snippets are capped at 512/4096. C0/C1 and bidi display controls are removed, surrogate input is rejected, and ordinary emoji joiners are preserved.
+- Provider batches must have the expected record/tuple/boolean/text shapes and may not return more candidates than the actual requested limit, including a reduced fallback limit. Shape/count/type failures become generic provider errors and preserve healthy peers. This bounds Search-side processing after an adapter returns; it does not bound allocations or network bytes inside an adapter.
+- An invalid result URL or display value that reaches central normalization currently fails the whole request closed, including a federated request with a healthy peer. Per-provider isolation of those content-validation failures remains open.
+
+Local Python 3.12.14 compilation and all 104 unit tests passed on the combined candidate. Independent AI re-review also passed the HTTP regressions; this is separate from the required human review. Exact-head CI and review status are tracked in the candidate PR. These are source-candidate evidence only. The laptop has Python 3.10.12, below the package's Python 3.11 minimum, so target-device execution is blocked. No runtime install, live provider activation, deployment, or lifecycle promotion was performed.
+
+Human security review is required before protected-branch acceptance under [Instruction — Secure Coding](https://docs.google.com/document/d/1Z1OEJYopW1ytZcyG4TuaBvF4VwJSkyt3/edit): “Human review is mandatory when AI-generated work affects important trust boundaries.” Independent AI review and passing checks do not satisfy that gate.
 
 ## 2026-09-21 — Fail-closed runtime readiness integrated
 

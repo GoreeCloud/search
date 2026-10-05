@@ -36,7 +36,7 @@ platform_systems:
     version: null
     evidence:
       - README.md
-      - FEATURE-ROADMAP.md
+      - PLANNED-FEATURES.md
     notes: GoreeCloud Manager operational inventory, configuration, lifecycle, health, and administrative visibility are applicable to Search, but no accepted Manager runtime integration or administrator interface exists on authoritative main.
 
   privacy_shield:
@@ -45,7 +45,7 @@ platform_systems:
     evidence:
       - README.md
       - PRIVACY POLICY.md
-      - FEATURE-ROADMAP.md
+      - PLANNED-FEATURES.md
     notes: Search has privacy-aware planning plus a Development source boundary that requires an injected producer-authoritative Privacy Shield capability-reference verifier with exact expected claims and single-use consumption before Index-originated execution. No accepted live verifier transport, receipt/evidence integration, or production acceptance exists.
 
   wardveil_security:
@@ -53,7 +53,7 @@ platform_systems:
     version: null
     evidence:
       - SECURITY.md
-      - FEATURE-ROADMAP.md
+      - PLANNED-FEATURES.md
     notes: Search implements bounded provider execution and provenance validation, but no accepted Wardveil Security runtime evidence, trust, threat, or protection integration exists.
 
   everkeep:
@@ -69,14 +69,14 @@ platform_systems:
     version: null
     evidence:
       - README.md
-      - FEATURE-ROADMAP.md
+      - PLANNED-FEATURES.md
     notes: Authoritative main exposes no accepted GoreeCloud-controlled user or administrator interface. Glaze UI becomes applicable before any Search UI is accepted.
 
   mesh:
     result: applicable-blocked
     version: null
     evidence:
-      - FEATURE-ROADMAP.md
+      - PLANNED-FEATURES.md
     notes: GoreeCloud Mesh discovery, dependency, capability, and service-coordination integration are planned but not implemented or accepted on authoritative main.
     capabilities: []
     dependencies: []
@@ -89,14 +89,14 @@ platform_systems:
     evidence:
       - README.md
       - SECURITY.md
-      - FEATURE-ROADMAP.md
+      - PLANNED-FEATURES.md
     notes: The Development candidate requires an injected GoreeCloud Identity verifier and binds the authenticated requester exactly to goreecloud-index before Search execution. No accepted live Identity transport, token issuer/format, isolation, revocation, or production acceptance exists.
 
   policy:
     result: applicable-blocked
     version: null
     evidence:
-      - FEATURE-ROADMAP.md
+      - PLANNED-FEATURES.md
       - SECURITY.md
     notes: GoreeCloud Policy is applicable to shared content, source, provider, administrative, and execution policy decisions, but producer-authoritative Policy evaluation, freshness, explanation, enforcement, and evidence integration are not implemented or accepted on authoritative main.
 
@@ -104,7 +104,7 @@ platform_systems:
     result: applicable-blocked
     version: null
     evidence:
-      - FEATURE-ROADMAP.md
+      - PLANNED-FEATURES.md
       - SECURITY.md
     notes: The Development candidate exposes bounded source-level health and readiness endpoints, but no accepted Observability integration, target-runtime publication, signal freshness, alerting, or operational acceptance exists.
 
@@ -150,7 +150,7 @@ conformance:
   validated_at: null
   evidence:
     - README.md
-    - FEATURE-ROADMAP.md
+    - PLANNED-FEATURES.md
     - PRIVACY POLICY.md
     - SECURITY.md
     - NOTES.md
