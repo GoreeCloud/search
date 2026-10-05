@@ -1,7 +1,7 @@
 # GoreeCloud Search — Planned Features
 
 **Record type:** Repository planned/open feature inventory  
-**Repository:** `GoreeCloud/goreecloud-search`  
+**Repository:** `GoreeCloud/search`  
 **Lifecycle:** Development / nonconformant  
 **Repository version:** `0.1.0.dev14`  
 **Migration state:** Authoritative repository record on protected `main`; legacy Drive feature/changelog sources retired and independently verified absent on September 22, 2026.  
@@ -19,9 +19,17 @@ This file carries forward every material open, partial, deferred, blocked, accep
 
 The Drive planned-capabilities record was broad product-direction history. Where it conflicted with newer verified repository state, current repository evidence controls current disposition while the historical scope is preserved here. That Drive file was deleted only after the repository migration merged, authoritative `main` readback succeeded, the retired root files were confirmed absent, and exact-main CI/Platform Contract validation passed; independent Drive readback now returns 404 for the retired ID.
 
-Draft PR #29 (`security/reject-search-control-characters-20260921`) is a separate candidate. Its passing checks do not make its control-character hardening implemented on current `main`.
+Draft PR #29 (`security/reject-search-control-characters-20260921`) is historical candidate provenance. Equivalent C0/DEL query-control hardening was accepted through PR #34. The October 5 stabilization topic carries forward PR #35 and PR #37 onto main `39c1eec1851b0b11a3ecc4277ebc78f608b989d1`; that topic remains candidate-only until protected-branch acceptance.
 
 ## Priority open obligations
+
+### P0 — Stabilization candidate acceptance and platform migration
+
+- Complete human security review of HTTP/authority, URL/display, and provider-batch trust boundaries, then apply protected-branch gates to the exact reviewed candidate head. Reconcile accepted inventory only after merge and post-merge validation.
+- Preserve source-plan privacy restrictions, default-false readiness, generic errors, and Index-originated external-only/no-fallback behavior while integrating the candidate.
+- Accept the candidate's provider-level URL/display validation and verify healthy-peer/fallback preservation with approved live adapters. Source regressions do not establish live provider acceptance.
+- Stage compatible validator/consumer support before migrating the legacy 0.4 manifest and `development` lifecycle to the active v2.0 platform instruction. The current validator's green result does not prove current-governance conformance.
+- Validate on a supported Python runtime in the target environment; the inspected laptop's Python 3.10.12 is below the package minimum.
 
 ### P0 — Live authority and Index runtime acceptance
 

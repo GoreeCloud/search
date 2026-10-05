@@ -27,6 +27,8 @@ This repository currently contains the first native implementation foundation:
 
 The repository now contains a source-level authenticated Index HTTP boundary, but it is not automatically started or deployed. Identity and Privacy Shield authorities are injected interfaces; no credential issuer, signing key, reusable token, live verifier endpoint, production provider credential, or deployment configuration is embedded. The development CLI still performs no network access.
 
+The October 5 stabilization topic combines pending HTTP/authority validation, bounded URL/display normalization, and provider batch limits from the current main baseline. It requires human security review and protected-branch acceptance. See [`NOTES.md`](NOTES.md#2026-10-05--concurrent-stabilization-candidate) for the verified scope, remaining limitations, and platform migration debt.
+
 ## Development use
 
 Requires Python 3.11 or newer.

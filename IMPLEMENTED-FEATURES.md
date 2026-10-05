@@ -1,7 +1,7 @@
 # GoreeCloud Search — Implemented Features
 
 **Record type:** Repository implemented-feature inventory  
-**Repository:** `GoreeCloud/goreecloud-search`  
+**Repository:** `GoreeCloud/search`  
 **Lifecycle:** Development / nonconformant  
 **Repository version:** `0.1.0.dev14`  
 **Migration state:** Authoritative repository record on protected `main`; legacy Drive feature/changelog sources retired and independently verified absent on September 22, 2026.  
@@ -14,13 +14,13 @@ This record describes behavior implemented in the current native GoreeCloud Sear
 
 A partially implemented capability can appear here for the verified portion that exists and in `PLANNED-FEATURES.md` for the remaining work. Historical maintained-fork, release-candidate, deployment, native-rebuild, and prior-repository evidence is preserved under `docs/changelog-history/`; historical lifecycle claims do not override current `main`.
 
-Draft or unmerged pull requests are not implementation authority. In particular, PR #29 remains a separate Draft security candidate and is not represented below as accepted behavior.
+Draft or unmerged pull requests are not implementation authority. PR #29 remains historical candidate provenance; equivalent query-control hardening was subsequently accepted through PR #34.
 
 ## Current verified Development baseline
 
-The latest runtime-bearing Search baseline remains `1bf27785cf5502e32155d3d3d31bc5cbd052d3d6`, the merge of PR #28, **Fail closed Search readiness until authority transports are accepted**. Exact-main CI run #78 / `35662686554` passed, and Platform Contract run #20 / `35662687737` passed on that exact runtime-bearing revision.
+Authoritative `main`, verified October 5, 2026, is `39c1eec1851b0b11a3ecc4277ebc78f608b989d1` (PR #38 evidence migration). Its latest runtime-bearing revision is `66ff984b8dd79624a739ab6117c42a572dc44475` (PR #34 query-control hardening). PR #33 also corrected the manifest repository identity to `GoreeCloud/search`.
 
-Repository-governance PR #30 then merged as `db15ea4c6e7e29c395204a94cad07d886f9242ff`; exact-main CI run #81 / `35732002017` and Platform Contract run #23 / `35732002972` passed. PR #30 changed documentation/governance only and did not alter Search runtime behavior.
+Exact-main [CI run `36358514424`](https://github.com/GoreeCloud/search/actions/runs/36358514424) and [Platform Contract run `36358514745`](https://github.com/GoreeCloud/search/actions/runs/36358514745) passed on `39c1eec1851b0b11a3ecc4277ebc78f608b989d1`. Earlier PR #28 readiness and PR #30 repository-governance behavior remain part of this accepted baseline.
 
 The current line remains Development/nonconformant. The host-supplied authority-transport-readiness signal defaults false and cannot replace per-request GoreeCloud Identity or Privacy Shield verification.
 
@@ -75,6 +75,7 @@ The current line remains Development/nonconformant. The host-supplied authority-
 
 - Bounded server-side endpoints `/api/v1/status`, `/api/v1/search`, `/healthz`, and `/readyz`.
 - Strict JSON/body/request bounds for the Index delegation carrier.
+- Rejection of C0/DEL query controls before normalization and dispatch, accepted through PR #34.
 - Injected GoreeCloud Identity bearer/requester verification requiring the expected `goreecloud-index` caller identity before query dispatch.
 - Injected Privacy Shield opaque capability-reference verification and consumption before provider execution.
 - Generic fail-closed authorization errors that do not disclose verifier internals.
@@ -96,7 +97,7 @@ The current line remains Development/nonconformant. The host-supplied authority-
 
 ### Repository and platform control plane
 
-- GoreeCloud Platform Contract 0.4 declaration covering the nine Integral Platform Systems while preserving Development/nonconformant state for unresolved runtime integrations.
+- Legacy GoreeCloud Platform Contract 0.4 declaration covering the nine Integral Platform Systems while preserving Development/nonconformant state for unresolved runtime integrations. This is transitional repository state, not conformance to the active v2.0 platform instruction.
 - Repository CI on Python 3.11 and 3.12.
 - Platform Contract validation workflow pinned to the governed reusable validator revision used by the accepted control-plane change.
 - Explicit internal application version and Development lifecycle documentation.
@@ -111,6 +112,10 @@ The following source foundations exist but remain acceptance-gated and therefore
 - Health/readiness surfaces without production runtime acceptance.
 - Provider execution infrastructure without an approved live external provider set.
 - Ranking/explanation foundations without the complete planned quality, vertical, SafeSearch, and user-experience scope.
+
+## October 5, 2026 — Pending stabilization candidate
+
+The current topic candidate carries forward PR #35 HTTP and PR #37 normalization source/test work onto the verified main baseline, with additional regressions and provider batch validation. It bounds and validates Host/framing/query input, requires typed Identity/Privacy decisions with explicit boolean approval, checks actual and canonical result URLs, sanitizes bounded display text, and rejects malformed or oversized provider batches before central normalization. Shared content validation inside the provider boundary preserves healthy federation and permitted fallback when a peer returns unsafe content. These changes remain pending protected-branch acceptance and human security review; they are not added to the accepted inventory above. See `NOTES.md` for limitations and `PLANNED-FEATURES.md` for remaining gates.
 
 ## Explicitly not implemented on current `main`
 

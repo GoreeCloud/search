@@ -7,6 +7,7 @@ from time import monotonic
 from typing import Iterable
 
 from .models import ParsedQuery, SourcePlan, SourcePlanStep
+from .normalization import normalize_and_deduplicate
 from .providers import ProviderSearchBatch, ResultCandidate, SearchProvider
 
 
@@ -213,7 +214,7 @@ class SearchExecutor:
                     provider.search(query, limit=limit),
                     timeout=self._policy.per_provider_timeout_seconds,
                 )
-            self._validate_batch(provider, batch)
+            self._validate_batch(provider, batch, limit=limit)
             elapsed_ms = max(0, round((monotonic() - started) * 1000))
             status = (
                 ProviderExecutionStatus.DEGRADED
@@ -262,14 +263,66 @@ class SearchExecutor:
             )
 
     @staticmethod
-    def _validate_batch(provider: SearchProvider, batch: ProviderSearchBatch) -> None:
+    def _validate_batch(
+        provider: SearchProvider,
+        batch: ProviderSearchBatch,
+        *,
+        limit: int,
+    ) -> None:
         if not isinstance(batch, ProviderSearchBatch):
             raise ProviderExecutionError("provider returned an invalid batch type")
+        if not isinstance(batch.candidates, tuple):
+            raise ProviderExecutionError("provider returned an invalid candidate collection")
+        # Reject rather than truncate: oversized responses must not reach
+        # normalization or ranking, including when fallback requests less work.
+        if len(batch.candidates) > limit:
+            raise ProviderExecutionError("provider returned more candidates than requested")
+        if not isinstance(batch.degraded, bool):
+            raise ProviderExecutionError("provider returned an invalid degraded state")
+        if not isinstance(batch.warnings, tuple) or any(
+            not isinstance(warning, str) for warning in batch.warnings
+        ):
+            raise ProviderExecutionError("provider returned invalid warnings")
+
         expected = provider.descriptor.name.casefold()
-        if any(candidate.provider.casefold() != expected for candidate in batch.candidates):
-            raise ProviderExecutionError(
-                "provider returned candidate provenance for a different provider"
-            )
+        for candidate in batch.candidates:
+            if not isinstance(candidate, ResultCandidate):
+                raise ProviderExecutionError("provider returned an invalid candidate type")
+            if any(
+                not isinstance(value, str)
+                for value in (
+                    candidate.title,
+                    candidate.url,
+                    candidate.snippet,
+                    candidate.provider,
+                )
+            ) or any(
+                value is not None and not isinstance(value, str)
+                for value in (
+                    candidate.published_at,
+                    candidate.content_type,
+                    candidate.canonical_url,
+                    candidate.source_id,
+                    candidate.content_hash,
+                    candidate.language,
+                    candidate.last_crawled_at,
+                    candidate.provider_contract_version,
+                )
+            ):
+                raise ProviderExecutionError("provider returned invalid candidate text fields")
+            if candidate.provider_rank is not None and (
+                isinstance(candidate.provider_rank, bool)
+                or not isinstance(candidate.provider_rank, int)
+            ):
+                raise ProviderExecutionError("provider returned an invalid candidate rank")
+            if candidate.provider.casefold() != expected:
+                raise ProviderExecutionError(
+                    "provider returned candidate provenance for a different provider"
+                )
+
+        # Apply the shared content rules inside this provider's failure boundary.
+        # The core still owns the final cross-provider deduplication and ranking.
+        normalize_and_deduplicate(batch.candidates, (provider.descriptor,))
 
     @staticmethod
     def _availability(attempts: tuple[ProviderAttempt, ...]) -> SearchAvailability:

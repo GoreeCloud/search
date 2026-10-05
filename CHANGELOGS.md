@@ -1,11 +1,11 @@
 # GoreeCloud Search — Changelogs
 
 **Record type:** Authoritative repository changelog index and current change history  
-**Repository:** `GoreeCloud/goreecloud-search`  
+**Repository:** `GoreeCloud/search`  
 **Lifecycle:** Development / nonconformant  
 **Migration state:** Authoritative repository record on protected `main`; legacy Drive feature/changelog sources retired and independently verified absent on September 22, 2026.  
 **Governance baseline:** `main` at `db15ea4c6e7e29c395204a94cad07d886f9242ff`, merged by PR #30 on September 22, 2026.  
-**Runtime-bearing baseline:** `1bf27785cf5502e32155d3d3d31bc5cbd052d3d6`, merged by PR #28 on September 21, 2026.  
+**Runtime-bearing baseline:** `66ff984b8dd79624a739ab6117c42a572dc44475`, merged by PR #34.  
 **Governing standard:** Standard — Repository Feature Tracking and Changelog Governance v1.0, effective September 22, 2026.
 
 ## Authority and interpretation
@@ -14,7 +14,7 @@ This file is the repository-local changelog authority for current and future Gor
 
 Historical entries describe the state, repositories, candidates, deployments, release labels, and evidence that existed at their own dates. They do **not** override current authoritative `main`, current lifecycle, or current architecture. Earlier maintained-fork and prior native-line Production/RC/Stable language must therefore be read as exact-revision historical evidence rather than a claim about the current `0.1.0.dev14` native line.
 
-Draft/unmerged pull requests are not accepted changes. PR #29 remains candidate-only and is not recorded as implemented below.
+Draft/unmerged pull requests are not accepted changes. PR #29 remains historical candidate provenance; equivalent query-control hardening was later accepted through PR #34.
 
 ## Historical archive migrated from Google Drive
 
@@ -34,6 +34,16 @@ The complete meaningful chronology is normalized into eight repository archive f
 Those archives preserve the meaningful historical chronology of the retired Drive changelog, including maintained-fork development, deployment/release evidence, native rebuild work, Sync/provider/ranking work, platform and Glaze checkpoints, and later stabilization. They are historical provenance, not a shadow current-state authority.
 
 ## Current native-line changelog
+
+### October 5, 2026 — Concurrent stabilization candidate and baseline reconciliation
+
+- Reconciled current main `39c1eec1851b0b11a3ecc4277ebc78f608b989d1` (PR #38), latest runtime-bearing revision `66ff984b8dd79624a739ab6117c42a572dc44475` (PR #34), and canonical repository identity from PR #33. Main [CI `36358514424`](https://github.com/GoreeCloud/search/actions/runs/36358514424) and [Platform Contract `36358514745`](https://github.com/GoreeCloud/search/actions/runs/36358514745) passed on that exact main head.
+- Carried PR #35 HTTP and PR #37 normalization source/test work onto the current main-derived topic, preserving unique behavior and adding regressions for framing, bounded ports, IDN identity, surrogate input, and malformed authority-service decisions.
+- Added per-request provider batch cardinality and shape validation, including reduced fallback limits, with generic provider errors and healthy-peer preservation for malformed batches.
+- Applied shared URL/display validation inside each provider's failure boundary, preserving healthy federation and permitted fallback without duplicating content rules. Added SearchCore regressions for invalid content/overflow, privacy containment, all-invalid recovery, and unchanged central content-hash merging/sanitization, plus wire-level generic 503/recovery tests for an external-only unsafe URL or oversized batch.
+- Local Python 3.12.14 compilation and all 112 combined unit tests passed. New exact-head CI/review status is recorded in the candidate PR; earlier candidate checks are not reused as acceptance evidence.
+- Repaired manifest evidence paths from the retired `FEATURE-ROADMAP.md` to `PLANNED-FEATURES.md`, retaining the legacy 0.4 schema and pinned validator pending staged v2.0 migration.
+- This entry records a pending source candidate. Human security review, current exact-head protected checks, merge, and post-merge validation remain acceptance gates. No live authority/provider transport, deployment, runtime acceptance, release, production acceptance, or Stable qualification was established. PR #36 snippet generation remains separate and pending.
 
 ### September 22, 2026 — Repository migration accepted and legacy Drive sources retired
 

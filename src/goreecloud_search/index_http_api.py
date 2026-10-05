@@ -3,8 +3,10 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from ipaddress import AddressValueError, IPv4Address, IPv6Address
 import json
 from typing import Any, Protocol
+from unicodedata import category as unicode_category, normalize as unicode_normalize
 
 from .models import ProviderOrigin
 from .planner import (
@@ -44,6 +46,7 @@ SEARCH_MAX_QUERY_CHARS = 2048
 SEARCH_MAX_RESULTS = 100
 SEARCH_MAX_BEARER_CHARS = 16 * 1024
 SEARCH_MAX_CAPABILITY_REFERENCE_CHARS = 512
+SEARCH_REQUEST_TIMEOUT_SECONDS = 5.0
 
 
 class IndexHTTPBoundaryError(ValueError):
@@ -92,24 +95,145 @@ class PrivacyCapabilityVerifier(Protocol):
         ...
 
 
+_BIDI_FORMAT_CONTROLS = frozenset(
+    {
+        "\u061c",
+        "\u200e",
+        "\u200f",
+        "\u202a",
+        "\u202b",
+        "\u202c",
+        "\u202d",
+        "\u202e",
+        "\u2066",
+        "\u2067",
+        "\u2068",
+        "\u2069",
+    }
+)
+
+
+def _contains_unicode_control(value: str) -> bool:
+    return any(
+        unicode_category(char) in {"Cc", "Cs"} or char in _BIDI_FORMAT_CONTROLS
+        for char in value
+    )
+
+
 def _is_bounded_opaque(value: str, *, prefix: str | None, maximum: int) -> bool:
     if not value or len(value) > maximum:
         return False
     if prefix is not None and (not value.startswith(prefix) or len(value) <= len(prefix)):
         return False
-    return all(not char.isspace() and not char.iscontrol() if hasattr(char, "iscontrol") else not char.isspace() and ord(char) >= 32 and ord(char) != 127 for char in value)
+    return all(not char.isspace() for char in value) and not _contains_unicode_control(value)
 
 
 def _valid_bearer(value: str) -> bool:
     if not value or len(value) > SEARCH_MAX_BEARER_CHARS:
         return False
-    return all(not char.isspace() and ord(char) >= 32 and ord(char) != 127 for char in value)
+    return all(not char.isspace() for char in value) and not _contains_unicode_control(value)
 
 
 def _valid_capability_reference(value: str) -> bool:
     if not value.startswith("psc_") or len(value) <= 4 or len(value) > SEARCH_MAX_CAPABILITY_REFERENCE_CHARS:
         return False
-    return all(not char.isspace() and ord(char) >= 32 and ord(char) != 127 for char in value)
+    return all(not char.isspace() for char in value) and not _contains_unicode_control(value)
+
+
+def _looks_like_numeric_ipv4(host: str) -> bool:
+    labels = host.split(".")
+
+    def numeric_label(label: str) -> bool:
+        if label.isdecimal():
+            return True
+        lowered = label.casefold()
+        return (
+            lowered.startswith("0x")
+            and all(character in "0123456789abcdef" for character in lowered[2:])
+        )
+
+    # Browser URL parsers treat a final numeric label as an IPv4 candidate,
+    # even when earlier labels are not numeric or there are too many labels.
+    return numeric_label(labels[-1])
+
+
+def _normalize_dns_or_ipv4_host(value: str) -> str:
+    source = unicode_normalize("NFC", value.removesuffix(".")).lower()
+    if not source or len(source) > 253:
+        raise ValueError("host must contain a usable DNS or IPv4 identity")
+    try:
+        encoded_labels = []
+        for label in source.split("."):
+            encoded = label.encode("idna").decode("ascii").lower()
+            decoded = encoded.encode("ascii").decode("idna")
+            # The stdlib codec uses IDNA2003. Reject names whose normalization
+            # changes their identity rather than silently mapping a browser's
+            # non-transitional IDN to a different host (for example, sharp s).
+            if decoded.encode("idna").decode("ascii").lower() != encoded:
+                raise ValueError("host contains an invalid A-label")
+            if not label.isascii() and unicode_normalize("NFC", decoded).lower() != label:
+                raise ValueError("host requires unsupported IDN mapping")
+            encoded_labels.append(encoded)
+        normalized = ".".join(encoded_labels)
+    except UnicodeError as exc:
+        raise ValueError("host cannot be represented as a valid IDN") from exc
+
+    if len(normalized) > 253:
+        raise ValueError("host exceeds the DNS length limit")
+
+    labels = normalized.split(".")
+    if any(
+        not label
+        or len(label) > 63
+        or label.startswith("-")
+        or label.endswith("-")
+        or any(
+            not (character.isascii() and (character.isalnum() or character == "-"))
+            for character in label
+        )
+        for label in labels
+    ):
+        raise ValueError("host contains invalid DNS label syntax")
+
+    if _looks_like_numeric_ipv4(normalized):
+        try:
+            canonical_ipv4 = str(IPv4Address(normalized))
+        except AddressValueError as exc:
+            raise ValueError("host contains ambiguous numeric IPv4 syntax") from exc
+        if normalized != canonical_ipv4:
+            raise ValueError("host contains non-canonical IPv4 syntax")
+        return canonical_ipv4
+
+    return normalized
+
+
+def _normalize_allowed_host(value: str) -> str:
+    if not isinstance(value, str) or _contains_unicode_control(value):
+        raise ValueError("allowed host must be text without control characters")
+    raw = value.strip()
+    if not raw or any(char.isspace() for char in raw) or _contains_unicode_control(raw):
+        raise ValueError("allowed host is empty or contains unsupported whitespace/control characters")
+
+    if "%" in raw:
+        raise ValueError("allowed host must not contain an IPv6 scope identifier")
+    if raw.startswith("["):
+        if not raw.endswith("]") or raw.count("[") != 1 or raw.count("]") != 1:
+            raise ValueError("bracketed allowed host must be a single IPv6 literal")
+        try:
+            return str(IPv6Address(raw[1:-1])).casefold()
+        except AddressValueError as exc:
+            raise ValueError("bracketed allowed host must contain valid IPv6") from exc
+
+    if ":" in raw:
+        try:
+            return str(IPv6Address(raw)).casefold()
+        except AddressValueError as exc:
+            raise ValueError("allowed host must not include a port or malformed IPv6") from exc
+
+    if any(character in raw for character in "@[]/\\"):
+        raise ValueError("allowed host contains unsupported authority syntax")
+
+    return _normalize_dns_or_ipv4_host(raw)
 
 
 def _json_loads_strict(body: bytes) -> Any:
@@ -177,9 +301,9 @@ class SearchIndexHTTPServer(ThreadingHTTPServer):
         allowed_hosts: tuple[str, ...] = ("127.0.0.1", "localhost", "search.goreecloud.com"),
         authority_transports_ready: bool = False,
     ) -> None:
-        normalized_hosts = frozenset(item.casefold().rstrip(".") for item in allowed_hosts if item.strip())
+        normalized_hosts = frozenset(_normalize_allowed_host(item) for item in allowed_hosts)
         if not normalized_hosts:
-            raise ValueError("allowed_hosts must not be empty")
+            raise ValueError("allowed_hosts must contain at least one usable host")
         self.search_core = core
         self.identity_verifier = identity_verifier
         self.privacy_verifier = privacy_verifier
@@ -199,6 +323,10 @@ class _IndexRequestHandler(BaseHTTPRequestHandler):
     server: SearchIndexHTTPServer
     server_version = "GoreeCloudSearch"
     sys_version = ""
+
+    def setup(self) -> None:
+        super().setup()
+        self.connection.settimeout(SEARCH_REQUEST_TIMEOUT_SECONDS)
 
     def log_message(self, format: str, *args: object) -> None:
         del format, args
@@ -224,12 +352,92 @@ class _IndexRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_method_not_allowed(self, *, write_body: bool = True) -> None:
+        if not self._host_allowed():
+            if write_body:
+                self._send_json(421, {"error": "misdirected_request"})
+            else:
+                body = json.dumps(
+                    {"error": "misdirected_request"},
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                    sort_keys=True,
+                ).encode("utf-8")
+                self.send_response(421)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
+                self.send_header("Referrer-Policy", "no-referrer")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("X-Frame-Options", "DENY")
+                self.end_headers()
+            return
+
+        if write_body:
+            self._send_json(405, {"error": "method_not_allowed"})
+        else:
+            body = json.dumps(
+                {"error": "method_not_allowed"},
+                ensure_ascii=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("utf-8")
+            self.send_response(405)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
+            self.end_headers()
+
     def _normalized_host(self) -> str:
-        raw = self.headers.get("Host", "").strip()
+        # Do not trust the first of multiple Host headers or silently discard an
+        # invalid port: proxy and application routing must see one authority.
+        hosts = self.headers.get_all("Host") or []
+        if len(hosts) != 1:
+            return ""
+        if _contains_unicode_control(hosts[0]):
+            return ""
+        raw = hosts[0].strip()
+        if not raw or any(char.isspace() for char in raw) or _contains_unicode_control(raw):
+            return ""
+
         if raw.startswith("["):
             closing = raw.find("]")
-            return raw[1:closing].casefold().rstrip(".") if closing > 0 else ""
-        return raw.rsplit(":", 1)[0].casefold().rstrip(".")
+            if closing <= 1 or raw.count("[") != 1 or raw.count("]") != 1:
+                return ""
+            host = raw[1:closing]
+            if "%" in host:
+                return ""
+            try:
+                normalized_host = str(IPv6Address(host))
+            except AddressValueError:
+                return ""
+            suffix = raw[closing + 1:]
+            if suffix and (not suffix.startswith(":") or not self._valid_port(suffix[1:])):
+                return ""
+            return normalized_host.casefold()
+
+        # Unbracketed IPv6, user-info and ambiguous separators are invalid Host
+        # authorities even if a substring would match an allowed host.
+        if raw.count(":") > 1:
+            return ""
+        host, separator, port = raw.partition(":")
+        if not host or any(character in host for character in "@[]/\\"):
+            return ""
+        if separator and not self._valid_port(port):
+            return ""
+        try:
+            return _normalize_dns_or_ipv4_host(host)
+        except ValueError:
+            return ""
+
+    @staticmethod
+    def _valid_port(value: str) -> bool:
+        return 1 <= len(value) <= 5 and value.isascii() and value.isdecimal() and 1 <= int(value) <= 65535
 
     def _host_allowed(self) -> bool:
         return self._normalized_host() in self.server.allowed_hosts
@@ -238,6 +446,8 @@ class _IndexRequestHandler(BaseHTTPRequestHandler):
         values = self.headers.get_all(name) or []
         if len(values) != 1:
             raise IndexHTTPBoundaryError(f"{name} must be supplied exactly once")
+        if _contains_unicode_control(values[0]):
+            raise IndexHTTPBoundaryError(f"{name} contains unsupported control characters")
         value = values[0].strip()
         if not value:
             raise IndexHTTPBoundaryError(f"{name} must not be empty")
@@ -262,7 +472,11 @@ class _IndexRequestHandler(BaseHTTPRequestHandler):
             raise IndexHTTPBoundaryError("requester authentication failed") from exc
 
         if (
-            requester.requester_id != SEARCH_INDEX_REQUESTER_ID
+            not isinstance(requester, AuthenticatedRequester)
+            or not all(isinstance(value, str) for value in (
+                requester.requester_id, requester.requester_type, requester.authority
+            ))
+            or requester.requester_id != SEARCH_INDEX_REQUESTER_ID
             or requester.requester_type != SEARCH_INDEX_REQUESTER_TYPE
             or requester.authority != SEARCH_IDENTITY_AUTHORITY
         ):
@@ -280,8 +494,11 @@ class _IndexRequestHandler(BaseHTTPRequestHandler):
             raise IndexHTTPBoundaryError("privacy authorization verification failed") from exc
 
         if not (
-            verification.authorized
-            and verification.consumed
+            isinstance(verification, PrivacyCapabilityVerification)
+            and verification.authorized is True
+            and verification.consumed is True
+            and isinstance(verification.requester_id, str)
+            and isinstance(verification.verification_consumer_id, str)
             and verification.requester_id == requester.requester_id
             and verification.verification_consumer_id == SEARCH_VERIFICATION_CONSUMER_ID
         ):
@@ -289,25 +506,29 @@ class _IndexRequestHandler(BaseHTTPRequestHandler):
         return requester, privacy_reference
 
     def _read_search_request(self) -> tuple[str, int]:
-        content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().casefold()
-        if content_type != "application/json":
-            raise IndexHTTPBoundaryError("content type must be application/json")
-        transfer_encoding = self.headers.get("Transfer-Encoding")
-        if transfer_encoding:
+        content_types = self.headers.get_all("Content-Type") or []
+        if len(content_types) != 1 or _contains_unicode_control(content_types[0]) or content_types[0].split(";", 1)[0].strip().casefold() != "application/json":
+            raise IndexHTTPBoundaryError("content type must be supplied exactly once as application/json")
+        if self.headers.get_all("Transfer-Encoding"):
             raise IndexHTTPBoundaryError("transfer encoding is not supported")
-        raw_length = self.headers.get("Content-Length")
-        if raw_length is None:
-            raise IndexHTTPBoundaryError("content length is required")
-        try:
-            content_length = int(raw_length)
-        except ValueError as exc:
-            raise IndexHTTPBoundaryError("content length is invalid") from exc
+        content_lengths = self.headers.get_all("Content-Length") or []
+        if len(content_lengths) != 1:
+            raise IndexHTTPBoundaryError("content length must be supplied exactly once")
+        if _contains_unicode_control(content_lengths[0]):
+            raise IndexHTTPBoundaryError("content length contains unsupported controls")
+        raw_length = content_lengths[0].strip()
+        if not raw_length or len(raw_length) > 5 or not raw_length.isascii() or not raw_length.isdecimal():
+            raise IndexHTTPBoundaryError("content length is invalid")
+        content_length = int(raw_length)
         if content_length < 2 or content_length > SEARCH_MAX_REQUEST_BYTES:
             raise IndexHTTPBoundaryError("request body size is invalid")
 
         try:
-            payload = _json_loads_strict(self.rfile.read(content_length))
-        except (UnicodeDecodeError, ValueError, json.JSONDecodeError) as exc:
+            body = self.rfile.read(content_length)
+            if len(body) != content_length:
+                raise IndexHTTPBoundaryError("request body length is incomplete")
+            payload = _json_loads_strict(body)
+        except (UnicodeDecodeError, ValueError, json.JSONDecodeError, OSError) as exc:
             raise IndexHTTPBoundaryError("request body is invalid JSON") from exc
         if not isinstance(payload, dict):
             raise IndexHTTPBoundaryError("request body must be a JSON object")
@@ -319,11 +540,15 @@ class _IndexRequestHandler(BaseHTTPRequestHandler):
         limit = payload["limit"]
         if not isinstance(query, str):
             raise IndexHTTPBoundaryError("query must be a string")
+        # Reject original untrusted text before normalization. Unicode Cc
+        # includes C0 and DEL/C1 controls; surrogates and bidi-format controls are
+        # also rejected so untrusted query text cannot visually reorder later
+        # presentation merely because it survives whitespace normalization.
+        if len(query) > SEARCH_MAX_QUERY_CHARS or _contains_unicode_control(query):
+            raise IndexHTTPBoundaryError("query contains unsupported control characters")
         query = query.strip()
         if not query or len(query) > SEARCH_MAX_QUERY_CHARS:
             raise IndexHTTPBoundaryError("query is empty or too large")
-        if any(ord(char) < 32 or ord(char) == 127 for char in query):
-            raise IndexHTTPBoundaryError("query contains unsupported control characters")
         if category != "general":
             raise IndexHTTPBoundaryError("only the initial general category is accepted")
         if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= SEARCH_MAX_RESULTS:
@@ -430,10 +655,25 @@ class _IndexRequestHandler(BaseHTTPRequestHandler):
         )
 
     def do_PUT(self) -> None:
-        self._send_json(405, {"error": "method_not_allowed"})
+        self._send_method_not_allowed()
 
     def do_DELETE(self) -> None:
-        self._send_json(405, {"error": "method_not_allowed"})
+        self._send_method_not_allowed()
+
+    def do_PATCH(self) -> None:
+        self._send_method_not_allowed()
+
+    def do_OPTIONS(self) -> None:
+        self._send_method_not_allowed()
+
+    def do_TRACE(self) -> None:
+        self._send_method_not_allowed()
+
+    def do_CONNECT(self) -> None:
+        self._send_method_not_allowed()
+
+    def do_HEAD(self) -> None:
+        self._send_method_not_allowed(write_body=False)
 
 
 def create_index_http_server(
