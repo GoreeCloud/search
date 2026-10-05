@@ -7,6 +7,7 @@ from time import monotonic
 from typing import Iterable
 
 from .models import ParsedQuery, SourcePlan, SourcePlanStep
+from .normalization import normalize_and_deduplicate
 from .providers import ProviderSearchBatch, ResultCandidate, SearchProvider
 
 
@@ -318,6 +319,10 @@ class SearchExecutor:
                 raise ProviderExecutionError(
                     "provider returned candidate provenance for a different provider"
                 )
+
+        # Apply the shared content rules inside this provider's failure boundary.
+        # The core still owns the final cross-provider deduplication and ranking.
+        normalize_and_deduplicate(batch.candidates, (provider.descriptor,))
 
     @staticmethod
     def _availability(attempts: tuple[ProviderAttempt, ...]) -> SearchAvailability:

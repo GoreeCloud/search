@@ -416,6 +416,234 @@ class ExecutionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(provider.calls, 2)
         self.assertEqual(provider.requested_limits, [1, 1])
 
+    async def test_invalid_open_url_with_safe_alias_isolated_from_healthy_peer(self) -> None:
+        for url in (
+            "javascript:alert('synthetic-private-payload')",
+            "https://synthetic:private-payload@example.com/private",
+            "https://example.com/private\npath",
+            "https://faß.de/private",
+            "http://127.1/private",
+            "https://example.com:65536/private",
+        ):
+            with self.subTest(url=url):
+                good = FakeProvider(
+                    "good", ProviderOrigin.GOREECLOUD_SERVICE,
+                    candidates=(candidate("good", "good"),),
+                )
+                bad = FakeProvider(
+                    "bad", ProviderOrigin.EXTERNAL,
+                    candidates=(
+                        candidate("bad", "valid-from-invalid-batch"),
+                        replace(candidate("bad", "bad"), url=url, canonical_url="https://example.com/safe"),
+                    ),
+                    warnings=("synthetic-private-payload",),
+                )
+                response = await SearchCore(provider_adapters=(good, bad)).search(
+                    "result", mode=SourceMode.FEDERATED, limit=2
+                )
+
+                self.assertEqual((good.calls, bad.calls), (1, 1))
+                self.assertEqual(response.execution.availability, SearchAvailability.DEGRADED)
+                self.assertEqual(response.execution.candidates, (candidate("good", "good"),))
+                self.assertEqual(len(response.results), 1)
+                attempts = {attempt.provider: attempt for attempt in response.execution.attempts}
+                self.assertEqual(attempts["good"].status, ProviderExecutionStatus.SUCCESS)
+                self.assertEqual(attempts["bad"].status, ProviderExecutionStatus.ERROR)
+                self.assertEqual(attempts["bad"].reason, "provider execution failed")
+                self.assertEqual(attempts["bad"].result_count, 0)
+                self.assertEqual(attempts["bad"].warnings, ())
+                self.assertNotIn("private-payload", repr(response.execution))
+
+    async def test_invalid_display_content_isolated_from_healthy_peer(self) -> None:
+        for changes in (
+            {"title": "\x00\n\u202e"},
+            {"title": "\ud800"},
+            {"snippet": "\udfff"},
+        ):
+            with self.subTest(changes=changes):
+                good = FakeProvider(
+                    "good", ProviderOrigin.GOREECLOUD_SERVICE,
+                    candidates=(candidate("good", "good"),),
+                )
+                bad = FakeProvider(
+                    "bad", ProviderOrigin.EXTERNAL,
+                    candidates=(replace(candidate("bad", "bad"), **changes),),
+                )
+                response = await SearchCore(provider_adapters=(good, bad)).search(
+                    "result", mode=SourceMode.FEDERATED, limit=2
+                )
+
+                self.assertEqual(response.execution.availability, SearchAvailability.DEGRADED)
+                self.assertEqual(response.execution.candidates, (candidate("good", "good"),))
+                self.assertEqual(len(response.results), 1)
+                attempts = {attempt.provider: attempt for attempt in response.execution.attempts}
+                self.assertEqual(attempts["good"].status, ProviderExecutionStatus.SUCCESS)
+                self.assertEqual(attempts["bad"].status, ProviderExecutionStatus.ERROR)
+                self.assertEqual(attempts["bad"].reason, "provider execution failed")
+
+    async def test_oversized_url_and_raw_display_source_fields_fail_cleanly(self) -> None:
+        for field, value in (
+            ("url", "https://example.com/" + "a" * 8192),
+            ("canonical_url", "https://example.com/" + "a" * 8192),
+            ("url", "https://example.com/?q=" + "é" * 2000),
+            ("title", "T" * 32_769),
+            ("snippet", "S" * 32_769),
+        ):
+            with self.subTest(field=field, source_length=len(value)):
+                provider = FakeProvider(
+                    "bad", ProviderOrigin.GOREECLOUD_SERVICE,
+                    candidates=(replace(candidate("bad", "bad"), **{field: value}),),
+                )
+                response = await SearchCore(provider_adapters=(provider,)).search("result", limit=1)
+
+                self.assertEqual(provider.calls, 1)
+                self.assertEqual(response.execution.availability, SearchAvailability.UNAVAILABLE)
+                self.assertEqual(response.execution.candidates, ())
+                self.assertEqual(response.results, ())
+                attempt = response.execution.attempts[0]
+                self.assertEqual(attempt.status, ProviderExecutionStatus.ERROR)
+                self.assertEqual(attempt.reason, "provider execution failed")
+                self.assertEqual(attempt.result_count, 0)
+
+    async def test_invalid_primary_content_still_allows_index_first_fallback(self) -> None:
+        native = FakeProvider(
+            "index", ProviderOrigin.GOREECLOUD_INDEX,
+            candidates=(replace(candidate("index", "bad"), title="\x00\u202e"),),
+        )
+        external = BatchProvider(
+            "external", ProviderOrigin.EXTERNAL,
+            batches=(ProviderSearchBatch(candidates=(candidate("external", "good"),)),),
+        )
+        response = await SearchCore(provider_adapters=(native, external)).search(
+            "result", mode=SourceMode.INDEX_FIRST, limit=1
+        )
+
+        self.assertEqual(external.requested_limits, [1])
+        self.assertTrue(response.execution.fallback_used)
+        self.assertEqual(response.execution.availability, SearchAvailability.DEGRADED)
+        self.assertEqual(response.execution.candidates, (candidate("external", "good"),))
+        self.assertEqual(len(response.results), 1)
+        self.assertEqual(
+            {attempt.provider: attempt.status for attempt in response.execution.attempts},
+            {"index": ProviderExecutionStatus.ERROR, "external": ProviderExecutionStatus.SUCCESS},
+        )
+
+    async def test_invalid_fallback_content_preserves_healthy_primary(self) -> None:
+        native = FakeProvider(
+            "index", ProviderOrigin.GOREECLOUD_INDEX,
+            candidates=(candidate("index", "good"),),
+        )
+        external = BatchProvider(
+            "external", ProviderOrigin.EXTERNAL,
+            batches=(ProviderSearchBatch(candidates=(
+                replace(candidate("external", "bad"), url="https://user:pass@example.com/private", canonical_url="https://example.com/safe"),
+            )),),
+        )
+        response = await SearchCore(provider_adapters=(native, external)).search(
+            "result", mode=SourceMode.INDEX_FIRST, limit=2
+        )
+
+        self.assertEqual(external.requested_limits, [1])
+        self.assertTrue(response.execution.fallback_used)
+        self.assertEqual(response.execution.availability, SearchAvailability.DEGRADED)
+        self.assertEqual(response.execution.candidates, (candidate("index", "good"),))
+        self.assertEqual(len(response.results), 1)
+        self.assertEqual(
+            {attempt.provider: attempt.status for attempt in response.execution.attempts},
+            {"index": ProviderExecutionStatus.SUCCESS, "external": ProviderExecutionStatus.ERROR},
+        )
+
+    async def test_invalid_content_never_expands_privacy_restricted_provider_plan(self) -> None:
+        for mode, budget in (
+            (SourceMode.GOREECLOUD_ONLY, None),
+            (SourceMode.OFFLINE_LOCAL, None),
+            (SourceMode.INDEX_FIRST, QueryDisclosureBudget(max_third_party_providers=0)),
+        ):
+            with self.subTest(mode=mode.value):
+                local = FakeProvider(
+                    "local", ProviderOrigin.LOCAL,
+                    candidates=(replace(candidate("local", "bad"), url="javascript:alert(1)"),),
+                )
+                external = FakeProvider(
+                    "external", ProviderOrigin.EXTERNAL,
+                    candidates=(candidate("external", "good"),),
+                )
+                response = await SearchCore(provider_adapters=(local, external)).search(
+                    "result", mode=mode, limit=1, disclosure_budget=budget
+                )
+
+                self.assertEqual(local.calls, 1)
+                self.assertEqual(external.calls, 0)
+                self.assertFalse(response.plan.third_party_query_disclosure)
+                self.assertFalse(response.execution.fallback_used)
+                self.assertEqual(response.execution.availability, SearchAvailability.UNAVAILABLE)
+                self.assertEqual(response.execution.candidates, ())
+                self.assertEqual(response.results, ())
+
+    async def test_all_invalid_index_delegation_content_is_unavailable_and_later_recovers(self) -> None:
+        index = FakeProvider(
+            "index", ProviderOrigin.GOREECLOUD_INDEX,
+            candidates=(candidate("index", "unused"),),
+        )
+        one = candidate("one", "one")
+        two = candidate("two", "two")
+        first = BatchProvider(
+            "one", ProviderOrigin.EXTERNAL,
+            batches=(
+                ProviderSearchBatch(candidates=(replace(one, url="https://user:synthetic-payload@example.com/private", canonical_url="https://example.com/safe"),), warnings=("synthetic-payload",)),
+                ProviderSearchBatch(candidates=(one,)),
+            ),
+        )
+        second = BatchProvider(
+            "two", ProviderOrigin.EXTERNAL,
+            batches=(
+                ProviderSearchBatch(candidates=(replace(two, title="\x00\u202e"),)),
+                ProviderSearchBatch(candidates=(two,)),
+            ),
+        )
+        core = SearchCore(provider_adapters=(index, first, second))
+        failed = await core.search_from_index("result", limit=2)
+        recovered = await core.search_from_index("result", limit=2)
+
+        self.assertEqual(index.calls, 0)
+        self.assertEqual(failed.plan.mode, SourceMode.EXTERNAL_ONLY)
+        self.assertFalse(failed.execution.fallback_used)
+        self.assertEqual(failed.execution.availability, SearchAvailability.UNAVAILABLE)
+        self.assertEqual(failed.execution.candidates, ())
+        self.assertEqual(failed.results, ())
+        self.assertTrue(all(attempt.status is ProviderExecutionStatus.ERROR for attempt in failed.execution.attempts))
+        self.assertTrue(all(attempt.reason == "provider execution failed" and not attempt.warnings for attempt in failed.execution.attempts))
+        self.assertNotIn("synthetic-payload", repr(failed.execution))
+        self.assertEqual(recovered.execution.availability, SearchAvailability.AVAILABLE)
+        self.assertEqual(len(recovered.results), 2)
+        self.assertEqual(first.requested_limits, [2, 2])
+        self.assertEqual(second.requested_limits, [2, 2])
+
+    async def test_content_prevalidation_preserves_central_sanitization_and_cross_provider_merge(self) -> None:
+        native_item = ResultCandidate(
+            "Result\u202e\n title", "https://example.com/shared?utm_source=index",
+            " first\x00 second ", "index", content_hash="shared-hash",
+        )
+        external_item = ResultCandidate(
+            "Other result", "https://mirror.example.com/shared", "mirror", "external",
+            content_hash="SHARED-HASH",
+        )
+        native = FakeProvider("index", ProviderOrigin.GOREECLOUD_INDEX, candidates=(native_item,))
+        external = FakeProvider("external", ProviderOrigin.EXTERNAL, candidates=(external_item,))
+        response = await SearchCore(provider_adapters=(native, external)).search(
+            "result", mode=SourceMode.FEDERATED, limit=2
+        )
+
+        self.assertEqual(response.execution.availability, SearchAvailability.AVAILABLE)
+        self.assertEqual(response.execution.candidates, (native_item, external_item))
+        self.assertEqual(len(response.results), 1)
+        result = response.results[0].result
+        self.assertEqual(result.title, "Result title")
+        self.assertEqual(result.snippet, "first second")
+        self.assertEqual(result.canonical_url, "https://example.com/shared")
+        self.assertEqual(result.source_agreement, 2)
+        self.assertEqual({item.provider for item in result.provenance}, {"index", "external"})
+
 
 if __name__ == "__main__":
     unittest.main()

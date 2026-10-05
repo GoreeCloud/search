@@ -115,7 +115,7 @@ The following source foundations exist but remain acceptance-gated and therefore
 
 ## October 5, 2026 — Pending stabilization candidate
 
-The current topic candidate carries forward PR #35 HTTP and PR #37 normalization source/test work onto the verified main baseline, with additional regressions and provider batch validation. It bounds and validates Host/framing/query input, requires typed Identity/Privacy decisions with explicit boolean approval, checks actual and canonical result URLs, sanitizes bounded display text, and rejects malformed or oversized provider batches before normalization. These changes remain pending protected-branch acceptance and human security review; they are not added to the accepted inventory above. See `NOTES.md` for limitations and `PLANNED-FEATURES.md` for remaining gates.
+The current topic candidate carries forward PR #35 HTTP and PR #37 normalization source/test work onto the verified main baseline, with additional regressions and provider batch validation. It bounds and validates Host/framing/query input, requires typed Identity/Privacy decisions with explicit boolean approval, checks actual and canonical result URLs, sanitizes bounded display text, and rejects malformed or oversized provider batches before central normalization. Shared content validation inside the provider boundary preserves healthy federation and permitted fallback when a peer returns unsafe content. These changes remain pending protected-branch acceptance and human security review; they are not added to the accepted inventory above. See `NOTES.md` for limitations and `PLANNED-FEATURES.md` for remaining gates.
 
 ## Explicitly not implemented on current `main`
 

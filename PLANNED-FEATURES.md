@@ -27,7 +27,7 @@ Draft PR #29 (`security/reject-search-control-characters-20260921`) is historica
 
 - Complete human security review of HTTP/authority, URL/display, and provider-batch trust boundaries, then apply protected-branch gates to the exact reviewed candidate head. Reconcile accepted inventory only after merge and post-merge validation.
 - Preserve source-plan privacy restrictions, default-false readiness, generic errors, and Index-originated external-only/no-fallback behavior while integrating the candidate.
-- Isolate unsafe URL/display normalization failures per provider before central federation without relaxing fail-closed validation; current central normalization can reject the whole request.
+- Accept the candidate's provider-level URL/display validation and verify healthy-peer/fallback preservation with approved live adapters. Source regressions do not establish live provider acceptance.
 - Stage compatible validator/consumer support before migrating the legacy 0.4 manifest and `development` lifecycle to the active v2.0 platform instruction. The current validator's green result does not prove current-governance conformance.
 - Validate on a supported Python runtime in the target environment; the inspected laptop's Python 3.10.12 is below the package minimum.
 
