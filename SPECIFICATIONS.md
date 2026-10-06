@@ -13,7 +13,9 @@ The current native development candidate provides a query parser and privacy-awa
 
 ### Query model
 
-The parser currently supports free-text terms, double-quoted phrases, excluded terms, `site:`, `-domain:`, `filetype:`, `ext:`, `before:`, `after:`, `language:`, `region:`, `source:`, `category:`, and `lens:`.
+The parser supports free-text terms, double-quoted phrases, excluded terms (including `-"excluded phrase"`), `site:`, `-domain:`, `filetype:`, `ext:`, `before:`, `after:`, `language:`, `region:`, `source:`, `category:`, and `lens:`. Quoted operator-like text remains a literal phrase, and malformed/unbalanced quotation is rejected.
+
+The query-filter-correctness candidate applies `site:` and filetype constraints plus excluded domains against normalized canonical URLs, and excluded words/phrases against normalized visible result title/snippet, before deterministic ranking. This is a post-provider display/result constraint only: it does not constrain provider-side query disclosure, unseen document text, access permissions, or raw-result fallback counting. The candidate may return fewer results than the requested limit after filtering. Language remains a ranking preference, and date, region, lens, and other not-yet-integrated semantics are not falsely represented as fully enforced.
 
 ### Source modes and privacy invariant
 

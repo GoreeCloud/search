@@ -35,6 +35,15 @@ The command prints a normalized JSON representation of the query. It does not co
 - `lens:official`
 - `"quoted phrase"`
 - `-excluded-term`
+- `-"excluded phrase"`
+
+Quoted operator text, such as `"site:example.com"`, is searched as a literal phrase. Incomplete or joined quotation marks produce a parse error rather than an ambiguous query.
+
+## Result restrictions (developer API)
+
+After provider results are normalized, Search enforces `site:` and `filetype:`/`ext:` against the canonical result URL and removes results from `-domain:` domains (including subdomains). `-term` and `-"phrase"` exclusions match complete words/phrases in the visible title or snippet without case sensitivity. These rules affect Search's returned results; they do **not** prevent disclosure of the search query to an eligible provider, inspect unseen document bodies, or replace provider-side filtering or access control. When upstream candidates do not satisfy a restriction, fewer than the requested number of results may be returned.
+
+Other parsed operators, including dates, currently do not constitute centrally enforced result restrictions; full operator support remains in the backlog.
 
 ## Developer privacy control
 

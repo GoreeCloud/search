@@ -12,7 +12,8 @@ This repository currently contains the first native implementation foundation:
 
 - A typed search-query model.
 - Parsing for `site:`, `-domain:`, `filetype:`, `ext:`, `before:`, `after:`, `language:`, `region:`, `source:`, `category:`, and `lens:`.
-- Quoted phrases and excluded terms.
+- Quoted phrases, literal quoted operators, excluded words and quoted negative phrases, with malformed-quote rejection.
+- Candidate source-level result restrictions for site, filetype, excluded domains, and excluded visible words/phrases, applied after normalization and before ranking; these do not replace provider-side enforcement or privacy/authorization gates.
 - Search categories and deployment source modes.
 - A deterministic source planner for Index First, Federated, GoreeCloud Only, External Only, and Offline / Local Index operation.
 - A replaceable provider contract for GoreeCloud Index and future federated adapters.

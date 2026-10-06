@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 from urllib.parse import urlsplit
 
 from .models import ParsedQuery
@@ -33,6 +34,33 @@ def _host_matches(host: str, domain: str) -> bool:
     host = host.casefold().rstrip(".")
     domain = domain.casefold().rstrip(".")
     return host == domain or host.endswith(f".{domain}")
+
+
+def _matches_result_filters(
+    query: ParsedQuery,
+    result: NormalizedResult,
+    excluded_patterns: tuple[re.Pattern[str], ...],
+) -> bool:
+    """Apply explicit result restrictions after normalization, never as an auth gate.
+
+    Exclusions inspect the title/snippet we can actually show; providers are
+    still responsible for honoring filters against content not returned here.
+    """
+    parts = urlsplit(result.canonical_url)
+    host = parts.hostname or ""
+    if query.filters.sites and not any(_host_matches(host, site) for site in query.filters.sites):
+        return False
+    if any(_host_matches(host, domain) for domain in query.filters.excluded_domains):
+        return False
+    if query.filters.filetypes and not any(
+        parts.path.casefold().endswith(f".{ext.casefold()}") for ext in query.filters.filetypes
+    ):
+        return False
+    if excluded_patterns:
+        visible_text = f"{result.title}\n{result.snippet}".casefold()
+        if any(pattern.search(visible_text) for pattern in excluded_patterns):
+            return False
+    return True
 
 
 def _score_result(query: ParsedQuery, result: NormalizedResult) -> tuple[float, tuple[RankingSignal, ...]]:
@@ -148,11 +176,19 @@ def _score_result(query: ParsedQuery, result: NormalizedResult) -> tuple[float, 
 
 
 def rank_results(query: ParsedQuery, results: tuple[NormalizedResult, ...] | list[NormalizedResult]) -> tuple[RankedResult, ...]:
-    """Rank normalized results using transparent, deterministic, non-behavioral evidence."""
+    """Apply explicit result restrictions, then deterministically rank matches.
 
+    This output filtering is not a substitute for provider-side query filtering
+    or an authorization/privacy boundary.
+    """
+    excluded_patterns = tuple(
+        re.compile(r"(?<!\w)" + re.escape(term.casefold()) + r"(?!\w)")
+        for term in query.excluded_terms
+    )
     ranked = [
         RankedResult(result=result, score=score, signals=signals)
         for result in results
+        if _matches_result_filters(query, result, excluded_patterns)
         for score, signals in [_score_result(query, result)]
     ]
     ranked.sort(
