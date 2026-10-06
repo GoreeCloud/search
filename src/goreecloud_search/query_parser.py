@@ -11,7 +11,7 @@ class QueryParseError(ValueError):
     """Raised when a query contains an invalid supported operator."""
 
 
-_TOKEN_RE = re.compile(r'"(?:[^"\\]|\\.)*"|\S+')
+_TOKEN_RE = re.compile(r'-?"(?:[^"\\]|\\.)*"|\S+')
 _CATEGORY_ALIASES = {
     "code": SearchCategory.SOURCE_CODE,
     "source-code": SearchCategory.SOURCE_CODE,
@@ -29,18 +29,27 @@ _CATEGORY_ALIASES = {
 
 def _tokens(raw: str) -> list[tuple[str, bool]]:
     parsed: list[tuple[str, bool]] = []
+    previous_end = 0
     for match in _TOKEN_RE.finditer(raw):
+        # Adjacent quoted and unquoted fragments are ambiguous. Require spaces
+        # rather than interpreting a malformed operator or phrase differently.
+        if match.start() == previous_end and previous_end and not raw[previous_end - 1].isspace():
+            raise QueryParseError("separate quoted phrases from other query tokens")
         token = match.group(0)
-        quoted = token.startswith('"') and token.endswith('"') and len(token) >= 2
-        if quoted:
+        negated_phrase = token.startswith('-"') and token.endswith('"')
+        quoted = token.startswith('"') and token.endswith('"')
+        if quoted or negated_phrase:
             try:
                 decoded = shlex.split(token, posix=True)
             except ValueError as exc:
                 raise QueryParseError(str(exc)) from exc
-            if len(decoded) != 1:
+            if len(decoded) != 1 or not decoded[0] or (negated_phrase and decoded[0] == "-"):
                 raise QueryParseError("invalid quoted phrase")
             token = decoded[0]
+        elif '"' in token:
+            raise QueryParseError("unbalanced or misplaced quote")
         parsed.append((token, quoted))
+        previous_end = match.end()
     return parsed
 
 
@@ -97,7 +106,10 @@ def parse_query(raw: str) -> ParsedQuery:
 
     for token, quoted in _tokens(raw):
         lower = token.lower()
-        if lower.startswith("site:"):
+        if quoted:
+            # A quoted operator is literal search text, not an active filter.
+            phrases.append(token)
+        elif lower.startswith("site:"):
             sites.append(_domain(_value(token, "site:")))
         elif lower.startswith("-domain:"):
             excluded_domains.append(_domain(_value(token, "-domain:")))
@@ -121,8 +133,6 @@ def parse_query(raw: str) -> ParsedQuery:
             lens = _value(token, "lens:")
         elif token.startswith("-") and len(token) > 1:
             excluded_terms.append(token[1:])
-        elif quoted:
-            phrases.append(token)
         else:
             terms.append(token)
 
