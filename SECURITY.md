@@ -16,6 +16,20 @@ Version `0.1.0.dev14` adds a bounded authenticated Index-originated HTTP source 
 
 The HTTP boundary rejects missing/duplicate/malformed authentication material, requires the authenticated requester to resolve exactly to `goreecloud-index`, requires a canonical bounded `psc_*` reference, calls the injected Privacy Shield verifier with exact expected resource/purpose/operation/zone/destination/retention claims and `consume=true`, rejects extra JSON fields, keeps query text out of request logs, and invokes only `SearchCore.search_from_index(...)`. Capability discovery explicitly reports `production_accepted=false`.
 
+## TinyFish public-web-only boundary (owner directive — 2026-10-09)
+
+Any TinyFish-backed research, extraction, or browser automation integrated into GoreeCloud Search **MUST** operate only on publicly accessible websites without website authentication. The owner prohibits TinyFish from logging in to websites and from storing passwords. This is a provider-specific implementation requirement; it does not remove the separately governed internal authentication boundary for GoreeCloud Search and GoreeCloud Index.
+
+- **MUST NOT** log in to websites or complete authentication, SSO, OAuth, passkey, MFA, or account-recovery flows, including for GoreeCloud-owned websites.
+- **MUST NOT** collect, receive, autofill, transmit, save, or manage passwords, passkeys, tokens, recovery codes, or reusable authentication secrets through TinyFish.
+- **MUST NOT** use persistent authenticated browser profiles, imported sessions, saved credentials, authenticated session cookies, or credential-bearing browser storage with TinyFish.
+- **MUST** restrict TinyFish tasks to unauthenticated public-web navigation, searching, reading, filtering, and information extraction. A task encountering authentication **MUST** stop or fail closed without trying to log in or bypass access controls.
+- **MUST** treat TinyFish as read-only with respect to remote site state: no account changes, purchases, protected submissions, or transactions. Respect access controls and applicable law.
+- **MUST** use separately authorized direct integrations or APIs instead of TinyFish when an otherwise permitted task needs authentication.
+- **MUST** verify these fail-closed boundaries with tests before enabling any TinyFish integration. This record does not assert that controls or a live TinyFish provider are currently implemented.
+
+GoreeCloud-wide ChatGPT plugin instructions remain owned by the existing canonical Drive record **Instructions — ChatGPT Plugins.docx**. This repository section describes only the corresponding Search implementation boundary; it does not replace the central governance document.
+
 ## Future requirements
 
 Before network-capable or privileged service operation is production-accepted, Search must implement and verify applicable:
