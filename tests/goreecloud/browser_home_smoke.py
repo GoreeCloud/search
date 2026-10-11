@@ -155,6 +155,8 @@ def main() -> None:
             summary = driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary')
             assert summary.is_displayed()
             assert '0 selected source(s) represented' in summary.text, summary.text
+            assert not driver.find_element(By.ID, 'search_logo').is_displayed(), 'Duplicate app logo in results header'
+            assert driver.find_element(By.CSS_SELECTOR, '#main_results .search_box').rect['width'] >= 300
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').is_displayed()
             assert 'synthetic no-network test' not in driver.title, 'private query leaked into page title'
             driver.save_screenshot(str(artifacts / 'phone-synthetic-results.png'))
@@ -164,10 +166,14 @@ def main() -> None:
             assert driver.current_url.endswith('/search'), driver.current_url
             assert not driver.execute_script('return location.search'), 'one-source query entered URL'
             assert '1 source(s) selected' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
-            driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(3) button').click()
+            switch_startpage = driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(3) button')
+            driver.execute_script("arguments[0].scrollIntoView({block:'center'})", switch_startpage)
+            switch_startpage.click()
             WebDriverWait(driver, 12).until(lambda page: bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(3) button:disabled')))
             assert '1 source(s) selected' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
-            driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(1) button').click()
+            switch_both = driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(1) button')
+            driver.execute_script("arguments[0].scrollIntoView({block:'center'})", switch_both)
+            switch_both.click()
             WebDriverWait(driver, 12).until(lambda page: bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(1) button:disabled')))
             assert '2 source(s) selected' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
             assert not driver.execute_script('return location.search'), 'switching sources entered URL query'

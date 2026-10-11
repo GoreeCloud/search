@@ -210,3 +210,62 @@ html[data-glaze-consumer] .goreecloud-why .goreecloud-source-disclosure {
   border: 0; border-radius: 0; background: transparent; box-shadow: none;
   font: inherit; font-size: inherit; line-height: inherit; color: var(--gc-muted);
 }
+
+/* Retain the same restrained header and search affordance on results screens.
+   There is only one General category; no redundant scrolling category rail. */
+html[data-glaze-consumer] body.results_endpoint #main_results {
+  display: block; box-sizing: border-box; width: 100%; max-width: 1150px;
+  min-width: 0; margin: 0 auto; padding: 6px clamp(14px, 3vw, 32px) 46px;
+}
+html[data-glaze-consumer] body.results_endpoint #main_results #search {
+  display: block; position: relative; box-sizing: border-box;
+  margin: 0 0 1rem; padding: 0; width: 100%; max-width: none;
+}
+html[data-glaze-consumer] body.results_endpoint #main_results #search_header,
+html[data-glaze-consumer] body.results_endpoint #main_results #search_view {
+  display: block; box-sizing: border-box; position: relative;
+  width: 100%; max-width: none; min-width: 0; height: auto;
+  margin: 0; padding: 0;
+}
+html[data-glaze-consumer] body.results_endpoint #search_logo { display: none; }
+html[data-glaze-consumer] body.results_endpoint #main_results .search_box {
+  display: flex; align-items: center; position: relative; box-sizing: border-box;
+  width: 100%; max-width: none; min-width: 0; min-height: 52px; height: 52px;
+  margin: 0; padding: 4px; border-radius: 15px;
+  background: var(--gc-surface); border: 1px solid var(--gc-outline);
+  box-shadow: 0 8px 22px rgba(40,67,128,.09);
+}
+html[data-glaze-consumer] body.results_endpoint #main_results #q {
+  display: block; position: relative; flex: 1; min-width: 0; width: 0;
+  height: 100%; margin: 0; padding: 0 12px;
+  border: 0; box-shadow: none; background: transparent; color: var(--gc-ink); font-size: 16px;
+}
+html[data-glaze-consumer] body.results_endpoint #main_results #send_search {
+  display: grid; place-items: center; position: relative; flex: none;
+  width: 45px; height: 43px; min-height: 43px; min-width: 45px;
+  margin: 0; padding: 6px; background: #1c51b0; color: #fff;
+  border-radius: 11px;
+}
+html[data-glaze-consumer] body.results_endpoint #main_results #clear_search { position: relative; right: auto; }
+html[data-glaze-consumer] body.results_endpoint #categories { display: none; }
+html[data-glaze-consumer] body.results_endpoint #main_results .goreecloud-preview-trigger {
+  display: inline-flex; width: auto; min-height: 34px; margin: .4rem 0 0;
+  padding: 6px 3px; background: transparent; border: 0; border-radius: 0;
+  color: var(--gc-accent-strong); box-shadow: none; font-size: 13px;
+  font-weight: 600; text-decoration: underline; text-underline-offset: 3px;
+}
+html[data-glaze-consumer] body.results_endpoint #main_results .search_filters {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
+  max-width: 100%; margin: .75rem 0; padding: 0; overflow: visible;
+}
+html[data-glaze-consumer] body.results_endpoint #main_results .search_filters > * {
+  max-width: 100%; min-width: 0; box-sizing: border-box;
+}
+html[data-glaze-consumer] body.results_endpoint #main_results .goreecloud-source-summary {
+  width: 100%; box-sizing: border-box; margin-top: 1rem;
+}
+@media (max-width: 700px) {
+  html[data-glaze-consumer] body.results_endpoint #main_results { padding: 6px 15px 40px; }
+  html[data-glaze-consumer] body.results_endpoint #main_results .search_filters { gap: 8px 12px; }
+  html[data-glaze-consumer] body.results_endpoint #main_results .search_filters select { max-width: 100%; }
+}
