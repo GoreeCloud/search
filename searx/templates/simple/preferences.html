@@ -150,8 +150,11 @@
 {%- block content -%}
 
   <h1>{{ _('Preferences') }}</h1>
+  {% if private_query_transport %}
+  <p class="goreecloud-source-disclosure" role="note">Changes here are saved to this browser. To protect your selected search providers, importing settings through a shared URL is disabled in this local profile.</p>
+  {% endif %}
 
-  {%- if request.args.get('preferences_preview_only') == 'true' -%}
+  {%- if not private_query_transport and request.args.get('preferences_preview_only') == 'true' -%}
     <div class="dialog-warning-block">
       <p>{{ _("This is a preview of the settings used by the 'Search URL' you used to get here.") }}</p>
       <ul>

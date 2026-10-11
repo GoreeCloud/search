@@ -65,7 +65,7 @@ from searx.settings_loader import DEFAULT_SETTINGS_FILE
 from searx.exceptions import SearxParameterException
 from searx.goreecloud_policy import (
     SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
-    distinct_selected_sources,
+    distinct_selected_sources, safe_primary_result_url,
 )
 from searx.engines import (
     DEFAULT_CATEGORY,
@@ -513,6 +513,15 @@ def pre_request():
         if k not in sxng_request.form:
             sxng_request.form[k] = v
 
+    if settings['goreecloud']['private_search'] and (
+        'preferences' in sxng_request.args or 'preferences' in sxng_request.form
+    ):
+        # Upstream supports auto-applying serialized preferences via a GET link.
+        # Reject before decoding: such links can unexpectedly change providers.
+        raise SearchPolicyViolation(
+            'Shared preference imports are disabled in private mode. Use local Preferences instead.', 422
+        )
+
     try:
         if sxng_request.form.get('preferences'):
             preferences.parse_encoded_data(sxng_request.form['preferences'])
@@ -555,8 +564,10 @@ def add_default_headers(response: flask.Response):
         if header in response.headers:
             continue
         response.headers[header] = value
-    if settings['goreecloud']['private_search'] and sxng_request.endpoint in (
-        'index', 'search', 'autocompleter', 'opensearch',
+    if settings['goreecloud']['private_search'] and (
+        sxng_request.endpoint in ('index', 'search', 'autocompleter', 'opensearch', 'preferences')
+        or 'preferences' in sxng_request.args
+        or 'preferences' in sxng_request.form
     ):
         response.headers['Cache-Control'] = 'private, no-store, max-age=0'
         response.headers['Pragma'] = 'no-cache'
@@ -794,6 +805,10 @@ def search():
     previous_result = None
 
     results = result_container.get_ordered_results()
+    if settings['goreecloud']['private_search']:
+        # Only primary, navigable web results are displayed. This does not
+        # sanitize embedded media or perform a full provider security audit.
+        results = [result for result in results if safe_primary_result_url(result.url)]
 
     if search_query.redirect_to_first_result and results:
         return redirect(results[0]['url'], 302)

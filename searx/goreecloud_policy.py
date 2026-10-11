@@ -74,3 +74,29 @@ def distinct_selected_sources(provider_names: Iterable[str]) -> list[str]:
     for name in provider_names:
         first_labels.setdefault(name.casefold(), name)
     return sorted(first_labels.values(), key=lambda label: (label.casefold(), label))
+
+
+def safe_primary_result_url(url: object) -> bool:
+    """Allow only unambiguous HTTP(S) top-level result destinations.
+
+    Protects the private consumer from executable URL schemes and malformed
+    authority syntax. This is *not* a general-purpose provider SSRF filter:
+    it governs user-visible result links only.
+    """
+    from urllib.parse import urlsplit
+
+    if not isinstance(url, str) or not url or any(ord(ch) <= 32 or ord(ch) == 127 for ch in url):
+        return False
+    if '\\' in url:
+        return False
+    try:
+        parsed = urlsplit(url)
+        return (
+            parsed.scheme.lower() in ('http', 'https')
+            and bool(parsed.hostname)
+            and parsed.username is None
+            and parsed.password is None
+            and '%' not in parsed.hostname
+        )
+    except ValueError:
+        return False

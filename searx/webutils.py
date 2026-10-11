@@ -22,7 +22,7 @@ from flask_babel import gettext, format_date  # type: ignore
 from searx import logger, get_setting
 
 from searx.engines import DEFAULT_CATEGORY
-from searx.goreecloud_policy import distinct_selected_sources
+from searx.goreecloud_policy import distinct_selected_sources, safe_primary_result_url
 
 if TYPE_CHECKING:
     from searx.enginelib import Engine
@@ -161,9 +161,13 @@ class JSONEncoder(json.JSONEncoder):  # pylint: disable=missing-class-docstring
 
 def get_json_response(sq: "SearchQuery", rc: "ResultContainer", *, include_source_selection: bool = False) -> str:
     """Returns the JSON string of the results to a query (``application/json``)"""
+    ordered = rc.get_ordered_results()
+    if include_source_selection:
+        # The private JSON contract uses the same safe primary result links as HTML.
+        ordered = [result for result in ordered if safe_primary_result_url(result.url)]
     data = {
         'query': sq.query,
-        'results': [_.as_dict() for _ in rc.get_ordered_results()],
+        'results': [_.as_dict() for _ in ordered],
         'answers': [_.as_dict() for _ in rc.answers],
         'corrections': list(rc.corrections),
         'infoboxes': rc.infoboxes,
