@@ -25,6 +25,7 @@ from searx.webapp import app  # noqa: E402
 from selenium import webdriver  # noqa: E402
 from selenium.webdriver.chrome.options import Options  # noqa: E402
 from selenium.webdriver.common.by import By  # noqa: E402
+from selenium.webdriver.common.keys import Keys  # noqa: E402
 from selenium.webdriver.support.ui import WebDriverWait  # noqa: E402
 
 
@@ -56,7 +57,7 @@ def main() -> None:
         url = f"http://127.0.0.1:{server.server_port}/"
         artifacts = ROOT / "artifacts" / "search-browser"
         artifacts.mkdir(parents=True, exist_ok=True)
-        for width, height, label in ((1440, 900, "desktop"), (390, 844, "phone")):
+        for width, height, label in ((1440, 900, "desktop"), (768, 900, "tablet"), (390, 844, "phone"), (320, 760, "phone-small")):
             driver.set_window_size(width, height)
             driver.get(url)
             driver.save_screenshot(str(artifacts / f"{label}.png"))
@@ -89,11 +90,14 @@ def main() -> None:
             assert abs(hero_mark.rect['x'] + hero_mark.rect['width']/2 - width/2) < 30, 'Hero logo off center'
             assert why.rect['y'] > search_box.rect['y'], 'Mission statement above search'
             assert site_footer.rect['y'] > why.rect['y'], 'Footer above mission'
-            if label == 'phone':
+            if width <= 700:
                 assert not driver.find_element(By.CSS_SELECTOR, '.goreecloud-nav-secondary').is_displayed()
                 assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-site-nav a[href*="github.com"]').is_displayed()
             else:
                 assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-nav-secondary').is_displayed()
+            if width <= 360:
+                narrow_github = driver.find_element(By.CSS_SELECTOR, '.goreecloud-site-nav a[aria-label="Open source on GitHub"]')
+                assert narrow_github.rect['width'] >= 44, 'Source link touch area is too narrow'
             print(f'LAYOUT {label}: logo={hero_mark.rect}; search={search_box.rect}; footer-y={site_footer.rect["y"]}')
             assert not driver.find_elements(By.CSS_SELECTOR, "link[type='application/opensearchdescription+xml']")
             spill = driver.execute_script(
@@ -105,11 +109,19 @@ def main() -> None:
             assert spill <= 2, f"{label}: horizontal overflow of {spill}px"
             driver.save_screenshot(str(artifacts / f"{label}.png"))
             print(f"PASS {label} {width}x{height}; overflow={spill}px; POST and Glaze styles verified")
+            if label == 'desktop':
+                skip = driver.find_element(By.CSS_SELECTOR, '.goreecloud-skip-link')
+                driver.execute_script('arguments[0].focus()', skip)
+                assert driver.execute_script('return document.activeElement === arguments[0]', skip)
+                assert driver.execute_script('return arguments[0].getBoundingClientRect().top >= 0', skip), 'Keyboard skip link stayed offscreen'
+                skip.send_keys(Keys.ENTER)
+                assert driver.current_url.endswith('#goreecloud-content-start'), 'Keyboard skip did not reach content'
+                print('PASS keyboard-accessible skip to content')
         # Official mockup moon button is an actual local appearance control.
         driver.set_window_size(390, 844)
         driver.get(url)
         theme_button = driver.find_element(By.CSS_SELECTOR, '.goreecloud-theme-toggle')
-        theme_button.click()
+        theme_button.send_keys(Keys.SPACE)
         assert driver.execute_script("return document.documentElement.classList.contains('theme-dark')"), 'Dark toggle failed'
         assert theme_button.get_attribute('aria-label') == 'Switch to light mode'
         driver.save_screenshot(str(artifacts / 'phone-dark.png'))
@@ -178,6 +190,12 @@ def main() -> None:
             assert '2 source(s) selected' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
             assert not driver.execute_script('return location.search'), 'switching sources entered URL query'
             print('PASS mobile POST, one-source refinement, Startpage/Both switching and URL privacy')
+            driver.get(url)
+            driver.find_element(By.ID, 'q').send_keys('synthetic keyboard submission' + Keys.ENTER)
+            WebDriverWait(driver, 12).until(lambda page: page.current_url.endswith('/search'))
+            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').is_displayed()
+            assert not driver.execute_script('return location.search'), 'Keyboard search leaked terms into URL'
+            print('PASS keyboard Enter submits normal private POST search')
         # Exercise a synthetic denied URL without dispatching a search.
         driver.get(url + 'search?q=synthetic-private-smoke-fixture')
         assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-policy-error[role=alert]').is_displayed()

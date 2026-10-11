@@ -34,6 +34,7 @@
   {% if private_query_transport %}<script type="module" src="{{ url_for('static', filename='goreecloud-preview.js') }}"></script><script type="module" src="{{ url_for('static', filename='goreecloud-theme.js') }}"></script>{% endif %}
 </head>
 <body class="{{ endpoint }}_endpoint" >
+  {% if private_query_transport %}<a class="goreecloud-skip-link" href="#goreecloud-content-start">Skip to search and content</a>{% endif %}
   <main data-glaze-semantic-surface="protected" id="main_{{  self._TemplateReference__context.name|replace("simple/", "")|replace(".html", "") }}" class="{{body_class}}">
     {% if errors %}
         <div class="dialog-error" role="alert">
@@ -66,6 +67,7 @@
       {%- endblock -%}
     </nav>
     {% endif %}
+    {% if private_query_transport %}<div id="goreecloud-content-start" tabindex="-1" class="goreecloud-content-start"></div>{% endif %}
     {% block header %}
     {% endblock %}
     {% block content %}

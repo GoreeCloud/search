@@ -269,3 +269,32 @@ html[data-glaze-consumer] body.results_endpoint #main_results .goreecloud-source
   html[data-glaze-consumer] body.results_endpoint #main_results .search_filters { gap: 8px 12px; }
   html[data-glaze-consumer] body.results_endpoint #main_results .search_filters select { max-width: 100%; }
 }
+
+/* Keyboard skip navigation and narrow-phone fallback without horizontal scroll. */
+html[data-glaze-consumer] .goreecloud-skip-link {
+  position: fixed; inset-block-start: 10px; inset-inline-start: 10px; z-index: 10000;
+  display: block; padding: 12px 16px; border-radius: 10px; border: 2px solid var(--gc-ring);
+  background: var(--gc-surface); color: var(--gc-ink); font-weight: 700;
+  text-decoration: none; transform: translateY(-180%);
+}
+html[data-glaze-consumer] .goreecloud-skip-link:focus,
+html[data-glaze-consumer] .goreecloud-skip-link:focus-visible { transform: translateY(0); }
+html[data-glaze-consumer] .goreecloud-content-start {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+}
+/* Avoid a dead appearance control when scripts are blocked or disabled. */
+html.no-js[data-glaze-consumer] .goreecloud-theme-toggle { display: none; }
+@media (max-width: 360px) {
+  html[data-glaze-consumer] .goreecloud-open-source-text {
+    position: absolute; width: 1px; height: 1px; padding: 0;
+    margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap;
+  }
+  html[data-glaze-consumer] .goreecloud-site-nav a[href*="github.com/GoreeCloud/search"] {
+    display: inline-grid; place-items: center; min-width: 44px; min-height: 44px;
+    font-size: 20px; line-height: 1;
+  }
+  html[data-glaze-consumer] .goreecloud-site-header { padding-inline: 14px; }
+}
+@media (forced-colors: active) {
+  html[data-glaze-consumer] .goreecloud-skip-link { background: Canvas; color: CanvasText; border-color: Highlight; }
+}
