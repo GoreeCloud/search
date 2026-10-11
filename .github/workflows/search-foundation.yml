@@ -2,7 +2,9 @@ name: GoreeCloud Search foundation
 on:
   pull_request:
   push:
-    branches: [main]
+    branches:
+      - main
+      - 'feature/**'
 permissions:
   contents: read
 jobs:
