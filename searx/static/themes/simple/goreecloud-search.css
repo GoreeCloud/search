@@ -163,8 +163,8 @@ html[data-glaze-consumer] .goreecloud-policy-error p { color: var(--gc-muted); }
 
 /* Source preflight: an opt-in, no-network inspection before provider dispatch. */
 html[data-glaze-consumer] .goreecloud-preview-trigger {
-  /* The inherited homepage search grid has a large overlapping search-view hitbox. */
-  position: relative; z-index: 1100;
+  /* This is a child of the inherited search-view grid to avoid hitbox overlap. */
+  position: relative;
   display: inline-flex; align-items: center; justify-content: center;
   min-height: 44px; margin: 1.25rem 0 0; padding: .55rem .85rem;
   border: 1px solid var(--gc-outline); border-radius: 11px;

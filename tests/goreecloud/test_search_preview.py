@@ -26,7 +26,7 @@ class SearchPreviewTests(unittest.TestCase):
         with smoke.app.test_client() as client:
             response = client.get('/', headers=self.headers)
             page = html.fromstring(response.data)
-            buttons = page.xpath('//form[@id="search"]//button[@formaction="/preview"]')
+            buttons = page.xpath('//form[@id="search"]//div[@id="search_view"]/button[@formaction="/preview"]')
             self.assertEqual(1, len(buttons))
             self.assertEqual('post', buttons[0].get('formmethod'))
             response.close()

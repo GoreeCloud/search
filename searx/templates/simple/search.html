@@ -11,6 +11,7 @@
         <button id="send_search" type="submit" {%- if search_on_category_select -%}name="category_{{ selected_categories[0]|replace(' ', '_') }}"{%- endif -%} aria-label="{{ _('search') }}"><span class="hide_if_nojs">{{ icon_big('search') }}</span><span class="show_if_nojs">{{ _('search') }}</span></button>
         <div class="autocomplete hide_if_nojs"><ul></ul></div>
       </div>
+      {% if private_query_transport %}<button type="submit" class="goreecloud-preview-trigger" formaction="{{ url_for('goreecloud_preview') }}" formmethod="post">Preview sources without searching</button>{% endif %}
     </div>
     {% set display_tooltip = true %}
     {% include 'simple/categories.html' %}
@@ -25,5 +26,4 @@
   </div>
   <input type="hidden" name="theme" value="{{ theme }}" >
   {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}" >{% endif %}
-  {% if private_query_transport %}<button type="submit" class="goreecloud-preview-trigger" formaction="{{ url_for('goreecloud_preview') }}" formmethod="post">Preview sources without searching</button>{% endif %}
 </form>
