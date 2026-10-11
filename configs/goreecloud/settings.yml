@@ -1,6 +1,11 @@
-# Private/local GoreeCloud Search profile. Inherit upstream engines.
+# Private/local GoreeCloud Search profile. Inherit upstream engines except
+# Tor-only engines unavailable in the standard local profile.
 # Do not use this profile unchanged for an Internet-facing instance.
-use_default_settings: true
+use_default_settings:
+  engines:
+    remove:
+      - ahmia
+      - torch
 goreecloud:
   private_search: true
   max_query_chars: 512

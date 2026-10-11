@@ -17,7 +17,7 @@ export SEARXNG_SECRET="<unique-strong-secret-from-your-secret-store>"
 ./scripts/run-private.sh
 ```
 
-Never use the upstream placeholder key. The profile binds **127.0.0.1**, disables metrics and remote autocomplete, proxies images, defaults to POST, and exposes opt-in JSON on a private interface. It does **not** implement public rate limiting. Internet exposure requires a separate gated HTTPS/reverse-proxy, Valkey limiter, hardened secrets, security/privacy and operational acceptance.
+Never use the upstream placeholder key. The profile binds **127.0.0.1**, disables metrics and remote autocomplete, proxies images, defaults to POST, and exposes opt-in JSON on a private interface. Tor-dependent Ahmia and Torch engines are excluded from this standard local profile (they require separate Tor capability and acceptance). It does **not** implement public rate limiting. Internet exposure requires a separate gated HTTPS/reverse-proxy, Valkey limiter, hardened secrets, security/privacy and operational acceptance.
 
 ## Private search disclosure safeguards
 
@@ -39,7 +39,7 @@ export SEARXNG_SECRET="$(python -c 'import secrets;print(secrets.token_hex(32))'
 python -m nose2 -s tests/unit test_query test_webadapter test_settings_loader test_webapp -v
 ```
 
-The 2026-10-10 local verification passed 28 GoreeCloud foundation/privacy/Flask-runtime tests and 72 upstream SearXNG query, routing, settings and webapp regressions (100 tests total, in separate isolated runs). The Flask homepage and three local CSS/privacy assets returned HTTP 200. No live provider searches, device/browser acceptance, full upstream regression suite, or production security acceptance have been verified. This local environment also logged SQLite threading warnings and failures loading the optional Ahmia and Torch engines; provider availability remains a separate qualification requirement.
+The 2026-10-10 local verification passed 28 GoreeCloud foundation/privacy/Flask-runtime tests and 72 upstream SearXNG query, routing, settings and webapp regressions (100 tests total, in separate isolated runs). The Flask homepage and three local CSS/privacy assets returned HTTP 200. No live provider searches, device/browser acceptance, full upstream regression suite, or production security acceptance have been verified. This local environment still reports SQLite threading warnings; Ahmia and Torch no longer enter the supplied local engine registry because they require a separately qualified Tor setup. Actual upstream provider availability remains unverified.
 
 ## Source boundaries
 

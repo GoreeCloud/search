@@ -20,6 +20,9 @@ class PrivateRuntimeSmokeTests(unittest.TestCase):
         self.assertIs(settings["server"]["image_proxy"], True)
         self.assertIs(settings["general"]["enable_metrics"], False)
         self.assertEqual("", settings["search"]["autocomplete"])
+        names = {engine['name'] for engine in settings['engines']}
+        self.assertNotIn('ahmia', names)
+        self.assertNotIn('torch', names)
 
     def test_home_and_local_assets_are_served(self):
         paths = {
