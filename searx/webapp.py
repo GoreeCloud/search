@@ -65,7 +65,8 @@ from searx.settings_loader import DEFAULT_SETTINGS_FILE
 from searx.exceptions import SearxParameterException
 from searx.goreecloud_policy import (
     SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
-    distinct_selected_sources, safe_primary_result_url, represented_result_sources,
+    distinct_selected_sources, safe_primary_result_url, represented_result_sources, validate_builtin_sources,
+    validate_builtin_search_bangs,
 )
 from searx.engines import (
     DEFAULT_CATEGORY,
@@ -715,6 +716,7 @@ def goreecloud_preview():
         max_query_chars=settings['goreecloud']['max_query_chars'],
         max_providers=settings['goreecloud']['max_provider_fanout'],
     )
+    validate_builtin_search_bangs(raw_query)
     try:
         query, _, _, _, selected_locale = get_search_query_from_webapp(
             sxng_request.preferences, sxng_request.form
@@ -726,6 +728,7 @@ def goreecloud_preview():
         lucky_redirect=bool(query.redirect_to_first_result),
     )
     sources = distinct_selected_sources(ref.name for ref in query.engineref_list)
+    validate_builtin_sources(sources, submitted_engines=sxng_request.form.get('engines'))
     validate_disclosure(
         query.query, sources,
         max_query_chars=settings['goreecloud']['max_query_chars'],
@@ -773,12 +776,13 @@ def search():
 
     if settings['goreecloud']['private_search'] and 'q' in sxng_request.form:
         validate_transport(method=sxng_request.method, query_in_url=bool(sxng_request.args), private=True)
-        # Reject the original submitted value before SearXNG rewrites operators.
+        # Reject raw-size limit before validating bangs or parser operator rewrites.
         validate_disclosure(
             sxng_request.form['q'], (),
             max_query_chars=settings['goreecloud']['max_query_chars'],
             max_providers=settings['goreecloud']['max_provider_fanout'],
         )
+        validate_builtin_search_bangs(sxng_request.form['q'])
 
     # output_format
     output_format = sxng_request.form.get('format', 'html')
@@ -811,6 +815,10 @@ def search():
             validate_no_external_redirects(
                 external_bang=search_query.external_bang,
                 lucky_redirect=bool(search_query.redirect_to_first_result),
+            )
+            validate_builtin_sources(
+                (ref.name for ref in search_query.engineref_list),
+                submitted_engines=sxng_request.form.get('engines'),
             )
             validate_disclosure(
                 search_query.query,

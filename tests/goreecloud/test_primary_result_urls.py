@@ -36,7 +36,7 @@ class PrivatePrimaryResultUrlTests(unittest.TestCase):
                 self.assertFalse(safe_primary_result_url(url))
 
     def test_html_omits_unsafe_primary_links(self):
-        query = SearchQuery('synthetic', [EngineRef('Test', 'general')], lang='en')
+        query = SearchQuery('synthetic', [EngineRef('brave', 'general')], lang='en')
         with smoke.app.test_client() as client, patch(
             'searx.webapp.get_search_query_from_webapp', return_value=(query, None, None, None, 'en')
         ), patch('searx.search.SearchWithPlugins') as engine:
@@ -50,7 +50,7 @@ class PrivatePrimaryResultUrlTests(unittest.TestCase):
             response.close()
 
     def test_private_json_omits_unsafe_result_while_upstream_is_untouched(self):
-        query = SearchQuery('synthetic', [EngineRef('Test', 'general')], lang='en')
+        query = SearchQuery('synthetic', [EngineRef('brave', 'general')], lang='en')
         data = synthetic_results()
         private_doc = json.loads(get_json_response(query, data, include_source_selection=True))
         upstream_doc = json.loads(get_json_response(query, data))

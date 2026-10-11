@@ -130,3 +130,40 @@ def represented_result_sources(results: Iterable[object], selected_names: Iterab
         for name in matched:
             counts[name] = counts.get(name, 0) + 1
     return {name: counts[name] for name in sorted(counts, key=lambda label: (label.casefold(), label))}
+
+
+# Product-wide private Search provider allowlist; legacy upstream adapters
+# remain in the upstream source tree but are not selectable or executable.
+BUILTIN_SEARCH_SOURCES = frozenset({'brave', 'startpage'})
+
+
+def validate_builtin_sources(provider_names: Iterable[str], *, submitted_engines: str | None = None) -> int:
+    """Fail closed before a private search/preview can dispatch to any other engine.
+
+    SearXNG normally ignores unrecognized `engines=` entries and falls back to
+    default sources. Reject such requests rather than silently broadening egress.
+    """
+    if submitted_engines is not None:
+        supplied = [name.strip() for name in submitted_engines.split(',')]
+        if not supplied or any(name not in BUILTIN_SEARCH_SOURCES for name in supplied):
+            raise SearchPolicyViolation('Only Brave Search and Startpage are available.', 422)
+    names = list(provider_names)
+    if not names or any(not isinstance(name, str) or name not in BUILTIN_SEARCH_SOURCES for name in names):
+        raise SearchPolicyViolation('Only Brave Search and Startpage are available.', 422)
+    return len(set(names))
+
+
+ALLOWED_SEARCH_BANGS = frozenset({'brave', 'br', 'startpage', 'sp', 'general', 'web'})
+
+
+def validate_builtin_search_bangs(raw_query: str) -> None:
+    """Disallow unsupported `!provider` aliases before SearXNG fallback parsing.
+
+    SearXNG treats unknown bang tokens as ordinary words and then searches the
+    default engines. Reject instead of silently searching the wrong providers.
+    Users can quote a literal word beginning with `!` to search it normally.
+    """
+    for token in raw_query.split():
+        if token.startswith('!'):
+            if token.startswith('!!') or token[1:].lower().replace('-', ' ').replace('_', ' ') not in ALLOWED_SEARCH_BANGS:
+                raise SearchPolicyViolation('Only Brave Search and Startpage search shortcuts are supported.', 422)

@@ -1,15 +1,26 @@
-# Private/local GoreeCloud Search profile. Inherit upstream engines except
-# Tor-only engines unavailable in the standard local profile.
+# Private/local GoreeCloud Search profile: exactly two built-in providers.
+# Brave Search is the search service (not the Brave Browser executable).
+# Startpage's upstream connector may be challenged by proof-of-work CAPTCHA.
 # Do not use this profile unchanged for an Internet-facing instance.
 use_default_settings:
   engines:
-    remove:
-      - ahmia
-      - torch
+    keep_only:
+      - brave
+      - startpage
+engines:
+  - name: brave
+    disabled: false
+    inactive: false
+  - name: startpage
+    disabled: false
+    inactive: false
+# General web only; no phantom image/news/map/provider tabs.
+categories_as_tabs:
+  general:
 goreecloud:
   private_search: true
   max_query_chars: 512
-  max_provider_fanout: 32
+  max_provider_fanout: 2
 general:
   instance_name: "GoreeCloud Search"
   enable_metrics: false

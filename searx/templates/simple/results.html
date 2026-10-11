@@ -17,14 +17,14 @@
   {% if selected_source_names %}
   <details><summary>View selected sources</summary>
     <ul>{% for source in selected_source_names %}
-      <li>{{ source }}
+      <li>{{ 'Brave Search' if source == 'brave' else 'Startpage' }}
         <form class="goreecloud-refine-source" method="post" action="{{ url_for('search') }}">
           <input type="hidden" name="q" value="{{ q }}">
           <input type="hidden" name="engines" value="{{ source }}">
           <input type="hidden" name="language" value="{{ current_language }}">
           <input type="hidden" name="safesearch" value="{{ safesearch }}">
           <input type="hidden" name="time_range" value="{{ time_range }}">
-          <button type="submit" aria-label="Search only {{ source }}">Search only</button>
+          <button type="submit" aria-label="Search only {{ 'Brave Search' if source == 'brave' else 'Startpage' }}">Search only</button>
         </form>
       </li>
     {% endfor %}</ul>
@@ -33,7 +33,7 @@
   <p><strong>{{ represented_source_counts|length }} selected source(s) represented</strong> in the displayed web results. These result labels are not proof of provider contact or successful network requests.</p>
   {% if represented_source_counts %}
   <details><summary>View represented sources and result counts</summary>
-    <ul>{% for source, count in represented_source_counts.items() %}<li>{{ source }} — {{ count }} displayed result(s)</li>{% endfor %}</ul>
+    <ul>{% for source, count in represented_source_counts.items() %}<li>{{ 'Brave Search' if source == 'brave' else 'Startpage' }} — {{ count }} displayed result(s)</li>{% endfor %}</ul>
   </details>
   {% endif %}
 </aside>

@@ -17,7 +17,7 @@
     {% include 'simple/categories.html' %}
   </div>
   {% if private_query_transport %}
-  <p class="goreecloud-source-disclosure" role="note">Searches contact configured providers. <a href="{{ url_for('static', filename='goreecloud/privacy.html') }}">Source disclosure</a></p>
+  <p class="goreecloud-source-disclosure" role="note">Only Brave Search and Startpage are available. Searches send terms to the selected source(s). <a href="{{ url_for('static', filename='goreecloud/privacy.html') }}">Source disclosure</a></p>
   {% endif %}
   <div class="search_filters">
     {% include 'simple/filters/languages.html' %}

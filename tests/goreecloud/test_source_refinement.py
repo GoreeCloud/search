@@ -53,10 +53,8 @@ class SourceRefinementTests(unittest.TestCase):
             fake.return_value.search_query = query
             response = client.post('/search', data={'q':'synthetic query'},
                                    headers={'X-Real-IP':'127.0.0.1'})
-            self.assertEqual(200, response.status_code)
-            root = html.fromstring(response.data)
-            fields = root.xpath('//form[contains(@class,"goreecloud-refine-source")]//input[@name="engines"]')
-            self.assertEqual(1, len(fields))
-            self.assertEqual(risky, fields[0].get('value'))
-            self.assertNotIn('onclick="alert(99)"', response.get_data(as_text=True))
+            self.assertEqual(422, response.status_code)
+            self.assertNotIn(risky, response.get_data(as_text=True))
+            self.assertIn(b'Only Brave Search and Startpage are available', response.data)
+            fake.assert_not_called()
             response.close()

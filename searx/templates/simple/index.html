@@ -5,7 +5,7 @@
     <div class="title"><p class="goreecloud-eyebrow">Private discovery</p><h1>GoreeCloud <span>Search</span></h1><p class="goreecloud-tagline">Explore sources. Keep control.</p></div>
     {% include 'simple/simple_search.html' %}
     {% if private_query_transport %}
-    <p class="goreecloud-source-disclosure" role="note">Queries are forwarded to configured search providers. <a href="{{ url_for('static', filename='goreecloud/privacy.html') }}">Learn how sources receive queries</a></p>
+    <p class="goreecloud-source-disclosure" role="note">The only built-in sources are <strong>Brave Search</strong> (Brave Browser's search service) and <strong>Startpage</strong>. Searching may send terms to either or both. <a href="{{ url_for('static', filename='goreecloud/privacy.html') }}">Source and privacy details</a></p>
     {% endif %}
 </div>
 {% endblock %}

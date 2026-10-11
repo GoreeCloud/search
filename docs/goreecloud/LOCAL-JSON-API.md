@@ -43,7 +43,7 @@ An additive `goreecloud` response object is available when `goreecloud.private_s
   "suggestions": [],
   "unresponsive_engines": [],
   "goreecloud": {
-    "selected_engines": ["Engine A", "Engine B"],
+    "selected_engines": ["brave", "startpage"],
     "selected_engine_count": 2,
     "selection_not_contact_confirmation": true,
     "represented_engines": [],
@@ -55,6 +55,6 @@ An additive `goreecloud` response object is available when `goreecloud.private_s
 
 This is an illustrative shape, not a fabricated live-search response. SearXNG's original keys and result serialization remain unchanged; the private extension filters out primary result links that are not well-formed HTTP(S) destinations, while upstream callers not requesting the extension continue to receive the upstream response shape and result population. The selected list reflects engine selection after query parsing, not contacted, completed or successful providers. `represented_engines` and `represented_result_counts` describe selected engine labels attached to the safe primary results actually returned on this page. A merged result tagged by multiple engines contributes once to each represented engine, so counts can overlap. These labels are attribution attached to result objects, not independently verified provider identity, network completion, response authenticity, or total provider requests. Empty results produce an empty attribution map.
 
-Private-profile limits: at most 512 raw submitted query characters and 32 distinct selected engines. Oversized queries return HTTP 413, excessive engine selection or automatic external-navigation requests return 422, and URL-query submission returns 405. Rejected JSON searches return a structured privacy policy error without echoing query terms. Unexpected upstream plugin redirects are also denied. Private responses are uncached (`Cache-Control: private, no-store, max-age=0`) and set `Referrer-Policy: no-referrer`.
+Private-profile limits: at most 512 raw submitted query characters and **exactly two permitted built-in engines**, `brave` (Brave Search, used by Brave Browser) and `startpage`. Only one or both can be selected; every other engine is rejected before provider dispatch. The fanout cap is 2. Oversized queries return HTTP 413; unsupported explicit engines, provider bangs or automatic external-navigation requests return 422, and URL-query submission returns 405. Rejected JSON searches return a structured privacy policy error without echoing query terms. Unexpected upstream plugin redirects are also denied. Private responses are uncached (`Cache-Control: private, no-store, max-age=0`) and set `Referrer-Policy: no-referrer`.
 
 **Not included:** public authentication, OAuth, quotas, versioned API stability, audited upstream provider identity, Privacy Shield consent, or Wardveil admission. Those require independently governed contracts and security acceptance before network exposure.

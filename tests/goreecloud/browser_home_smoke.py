@@ -61,6 +61,8 @@ def main() -> None:
             driver.get(url)
             driver.save_screenshot(str(artifacts / f"{label}.png"))
             assert "GoreeCloud Search" in driver.title
+            assert 'Brave Search' in driver.find_element(By.TAG_NAME, 'body').text
+            assert 'Startpage' in driver.find_element(By.TAG_NAME, 'body').text
             heading = driver.find_element(By.CSS_SELECTOR, "#main_index .title h1")
             heading_text = (heading.get_attribute("textContent") or "").strip()
             assert "GoreeCloud" in heading_text and "Search" in heading_text, heading_text
@@ -95,6 +97,8 @@ def main() -> None:
             preview_heading = driver.find_element(By.CSS_SELECTOR, '#preview-heading')
             assert preview_heading.is_displayed()
             assert 'No search-provider requests have been sent' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview').text
+            approved = driver.find_elements(By.CSS_SELECTOR, '.goreecloud-preview-single select[name=engines] option[value]:not([value=""])')
+            assert sorted(option.get_attribute('value') for option in approved) == ['brave', 'startpage']
             preview_search.assert_not_called()
             driver.save_screenshot(str(artifacts / 'phone-source-preview.png'))
             driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-continue').click()

@@ -10,9 +10,9 @@ from searx.search.models import SearchQuery, EngineRef
 class SelectedSourcesTests(unittest.TestCase):
     def test_private_result_page_discloses_selected_sources(self):
         query = SearchQuery('synthetic sample', [
-            EngineRef('Alpha', 'general'),
-            EngineRef('alpha', 'images'),
-            EngineRef('Beta', 'general'),
+            EngineRef('brave', 'general'),
+            EngineRef('brave', 'web'),
+            EngineRef('startpage', 'general'),
         ], lang='en')
         result = SimpleNamespace(
             redirect_url=None, suggestions=[], corrections=[], answers=[],
@@ -29,9 +29,9 @@ class SelectedSourcesTests(unittest.TestCase):
                                            headers={'X-Real-IP': '127.0.0.1'})
                     self.assertEqual(200, response.status_code)
                     self.assertIn(b'2 source(s) selected', response.data)
-                    self.assertIn(b'<li>Alpha', response.data)
-                    self.assertNotIn(b'<li>alpha', response.data)
-                    self.assertIn(b'<li>Beta', response.data)
+                    self.assertIn(b'<li>Brave Search', response.data)
+                    self.assertEqual(1, response.data.count(b'<li>Brave Search'))
+                    self.assertIn(b'<li>Startpage', response.data)
                     self.assertIn(b'goreecloud-refine-source', response.data)
                     self.assertNotIn(b'application/rss+xml', response.data)
                     self.assertNotIn(b'id="search_url"', response.data)
@@ -58,7 +58,8 @@ class SelectedSourcesTests(unittest.TestCase):
             factory.return_value.search_query = query
             response = client.post('/search', data={'q':'synthetic sample'},
                                    headers={'X-Real-IP':'127.0.0.1'})
-            self.assertEqual(200, response.status_code)
+            self.assertEqual(422, response.status_code)
             self.assertNotIn(malicious.encode('utf-8'), response.data)
-            self.assertIn(b'&lt;img src=x onerror=alert(42)&gt;', response.data)
+            self.assertIn(b'Only Brave Search and Startpage are available', response.data)
+            factory.assert_not_called()
             response.close()

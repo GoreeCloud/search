@@ -11,9 +11,9 @@ from searx.search.models import EngineRef, SearchQuery
 
 def fixture():
     first = LegacyResult(url='https://example.org/one', title='First document', content='One',
-                         engine='Alpha', engines={'Alpha', 'BETA', 'Unexpected'})
+                         engine='brave', engines={'brave', 'STARTPAGE', 'Unexpected'})
     second = LegacyResult(url='https://example.org/two', title='Second document', content='Two',
-                          engine='Beta', engines={'Beta'})
+                          engine='startpage', engines={'startpage'})
     denied = LegacyResult(url='javascript:alert(1)', title='Unsafe document', content='No',
                           engine='Missing', engines={'Missing'})
     for result in (first, second, denied):
@@ -23,8 +23,7 @@ def fixture():
         infoboxes=[], engine_data={}, paging=False, unresponsive_engines=[],
         get_timings=lambda: [], get_ordered_results=lambda: [first, second, denied],
     )
-    query = SearchQuery('synthetic', [EngineRef('Alpha', 'general'), EngineRef('Beta', 'general'),
-                                     EngineRef('Missing', 'general')], lang='en')
+    query = SearchQuery('synthetic', [EngineRef('brave', 'general'), EngineRef('startpage', 'general')], lang='en')
     return query, container
 
 
@@ -33,8 +32,8 @@ class ResultProvenanceTests(unittest.TestCase):
         query, container = fixture()
         visible = container.get_ordered_results()[:2]
         selected = (ref.name for ref in query.engineref_list)
-        self.assertEqual({'Alpha': 1, 'Beta': 2}, represented_result_sources(visible, selected))
-        self.assertEqual({}, represented_result_sources([], ['Alpha', 'Beta']))
+        self.assertEqual({'brave': 1, 'startpage': 2}, represented_result_sources(visible, selected))
+        self.assertEqual({}, represented_result_sources([], ['brave', 'startpage']))
         self.assertEqual({}, represented_result_sources(visible, ['Unknown']))
 
     def test_html_and_json_report_only_labels_of_safe_visible_results(self):
@@ -52,16 +51,16 @@ class ResultProvenanceTests(unittest.TestCase):
                     self.assertEqual(200, response.status_code)
                     if fmt == 'json':
                         metadata = response.json['goreecloud']
-                        self.assertEqual(3, metadata['selected_engine_count'])
-                        self.assertEqual(['Alpha', 'Beta'], metadata['represented_engines'])
-                        self.assertEqual({'Alpha': 1, 'Beta': 2}, metadata['represented_result_counts'])
+                        self.assertEqual(2, metadata['selected_engine_count'])
+                        self.assertEqual(['brave', 'startpage'], metadata['represented_engines'])
+                        self.assertEqual({'brave': 1, 'startpage': 2}, metadata['represented_result_counts'])
                         self.assertIs(True, metadata['representation_not_contact_confirmation'])
                         self.assertEqual(2, len(response.json['results']))
                     else:
-                        self.assertIn(b'3 source(s) selected', response.data)
+                        self.assertIn(b'2 source(s) selected', response.data)
                         self.assertIn(b'2 selected source(s) represented', response.data)
-                        self.assertIn('Alpha — 1 displayed result(s)'.encode(), response.data)
-                        self.assertIn('Beta — 2 displayed result(s)'.encode(), response.data)
+                        self.assertIn('Brave Search — 1 displayed result(s)'.encode(), response.data)
+                        self.assertIn('Startpage — 2 displayed result(s)'.encode(), response.data)
                         self.assertNotIn('Missing — 1 displayed'.encode(), response.data)
                         self.assertNotIn(b'Unsafe document', response.data)
                     runner.assert_called_once()

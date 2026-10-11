@@ -12,9 +12,9 @@ from searx.webutils import get_json_response
 class LocalJsonSourceMetadataTests(unittest.TestCase):
     def test_local_json_extends_upstream_contract_without_contact_claim(self):
         query = SearchQuery('synthetic query', [
-            EngineRef('Alpha', 'general'),
-            EngineRef('alpha', 'news'),
-            EngineRef('Beta', 'general'),
+            EngineRef('brave', 'general'),
+            EngineRef('brave', 'web'),
+            EngineRef('startpage', 'general'),
         ], lang='en')
         results = SimpleNamespace(
             redirect_url=None, get_ordered_results=lambda: [],
@@ -34,7 +34,7 @@ class LocalJsonSourceMetadataTests(unittest.TestCase):
                     doc = json.loads(response.data)
                     self.assertEqual('synthetic query', doc['query'])
                     self.assertEqual([], doc['results'])
-                    self.assertEqual(['Alpha', 'Beta'], doc['goreecloud']['selected_engines'])
+                    self.assertEqual(['brave', 'startpage'], doc['goreecloud']['selected_engines'])
                     self.assertEqual(2, doc['goreecloud']['selected_engine_count'])
                     self.assertIs(True, doc['goreecloud']['selection_not_contact_confirmation'])
                     self.assertIn('no-store', response.headers['Cache-Control'])
