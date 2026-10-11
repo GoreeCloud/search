@@ -43,8 +43,12 @@ def main() -> None:
         for width, height, label in ((1440, 900, "desktop"), (390, 844, "phone")):
             driver.set_window_size(width, height)
             driver.get(url)
+            driver.save_screenshot(str(artifacts / f"{label}.png"))
             assert "GoreeCloud Search" in driver.title
-            assert driver.find_element(By.CSS_SELECTOR, "h1").text.replace("\n", " ").startswith("GoreeCloud")
+            heading = driver.find_element(By.CSS_SELECTOR, "#main_index .title h1")
+            heading_text = (heading.get_attribute("textContent") or "").strip()
+            assert "GoreeCloud" in heading_text and "Search" in heading_text, heading_text
+            assert heading.is_displayed(), f"{label}: GoreeCloud heading is hidden"
             search = driver.find_element(By.CSS_SELECTOR, "form#search")
             assert search.get_attribute("method").lower() == "post"
             assert driver.find_element(By.CSS_SELECTOR, "[role=note].goreecloud-source-disclosure").is_displayed()
