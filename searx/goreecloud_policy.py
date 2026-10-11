@@ -167,3 +167,16 @@ def validate_builtin_search_bangs(raw_query: str) -> None:
         if token.startswith('!'):
             if token.startswith('!!') or token[1:].lower().replace('-', ' ').replace('_', ' ') not in ALLOWED_SEARCH_BANGS:
                 raise SearchPolicyViolation('Only Brave Search and Startpage search shortcuts are supported.', 422)
+
+
+def restrict_explicit_private_engines(enginerefs: Iterable[object], selected: str | None) -> list[object]:
+    """Honor the explicit approved selection even if a category also appears."""
+    refs = list(enginerefs)
+    validate_builtin_sources((ref.name for ref in refs), submitted_engines=selected)
+    if selected is None:
+        return refs
+    requested = {name.strip() for name in selected.split(',')}
+    result = [ref for ref in refs if ref.name in requested]
+    if {ref.name for ref in result} != requested:
+        raise SearchPolicyViolation('The selected search source is unavailable for this query.', 422)
+    return result

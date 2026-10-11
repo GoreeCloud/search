@@ -66,7 +66,7 @@ from searx.exceptions import SearxParameterException
 from searx.goreecloud_policy import (
     SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
     distinct_selected_sources, safe_primary_result_url, represented_result_sources, validate_builtin_sources,
-    validate_builtin_search_bangs,
+    validate_builtin_search_bangs, restrict_explicit_private_engines,
 )
 from searx.engines import (
     DEFAULT_CATEGORY,
@@ -727,8 +727,10 @@ def goreecloud_preview():
         external_bang=query.external_bang,
         lucky_redirect=bool(query.redirect_to_first_result),
     )
+    query.engineref_list = restrict_explicit_private_engines(
+        query.engineref_list, sxng_request.form.get('engines')
+    )
     sources = distinct_selected_sources(ref.name for ref in query.engineref_list)
-    validate_builtin_sources(sources, submitted_engines=sxng_request.form.get('engines'))
     validate_disclosure(
         query.query, sources,
         max_query_chars=settings['goreecloud']['max_query_chars'],
@@ -816,9 +818,8 @@ def search():
                 external_bang=search_query.external_bang,
                 lucky_redirect=bool(search_query.redirect_to_first_result),
             )
-            validate_builtin_sources(
-                (ref.name for ref in search_query.engineref_list),
-                submitted_engines=sxng_request.form.get('engines'),
+            search_query.engineref_list = restrict_explicit_private_engines(
+                search_query.engineref_list, sxng_request.form.get('engines')
             )
             validate_disclosure(
                 search_query.query,
@@ -944,10 +945,16 @@ def search():
         # fmt: off
         'results.html',
         selected_source_names = distinct_selected_sources(ref.name for ref in search_query.engineref_list),
+        # Keep the exact validated two-provider selection across header search,
+        # next/previous page and numbered pagination POSTs.
+        selected_engine_post = ','.join(distinct_selected_sources(ref.name for ref in search_query.engineref_list))
+        if settings['goreecloud']['private_search'] else '',
         represented_source_counts = represented_result_sources(
             results, (ref.name for ref in search_query.engineref_list)
         ) if settings['goreecloud']['private_search'] else {},
         results = results,
+        source_switch_query = (raw_text_query.getQuery() if raw_text_query else sxng_request.form['q'])
+        if settings['goreecloud']['private_search'] else '',
         q=sxng_request.form['q'],
         selected_categories = search_query.categories,
         pageno = search_query.pageno,

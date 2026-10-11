@@ -5,7 +5,7 @@ The supplied GoreeCloud Search feature catalog is a **proposed product target**,
 | Workstream | Current foundation | Open and gated work |
 | --- | --- | --- |
 | Web search | Exactly two built-in options: Brave Search (`brave`) and Startpage (`startpage`), enabled in the private runtime; all other upstream providers excluded | Independent real-provider availability, Startpage proof-of-work challenge handling, ranking and result-quality evaluation, no expansion to other built-in providers |
-| Search operators | SearXNG syntax and preferences; private provider preflight with opt-in one-source search and result-page POST refinements | GoreeCloud ranking profiles, advanced policy filters and audited provider explanations |
+| Search operators | SearXNG syntax and preferences; private provider preflight, direct Both/Brave/Startpage POST switching, one-source refinement and exact provider persistence through pagination | GoreeCloud ranking profiles, advanced policy filters and audited provider explanations |
 | Privacy | POST, image proxy and private profile | Public rate limiting, formal Privacy Shield/Wardveil integration, disclosure audits |
 | Local Index | None in SearXNG imported runtime | Index contract adapter and cycle-safe routing, independent index operation |
 | Glaze | Local stable CSS foundation and app-specific mapping | Runtime integration, accessibility, device/rendered acceptance, conformance registration |

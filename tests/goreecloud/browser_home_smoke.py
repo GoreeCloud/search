@@ -130,7 +130,14 @@ def main() -> None:
             assert driver.current_url.endswith('/search'), driver.current_url
             assert not driver.execute_script('return location.search'), 'one-source query entered URL'
             assert '1 source(s) selected' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
-            print('PASS synthetic mobile POST, source-only refinement, empty-result recovery and URL privacy')
+            driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(3) button').click()
+            WebDriverWait(driver, 12).until(lambda page: bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(3) button:disabled')))
+            assert '1 source(s) selected' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
+            driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(1) button').click()
+            WebDriverWait(driver, 12).until(lambda page: bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(1) button:disabled')))
+            assert '2 source(s) selected' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
+            assert not driver.execute_script('return location.search'), 'switching sources entered URL query'
+            print('PASS mobile POST, one-source refinement, Startpage/Both switching and URL privacy')
         # Exercise a synthetic denied URL without dispatching a search.
         driver.get(url + 'search?q=synthetic-private-smoke-fixture')
         assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-policy-error[role=alert]').is_displayed()

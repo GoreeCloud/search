@@ -94,3 +94,30 @@ class TwoProviderContractTests(unittest.TestCase):
                         self.assertEqual(422,reply.status_code)
                         self.assertNotIn(rejected,reply.get_data(as_text=True))
                         reply.close()
+
+    def test_explicit_provider_selection_is_not_widened_by_categories(self):
+        """The upstream parser unions categories and engines; private mode must not."""
+        with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins', OfflineSearch):
+            for provider in ('brave', 'startpage'):
+                for route in ('/preview', '/search'):
+                    with self.subTest(provider=provider, route=route):
+                        response = client.post(route, data={
+                            'q': 'synthetic', 'engines': provider,
+                            'category_general': '1', 'format': 'json',
+                        }, headers=self.headers)
+                        self.assertEqual(200, response.status_code)
+                        self.assertEqual([provider], response.json['goreecloud']['selected_engines'])
+                        response.close()
+
+    def test_conflicting_source_bang_and_engine_choice_fail_closed(self):
+        with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins') as dispatcher:
+            for path in ('/preview', '/search'):
+                with self.subTest(path=path):
+                    response = client.post(path, data={
+                        'q': '!br synthetic', 'engines': 'startpage',
+                        'category_general': '1', 'format': 'json',
+                    }, headers=self.headers)
+                    self.assertEqual(422, response.status_code)
+                    self.assertNotIn('synthetic', response.get_data(as_text=True))
+                    response.close()
+            dispatcher.assert_not_called()

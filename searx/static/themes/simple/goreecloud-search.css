@@ -208,3 +208,22 @@ html[data-glaze-consumer] .goreecloud-refine-source button {
 @media (forced-colors: active) {
   html[data-glaze-consumer] .goreecloud-refine-source button { background: ButtonFace; color: ButtonText; border-color: ButtonText; }
 }
+
+/* Explicit two-provider modes on results; each action remains POST-only. */
+html[data-glaze-consumer] .goreecloud-source-switch { margin-top: 1rem; padding-top: .8rem; border-top: 1px solid var(--gc-outline); }
+html[data-glaze-consumer] .goreecloud-source-switch p { margin: .15rem 0 .6rem; font-weight: 650; }
+html[data-glaze-consumer] .goreecloud-source-switch-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+html[data-glaze-consumer] .goreecloud-source-switch button {
+  min-height: 44px; padding: .5rem .8rem; border: 1px solid var(--gc-outline);
+  border-radius: 11px; font: inherit; font-weight: 650;
+  background: var(--gc-surface); color: var(--gc-accent-strong); cursor: pointer;
+}
+html[data-glaze-consumer] .goreecloud-source-switch button:disabled {
+  color: var(--gc-ink); background: var(--gc-surface-alt, var(--gc-surface));
+  font-weight: 750; cursor: default; outline: 1px solid var(--gc-outline);
+}
+html[data-glaze-consumer] .goreecloud-source-switch button:focus-visible { outline: 3px solid var(--gc-accent-strong); outline-offset: 3px; }
+@media (forced-colors: active) {
+  html[data-glaze-consumer] .goreecloud-source-switch button { background: ButtonFace; color: ButtonText; border-color: ButtonText; }
+  html[data-glaze-consumer] .goreecloud-source-switch button:disabled { color: GrayText; outline-color: GrayText; }
+}

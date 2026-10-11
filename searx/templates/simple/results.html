@@ -36,6 +36,21 @@
     <ul>{% for source, count in represented_source_counts.items() %}<li>{{ 'Brave Search' if source == 'brave' else 'Startpage' }} — {{ count }} displayed result(s)</li>{% endfor %}</ul>
   </details>
   {% endif %}
+  <section class="goreecloud-source-switch" aria-label="Switch search provider">
+    <p>Search these terms with:</p>
+    <div class="goreecloud-source-switch-actions">
+    {% for source_value, source_label in [('brave,startpage', 'Both sources'), ('brave', 'Brave Search'), ('startpage', 'Startpage')] %}
+      <form method="post" action="{{ url_for('search') }}">
+        <input type="hidden" name="q" value="{{ source_switch_query }}">
+        <input type="hidden" name="engines" value="{{ source_value }}">
+        <input type="hidden" name="language" value="{{ current_language }}">
+        <input type="hidden" name="safesearch" value="{{ safesearch }}">
+        <input type="hidden" name="time_range" value="{{ time_range }}">
+        <button type="submit" {% if selected_engine_post == source_value %}disabled aria-label="{{ source_label }} (current selection)"{% else %}aria-label="Search with {{ source_label }}"{% endif %}>{{ source_label }}</button>
+      </form>
+    {% endfor %}
+    </div>
+  </section>
 </aside>
 {% endif %}
 
@@ -105,7 +120,8 @@
             <form method="{{ method }}" action="{{ url_for('search') }}" class="previous_page">
                 <div class="{% if rtl %}right{% else %}left{% endif %}">
                   <input type="hidden" name="q" value="{{ q|e }}" >
-                  {% for category in selected_categories %}
+                  {% if private_query_transport and selected_engine_post %}<input type="hidden" name="engines" value="{{ selected_engine_post }}">{% endif %}
+                {% for category in selected_categories %}
                   <input type="hidden" name="category_{{ category }}" value="1" >
                   {% endfor %}
                   <input type="hidden" name="pageno" value="{{ pageno-1 }}" >
@@ -123,6 +139,7 @@
           <form method="{{ method }}" action="{{ url_for('search') }}" class="next_page">
               <div class="{% if rtl %}left{% else %}right{% endif %}">
                 <input type="hidden" name="q" value="{{ q|e }}" >
+                {% if private_query_transport and selected_engine_post %}<input type="hidden" name="engines" value="{{ selected_engine_post }}">{% endif %}
                 {% for category in selected_categories %}
                 <input type="hidden" name="category_{{ category }}" value="1" >
                 {% endfor %}
@@ -148,6 +165,7 @@
         {% for x in range(pstart, pend) %}
             <form method="{{ method }}" action="{{ url_for('search') }}" class="page_number">
                 <input type="hidden" name="q" value="{{ q|e }}" >
+                {% if private_query_transport and selected_engine_post %}<input type="hidden" name="engines" value="{{ selected_engine_post }}">{% endif %}
                 {% for category in selected_categories %}
                 <input type="hidden" name="category_{{ category }}" value="1" >
                 {% endfor %}
