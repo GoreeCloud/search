@@ -805,6 +805,7 @@ def search():
     return render(
         # fmt: off
         'results.html',
+        selected_source_names = sorted({ref.name for ref in search_query.engineref_list}, key=str.casefold),
         results = results,
         q=sxng_request.form['q'],
         selected_categories = search_query.categories,

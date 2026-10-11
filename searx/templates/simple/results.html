@@ -11,6 +11,16 @@
 {% block meta %}{% if not private_query_transport %}<link rel="alternate" type="application/rss+xml" title="Searx search: {{ q|e }}" href="{{ url_for('search', _external=True) }}?q={{ q|urlencode }}&amp;categories={{ selected_categories|join(",") | replace(' ','+') }}&amp;pageno={{ pageno }}&amp;time_range={{ time_range }}&amp;language={{ current_language }}&amp;safesearch={{ safesearch }}&amp;format=rss">{% endif %}{% endblock %}
 {% block content %}
 {% include 'simple/search.html' %}
+{% if private_query_transport %}
+<aside class="goreecloud-source-summary" aria-label="Selected search sources">
+  <p><strong>{{ selected_source_names|length }} source(s) selected</strong> for this query. Providers may receive your search terms.</p>
+  {% if selected_source_names %}
+  <details><summary>View selected sources</summary>
+    <ul>{% for source in selected_source_names %}<li>{{ source }}</li>{% endfor %}</ul>
+  </details>
+  {% endif %}
+</aside>
+{% endif %}
 
 {% if results and results|map(attribute='template')|unique|list|count == 1 %}
   {% set only_template = 'only_template_' + results[0]['template']|default('default')|replace('.html', '') %}
@@ -58,7 +68,7 @@
       {%- include 'simple/elements/corrections.html' -%}
     {%- endif -%}
 
-    <div id="urls" role="main">
+    <div id="urls" aria-label="Search results">
     {% for result in results %}
         {% if result.open_group and not only_template %}<div class="template_group_{{ result['template']|replace('.html', '') }}">{% endif %}
         {% set index = loop.index %}

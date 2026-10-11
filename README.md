@@ -23,6 +23,10 @@ Never use the upstream placeholder key. The profile binds **127.0.0.1**, disable
 
 The local profile now rejects query-bearing GET requests, preserves POST even on Android/WebKit, and disables caching for private search pages. Query-length and distinct-provider limits are set to 512 characters and 32 engines respectively; searches exceeding these limits return 413/422 rather than silently expanding disclosure. Private result pages omit query-bearing RSS/share URL metadata, and the private homepage does not advertise OpenSearch GET-query registration until a safe browser integration is qualified. The privacy-sensitive preferences for POST transport, title disclosure, autocomplete, favicons, and image proxy are locked against cookie and request overrides. These protections cannot prevent configured upstream providers from receiving queries, and they do not establish anonymity or production security acceptance.
 
+## Search experience
+
+Results display a source-selection summary listing the upstream engine names chosen for that request; it does not pretend that every engine responded. The search header uses GoreeCloud branding, with accessible search labels and responsive Glaze styling. An empty search provides actionable, local preference guidance instead of sending users to another service. These interfaces are source- and Flask-render validated but still need browser, screen-reader, and visual acceptance.
+
 ## Development validation
 
 With SearXNG's pinned requirements installed (including the Python 3.10 compatibility backport when applicable), run:
@@ -32,7 +36,7 @@ python -m compileall -q searx
 python -m unittest discover -s tests/goreecloud -v
 ```
 
-The 2026-10-10 local verification passed 18 focused foundation, privacy, and runtime tests, with the Flask homepage and three local CSS/privacy assets returning HTTP 200. No live provider searches, device/browser acceptance, full upstream regression suite, or production security acceptance have been verified. This local environment also logged SQLite threading warnings and failures loading the optional Ahmia and Torch engines; provider availability remains a separate qualification requirement.
+The 2026-10-10 local verification passed 19 focused foundation, privacy, and runtime tests, with the Flask homepage and three local CSS/privacy assets returning HTTP 200. No live provider searches, device/browser acceptance, full upstream regression suite, or production security acceptance have been verified. This local environment also logged SQLite threading warnings and failures loading the optional Ahmia and Torch engines; provider availability remains a separate qualification requirement.
 
 ## Source boundaries
 
