@@ -2,21 +2,31 @@
   <div id="search_header">
     <div id="search_view">
       <div class="search_box">
-        <label class="goreecloud-visually-hidden" for="q">{{ _('Search query') }}</label>
-        <input id="q" name="q" type="search" placeholder="{{ _('Search for...') }}" autocomplete="off" autocapitalize="none" spellcheck="false" autocorrect="off" dir="auto" value="{{ q or '' }}">
-        <button id="clear_search" type="reset" aria-label="{{ _('clear') }}" class="hide_if_nojs"><span>{{ icon_big('close') }}</span></button>
-        <button id="send_search" type="submit" aria-label="{{ _('search') }}"><span class="hide_if_nojs">{{ icon_big('search') }}</span><span class="show_if_nojs">{{ _('search') }}</span></button>
+        <label class="goreecloud-visually-hidden" for="q">Search query</label>
+        <svg class="goreecloud-input-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"><circle cx="10.8" cy="10.8" r="6.7" stroke="currentColor" stroke-width="1.9"/><path d="m16.1 16.1 4.4 4.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+        <input id="q" name="q" type="search" placeholder="Search the web..." autocomplete="off" autocapitalize="none" spellcheck="false" autocorrect="off" dir="auto" value="{{ q or '' }}">
+        <button id="clear_search" type="reset" aria-label="Clear search" class="hide_if_nojs"><span>×</span></button>
+        <button id="send_search" type="submit" aria-label="Search"><span class="goreecloud-submit-label">Search</span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M4 12h15m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div class="autocomplete hide_if_nojs"><ul></ul></div>
       </div>
-      {% if private_query_transport %}<button type="submit" class="goreecloud-preview-trigger" formaction="{{ url_for('goreecloud_preview') }}" formmethod="post">Preview sources without searching</button>{% endif %}
     </div>
   </div>
-  {% for category in selected_categories %}
-  <input type="hidden" name="category_{{ category }}" value="1" >
-  {% endfor %}
-  <input type="hidden" name="language" value="{{ current_language }}" >
-  <input type="hidden" name="time_range" value="{{ time_range }}" >
-  <input type="hidden" name="safesearch" value="{{ safesearch }}" >
-  <input type="hidden" name="theme" value="{{ theme }}" >
-  {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}" >{% endif %}
+  <ul class="goreecloud-home-benefits" aria-label="Project principles">
+    <li><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="m12 2 8 3v6c0 5-3.3 8.1-8 11-4.7-2.9-8-6-8-11V5l8-3Z" stroke="currentColor" stroke-width="1.8"/><path d="m8.5 11.7 2.2 2.2 4.8-5" stroke="currentColor" stroke-width="1.8"/></svg><span>No tracking</span></li>
+    <li><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="1.5" stroke="currentColor" stroke-width="1.7"/><path d="m8 8 8 8m0-8-8 8" stroke="currentColor" stroke-width="1.7"/></svg><span>No user profiles</span></li>
+    <li><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="m8 7-5 5 5 5m8-10 5 5-5 5m-3-12-2 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Open source</span></li>
+    <li><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="9" y="9" width="6" height="6" rx=".5" stroke="currentColor" stroke-width="1.7"/></svg><span>Self-hostable</span></li>
+  </ul>
+  <div class="goreecloud-home-links">
+    <a href="#why-goreecloud-search">Why GoreeCloud Search?</a>
+    <span class="goreecloud-link-dot" aria-hidden="true">·</span>
+    <a href="https://github.com/GoreeCloud/search" rel="noopener noreferrer">View the project <span aria-hidden="true">↗</span></a>
+  </div>
+  {% if private_query_transport %}<button type="submit" class="goreecloud-preview-trigger" formaction="{{ url_for('goreecloud_preview') }}" formmethod="post">Preview sources without searching</button>{% endif %}
+  {% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}
+  <input type="hidden" name="language" value="{{ current_language }}">
+  <input type="hidden" name="time_range" value="{{ time_range }}">
+  <input type="hidden" name="safesearch" value="{{ safesearch }}">
+  <input type="hidden" name="theme" value="{{ theme }}">
+  {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}">{% endif %}
 </form>

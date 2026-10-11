@@ -8,7 +8,7 @@ The supplied GoreeCloud Search feature catalog is a **proposed product target**,
 | Search operators | SearXNG syntax and preferences; private provider preflight, direct Both/Brave/Startpage POST switching, one-source refinement and exact provider persistence through pagination | GoreeCloud ranking profiles, advanced policy filters and audited provider explanations |
 | Privacy | POST, image proxy and private profile | Public rate limiting, formal Privacy Shield/Wardveil integration, disclosure audits |
 | Local Index | None in SearXNG imported runtime | Index contract adapter and cycle-safe routing, independent index operation |
-| Glaze | Local stable CSS foundation and app-specific mapping | Runtime integration, accessibility, device/rendered acceptance, conformance registration |
+| Glaze / owner mockup | Implemented owner-approved responsive Search homepage treatment (cyan mark, cobalt branding, centered search, privacy principles, header/footer and session light/dark toggle) on the existing partial Glaze CSS foundation | Exact rendered visual comparison and official Glaze/a11y/device consumer acceptance; not yet conformance-registered |
 | API | SearXNG JSON with exact two-provider selected-source metadata (not provider-contact proof) | Authenticated versioned GoreeCloud API, quotas, stable schemas and verified source-proof metadata |
 | AI/research | No GoreeCloud AI layer | Source-grounded answers, citations, conversational research and safety |
 | Maps/local/commerce | No additional built-in engines; only Brave Search and Startpage web-result capabilities | Licensed structured integrations require separate approved platform contracts without adding selectable search providers |

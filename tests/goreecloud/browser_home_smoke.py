@@ -75,8 +75,26 @@ def main() -> None:
             assert driver.find_element(By.CSS_SELECTOR, "[role=note].goreecloud-source-disclosure").is_displayed()
             assert driver.find_element(By.CSS_SELECTOR, "label[for=q]").text.strip() == "Search query"
             assert driver.execute_script(
-                "return [...document.styleSheets].some(s => s.href && s.href.includes('goreecloud-search.css'))"
+                "return [...document.styleSheets].some(s => s.href && s.href.includes('goreecloud-mockup.css'))"
             )
+            site_header = driver.find_element(By.CSS_SELECTOR, '.goreecloud-site-header')
+            site_footer = driver.find_element(By.CSS_SELECTOR, '.goreecloud-site-footer')
+            hero_mark = driver.find_element(By.CSS_SELECTOR, '.goreecloud-mark-hero')
+            why = driver.find_element(By.CSS_SELECTOR, '#why-goreecloud-search')
+            search_box = driver.find_element(By.CSS_SELECTOR, '.goreecloud-hero .search_box')
+            assert all(part.is_displayed() for part in (site_header, site_footer, hero_mark, why, search_box))
+            assert len(driver.find_elements(By.CSS_SELECTOR, '.goreecloud-home-benefits li')) == 4
+            assert hero_mark.rect['width'] >= 64, hero_mark.rect
+            assert 260 <= search_box.rect['width'] <= 820, search_box.rect
+            assert abs(hero_mark.rect['x'] + hero_mark.rect['width']/2 - width/2) < 30, 'Hero logo off center'
+            assert why.rect['y'] > search_box.rect['y'], 'Mission statement above search'
+            assert site_footer.rect['y'] > why.rect['y'], 'Footer above mission'
+            if label == 'phone':
+                assert not driver.find_element(By.CSS_SELECTOR, '.goreecloud-nav-secondary').is_displayed()
+                assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-site-nav a[href*="github.com"]').is_displayed()
+            else:
+                assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-nav-secondary').is_displayed()
+            print(f'LAYOUT {label}: logo={hero_mark.rect}; search={search_box.rect}; footer-y={site_footer.rect["y"]}')
             assert not driver.find_elements(By.CSS_SELECTOR, "link[type='application/opensearchdescription+xml']")
             spill = driver.execute_script(
                 "return document.documentElement.scrollWidth - document.documentElement.clientWidth"
@@ -84,6 +102,19 @@ def main() -> None:
             assert spill <= 2, f"{label}: horizontal overflow of {spill}px"
             driver.save_screenshot(str(artifacts / f"{label}.png"))
             print(f"PASS {label} {width}x{height}; overflow={spill}px; POST and Glaze styles verified")
+        # Official mockup moon button is an actual local appearance control.
+        driver.set_window_size(390, 844)
+        driver.get(url)
+        theme_button = driver.find_element(By.CSS_SELECTOR, '.goreecloud-theme-toggle')
+        theme_button.click()
+        assert driver.execute_script("return document.documentElement.classList.contains('theme-dark')"), 'Dark toggle failed'
+        assert theme_button.get_attribute('aria-label') == 'Switch to light mode'
+        driver.save_screenshot(str(artifacts / 'phone-dark.png'))
+        driver.refresh()
+        assert driver.execute_script("return document.documentElement.classList.contains('theme-dark')"), 'Session appearance did not persist'
+        driver.find_element(By.CSS_SELECTOR, '.goreecloud-theme-toggle').click()
+        assert driver.execute_script("return document.documentElement.classList.contains('theme-light')"), 'Light toggle failed'
+        print('PASS moon button toggles light/dark appearance for this browser tab')
         # Preview selected providers first, then explicitly continue to the
         # synthetic search. The preview must never create a provider executor.
         with patch('searx.search.SearchWithPlugins', side_effect=SyntheticBrowserSearch) as preview_search:

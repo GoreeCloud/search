@@ -8,6 +8,10 @@ Privacy-focused, configurable federated search rebuilt from the SearXNG source e
 
 The codebase retains upstream SearXNG source adapters, but the GoreeCloud private product exposes **exactly two built-in web-search providers: Brave Search (the search service associated with Brave Browser) and Startpage**. All other adapters, including Brave API and specialized Brave or Startpage category variants, are excluded from the active registry. Both are enabled by default, and users can narrow a query to either. HTML and private JSON search remain available. GoreeCloud additions include the first semantic Glaze interface layer, a local-only privacy configuration, and a source/contract validation gate. No independent Index, AI answers, local business knowledge, or alert system is implied.
 
+## Owner-approved homepage design
+
+The official October 11, 2026 desktop/mobile mockups define GoreeCloud Search's frontend: cyan search-mark and navy/cobalt GoreeCloud wordmark, centered white search box, concise privacy principles, prominent blue search button, responsive header, moon appearance toggle and restrained footer. The visual specification and scope are documented in [Official homepage](docs/goreecloud/OFFICIAL-HOMEPAGE.md). The layout is implemented against the actual private Development app—not as a disconnected static demo—and retains the POST search, no-network source preview and strict Brave Search/Startpage policy. Privacy slogans are design principles, not proof that upstream providers do not track visitors.
+
 ## Develop locally
 
 Follow [upstream SearXNG development instructions](docs/dev/index.rst) to install dependencies. Set a unique 32+-character secret in a local secret store, and launch through the fail-closed wrapper:
@@ -49,7 +53,7 @@ export SEARXNG_SECRET="$(python -c 'import secrets;print(secrets.token_hex(32))'
 python -m nose2 -s tests/unit test_query test_webadapter test_settings_loader test_webapp -v
 ```
 
-The 2026-10-11 local verification passed 65 GoreeCloud foundation/privacy/Flask-runtime tests and 72 upstream SearXNG query, routing, settings and webapp regressions (137 tests total, in separate isolated runs). The Flask homepage and three local CSS/privacy assets returned HTTP 200. Synthetic browser CI now covers mobile POST results, no query-bearing URL/title, source disclosure, empty-result recovery, error screens and responsive desktop/phone rendering; it does not make any provider-network requests. No live provider searches, device/browser acceptance, full upstream regression suite, or production security acceptance have been verified. This local environment still reports SQLite threading warnings; the local engine registry contains only `brave` and `startpage`. In particular, Startpage functionality and proof-of-work challenge behavior have not been verified with live provider traffic.
+The 2026-10-11 local verification passed 68 GoreeCloud foundation/privacy/Flask-runtime tests and 72 upstream SearXNG query, routing, settings and webapp regressions (140 tests total, in separate isolated runs). The Flask homepage and three local CSS/privacy assets returned HTTP 200. Synthetic browser CI now covers mobile POST results, no query-bearing URL/title, source disclosure, empty-result recovery, error screens and responsive desktop/phone rendering; it does not make any provider-network requests. No live provider searches, device/browser acceptance, full upstream regression suite, or production security acceptance have been verified. This local environment still reports SQLite threading warnings; the local engine registry contains only `brave` and `startpage`. In particular, Startpage functionality and proof-of-work challenge behavior have not been verified with live provider traffic.
 
 ## Source boundaries
 

@@ -1,0 +1,212 @@
+/* Official GoreeCloud Search desktop/mobile homepage direction, 2026-10-11.
+   Private SearXNG consumer only: visual composition, not a provider/privacy audit. */
+html[data-glaze-consumer="goreecloud-search"] {
+  --gc-canvas: #f7faff; --gc-surface: #ffffff; --gc-ink: #18263e;
+  --gc-muted: #677993; --gc-accent: #1b52b3; --gc-accent-strong: #194eaf;
+  --gc-outline: #d8e3f0; --gc-ring: #194eaf;
+  --gc-shadow: 0 16px 42px rgba(37, 65, 120, .11);
+  color-scheme: light;
+}
+html[data-glaze-consumer].theme-dark, html[data-glaze-consumer].theme-black {
+  --gc-canvas: #0e1729; --gc-surface: #18243a; --gc-ink: #f5f8ff;
+  --gc-muted: #afbed5; --gc-accent: #8eafff; --gc-accent-strong: #a9c2ff;
+  --gc-outline: #384a66; --gc-ring: #afc8ff;
+  --gc-shadow: 0 16px 42px rgba(0, 0, 0, .25);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-glaze-consumer].theme-auto {
+    --gc-canvas: #0e1729; --gc-surface: #18243a; --gc-ink: #f5f8ff;
+    --gc-muted: #afbed5; --gc-accent: #8eafff; --gc-accent-strong: #a9c2ff;
+    --gc-outline: #384a66; --gc-ring: #afc8ff;
+    --gc-shadow: 0 16px 42px rgba(0, 0, 0, .25); color-scheme: dark;
+  }
+}
+html[data-glaze-consumer] body {
+  background: radial-gradient(ellipse 65% 56% at 22% 41%, #eaf2ff 0%, transparent 78%), var(--gc-canvas);
+  color: var(--gc-ink); min-height: 100svh; margin: 0;
+  display: flex; flex-direction: column;
+}
+html[data-glaze-consumer].theme-dark body, html[data-glaze-consumer].theme-black body { background: var(--gc-canvas); }
+html[data-glaze-consumer] body > main { flex: 1 0 auto; }
+html[data-glaze-consumer] .goreecloud-site-header {
+  width: 100%; min-height: 90px; padding: 22px clamp(22px, 3.65vw, 52px);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  box-sizing: border-box; position: relative; z-index: 3;
+}
+html[data-glaze-consumer] .goreecloud-site-brand {
+  display: inline-flex; align-items: center; gap: 12px; flex: 0 0 auto;
+  color: var(--gc-ink); text-decoration: none; white-space: nowrap;
+}
+html[data-glaze-consumer] .goreecloud-mark {
+  display: grid; place-items: center; color: #fff; flex: none;
+  background: #18c8df; border-radius: 12px;
+  box-shadow: 0 9px 25px rgba(25, 80, 152, .1);
+}
+html[data-glaze-consumer] .goreecloud-mark svg { width: 76%; height: 76%; }
+html[data-glaze-consumer] .goreecloud-mark-small { width: 36px; height: 36px; border-radius: 10px; }
+html[data-glaze-consumer] .goreecloud-brand-name { color: var(--gc-ink); font-weight: 800; font-size: 19px; letter-spacing: -.055em; }
+html[data-glaze-consumer] .goreecloud-brand-name span { color: var(--gc-accent-strong); }
+html[data-glaze-consumer] .goreecloud-brand-divider { height: 23px; width: 1px; background: var(--gc-outline); }
+html[data-glaze-consumer] .goreecloud-brand-product { font-size: 16px; font-weight: 500; letter-spacing: -.015em; }
+html[data-glaze-consumer] .goreecloud-site-nav { display: flex; align-items: center; gap: clamp(13px, 2.1vw, 31px); }
+html[data-glaze-consumer] .goreecloud-site-nav a { color: var(--gc-muted); font-size: 14px; font-weight: 650; white-space: nowrap; text-decoration: none; }
+html[data-glaze-consumer] .goreecloud-site-nav a:hover { color: var(--gc-accent-strong); text-decoration: underline; }
+html[data-glaze-consumer] .goreecloud-theme-toggle {
+  border: 1px solid var(--gc-outline); border-radius: 50%; width: 40px; height: 40px;
+  display: grid; place-items: center; background: var(--gc-surface); color: var(--gc-ink);
+  padding: 8px; cursor: pointer; flex: none;
+}
+html[data-glaze-consumer] .goreecloud-theme-toggle svg { width: 22px; height: 22px; }
+html[data-glaze-consumer] .goreecloud-theme-toggle:hover { border-color: var(--gc-accent-strong); }
+html[data-glaze-consumer] .goreecloud-site-footer {
+  box-sizing: border-box; width: 100%; min-height: 70px;
+  border-top: 1px solid var(--gc-outline); padding: 20px clamp(22px, 3.65vw, 52px);
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 22px;
+  background: transparent; color: #8495ac; font-size: 13px;
+}
+html[data-glaze-consumer] .goreecloud-site-footer p { margin: 0; color: inherit; }
+html[data-glaze-consumer] .goreecloud-site-footer nav { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; }
+html[data-glaze-consumer] .goreecloud-site-footer a { color: inherit; text-decoration: none; }
+html[data-glaze-consumer] .goreecloud-site-footer a:hover { color: var(--gc-accent-strong); text-decoration: underline; }
+/* Home composition: focus on the single search task, with a clear second section. */
+html[data-glaze-consumer] body.index_endpoint #main_index {
+  box-sizing: border-box; width: 100%; max-width: none; min-height: 0;
+  margin: 0; padding: 0; display: flex; flex-direction: column;
+}
+html[data-glaze-consumer] #main_index .goreecloud-home {
+  display: flex; flex: 1 0 auto; flex-direction: column;
+  width: 100%; max-width: none; margin: 0; box-sizing: border-box;
+  align-items: center; text-align: center;
+}
+html[data-glaze-consumer] .goreecloud-hero {
+  width: min(100%, 820px); box-sizing: border-box; padding: clamp(27px, 4vh, 45px) 18px 0;
+  margin: 0 auto; display: flex; flex-direction: column; align-items: center;
+}
+html[data-glaze-consumer] .goreecloud-mark-hero { width: 80px; height: 80px; border-radius: 20px; }
+html[data-glaze-consumer] #main_index .goreecloud-hero .title {
+  display: block; visibility: visible; background: none; width: 100%; height: auto;
+  min-height: 0; margin: 27px auto 0; padding: 0;
+}
+html[data-glaze-consumer] #main_index .goreecloud-hero h1 {
+  display: block; visibility: visible; color: var(--gc-ink); margin: 0;
+  font-size: clamp(38px, 4.55vw, 64px); line-height: 1.1; letter-spacing: -.061em;
+  font-weight: 790; white-space: nowrap;
+}
+html[data-glaze-consumer] .goreecloud-hero-brand { font-weight: 820; }
+html[data-glaze-consumer] .goreecloud-hero-brand span { color: var(--gc-accent-strong) !important; }
+html[data-glaze-consumer] .goreecloud-hero-product { color: var(--gc-ink) !important; font-weight: 560; }
+html[data-glaze-consumer] .goreecloud-hero .goreecloud-tagline {
+  color: var(--gc-muted); font-size: clamp(17px, 1.55vw, 21px);
+  margin: 14px 0 0; line-height: 1.5; font-weight: 400;
+}
+html[data-glaze-consumer] #main_index .goreecloud-hero #search {
+  display: block; width: 100%; max-width: 764px; margin: 44px auto 0;
+  text-align: center; position: relative; box-sizing: border-box;
+}
+html[data-glaze-consumer] #main_index .goreecloud-hero #search_header,
+html[data-glaze-consumer] #main_index .goreecloud-hero #search_view {
+  display: block; width: 100%; max-width: none; min-width: 0;
+  height: auto; margin: 0; padding: 0; box-sizing: border-box;
+}
+html[data-glaze-consumer] #main_index .goreecloud-hero .search_box {
+  display: flex; align-items: center; position: relative; box-sizing: border-box;
+  width: 100%; min-width: 0; height: 54px; margin: 0; padding: 4px 4px 4px 0;
+  border: 1px solid var(--gc-outline); border-radius: 16px;
+  box-shadow: 0 14px 36px rgba(44, 68, 125, .14); background: var(--gc-surface);
+}
+html[data-glaze-consumer] .goreecloud-input-icon {
+  position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
+  width: 21px; height: 21px; color: #8b9cb5; pointer-events: none;
+}
+html[data-glaze-consumer] #main_index .goreecloud-hero #q {
+  display: block; flex: 1; min-width: 0; height: 100%; position: relative;
+  width: 0; max-width: none; margin: 0; padding: 0 12px 0 48px;
+  font-family: inherit; font-size: 16px; border: 0; outline-offset: -3px;
+  background: transparent; color: var(--gc-ink); box-shadow: none;
+}
+html[data-glaze-consumer] #main_index .goreecloud-hero #q::placeholder { color: #92a1b8; opacity: 1; }
+html[data-glaze-consumer] #main_index .goreecloud-hero #send_search {
+  position: relative; inset: auto; display: inline-flex; align-items: center; justify-content: center;
+  flex: none; gap: 9px; width: 108px; height: 44px; min-height: 44px; min-width: 0;
+  margin: 0; border: 0; border-radius: 11px; background: #1c51b0; color: #fff;
+  padding: 0 10px; font: inherit; font-size: 14px; cursor: pointer;
+}
+html[data-glaze-consumer] #main_index .goreecloud-hero #send_search svg { width: 20px; height: 20px; color: #fff; }
+html[data-glaze-consumer] #main_index .goreecloud-hero #clear_search { right: 122px; background: transparent; color: var(--gc-muted); }
+html[data-glaze-consumer] #main_index .goreecloud-hero .autocomplete { width: 100%; left: 0; }
+html[data-glaze-consumer] .goreecloud-home-benefits {
+  list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 24px;
+  margin: 25px auto 0; padding: 0; color: var(--gc-muted); font-size: 14px;
+}
+html[data-glaze-consumer] .goreecloud-home-benefits li { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+html[data-glaze-consumer] .goreecloud-home-benefits svg { width: 17px; height: 17px; color: var(--gc-accent-strong); }
+html[data-glaze-consumer] .goreecloud-home-links {
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;
+  margin: 24px auto 0; font-size: 14px; font-weight: 650;
+}
+html[data-glaze-consumer] .goreecloud-home-links a { color: var(--gc-accent-strong); text-decoration: none; }
+html[data-glaze-consumer] .goreecloud-home-links a:hover { text-decoration: underline; }
+html[data-glaze-consumer] .goreecloud-link-dot { color: #acb9cd; font-weight: 400; }
+html[data-glaze-consumer] #main_index .goreecloud-hero .goreecloud-preview-trigger {
+  display: inline-block; position: relative; width: auto; height: auto;
+  background: none; border: 0; border-radius: 0; box-shadow: none;
+  margin: 11px auto 0; padding: 7px 9px; min-height: 32px;
+  color: var(--gc-accent-strong); font: inherit; font-size: 13px; font-weight: 550;
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+html[data-glaze-consumer] .goreecloud-why {
+  width: min(100%, 800px); box-sizing: border-box;
+  margin: clamp(65px, 9vh, 93px) auto 80px; padding: 0 20px;
+  color: var(--gc-muted); text-align: center;
+}
+html[data-glaze-consumer] .goreecloud-why h2 { color: var(--gc-ink); font-size: clamp(22px, 2vw, 27px); font-weight: 750; line-height: 1.25; letter-spacing: -.035em; margin: 0 0 16px; }
+html[data-glaze-consumer] .goreecloud-why p { max-width: 675px; margin: 0 auto; font-size: 15px; line-height: 1.7; }
+@media (max-width: 700px) {
+  html[data-glaze-consumer] .goreecloud-site-header { min-height: 76px; padding: 19px 20px; gap: 9px; }
+  html[data-glaze-consumer] .goreecloud-brand-name { font-size: 16px; }
+  html[data-glaze-consumer] .goreecloud-brand-product { font-size: 15px; }
+  html[data-glaze-consumer] .goreecloud-site-brand { gap: 8px; }
+  html[data-glaze-consumer] .goreecloud-mark-small { width: 34px; height: 34px; }
+  html[data-glaze-consumer] .goreecloud-site-nav { gap: 12px; }
+  html[data-glaze-consumer] .goreecloud-site-nav .goreecloud-nav-secondary { display: none; }
+  html[data-glaze-consumer] .goreecloud-site-nav a { font-size: 12px; }
+  html[data-glaze-consumer] .goreecloud-theme-toggle { width: 39px; height: 39px; padding: 7px; }
+  html[data-glaze-consumer] .goreecloud-hero { padding-top: clamp(100px, 12vh, 150px); }
+  html[data-glaze-consumer] .goreecloud-mark-hero { width: 72px; height: 72px; border-radius: 18px; }
+  html[data-glaze-consumer] #main_index .goreecloud-hero .title { margin-top: 25px; }
+  html[data-glaze-consumer] #main_index .goreecloud-hero h1 { font-size: clamp(29px, 7vw, 46px); letter-spacing: -.065em; }
+  html[data-glaze-consumer] .goreecloud-hero .goreecloud-tagline { margin-top: 18px; font-size: clamp(16px, 3.8vw, 20px); }
+  html[data-glaze-consumer] #main_index .goreecloud-hero #search { margin-top: 44px; }
+  html[data-glaze-consumer] #main_index .goreecloud-hero .search_box { height: 58px; border-radius: 17px; }
+  html[data-glaze-consumer] #main_index .goreecloud-hero #send_search { width: 46px; height: 48px; }
+  html[data-glaze-consumer] #main_index .goreecloud-hero .goreecloud-submit-label { display: none; }
+  html[data-glaze-consumer] #main_index .goreecloud-hero #clear_search { right: 57px; }
+  html[data-glaze-consumer] .goreecloud-home-benefits { max-width: 335px; gap: 16px 23px; margin-top: 29px; }
+  html[data-glaze-consumer] .goreecloud-home-links { margin-top: 27px; font-size: 14px; }
+  html[data-glaze-consumer] .goreecloud-why { margin: clamp(145px, 19vh, 190px) auto 98px; }
+  html[data-glaze-consumer] .goreecloud-why h2 { font-size: clamp(23px, 6vw, 29px); }
+  html[data-glaze-consumer] .goreecloud-why p { font-size: 16px; line-height: 1.7; }
+  html[data-glaze-consumer] .goreecloud-site-footer { padding: 21px 20px 29px; font-size: 13px; }
+}
+@media (max-width: 380px) {
+  html[data-glaze-consumer] .goreecloud-site-header { padding-inline: 12px; }
+  html[data-glaze-consumer] .goreecloud-brand-name { font-size: 14px; }
+  html[data-glaze-consumer] .goreecloud-brand-product { font-size: 13px; }
+  html[data-glaze-consumer] .goreecloud-site-brand { gap: 6px; }
+  html[data-glaze-consumer] .goreecloud-site-nav { gap: 6px; }
+  html[data-glaze-consumer] .goreecloud-home-benefits { gap: 13px 17px; font-size: 13px; }
+}
+@media (forced-colors: active) {
+  html[data-glaze-consumer] .goreecloud-mark { background: Highlight; color: HighlightText; }
+  html[data-glaze-consumer] .goreecloud-theme-toggle, html[data-glaze-consumer] #main_index .goreecloud-hero .search_box { background: Canvas; color: CanvasText; border: 1px solid CanvasText; box-shadow: none; }
+  html[data-glaze-consumer] #main_index .goreecloud-hero #send_search { background: ButtonFace; color: ButtonText; border: 1px solid ButtonText; }
+  html[data-glaze-consumer] #main_index .goreecloud-hero #send_search svg { color: ButtonText; }
+}
+
+/* Preserve the required provider-disclosure semantics without an extra homepage card. */
+html[data-glaze-consumer] .goreecloud-why .goreecloud-source-disclosure {
+  display: block; max-width: 675px; margin: 0 auto; padding: 0;
+  border: 0; border-radius: 0; background: transparent; box-shadow: none;
+  font: inherit; font-size: inherit; line-height: inherit; color: var(--gc-muted);
+}

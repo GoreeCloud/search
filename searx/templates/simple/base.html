@@ -19,6 +19,7 @@
   {% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='glaze/css/glaze-v1.4.1.css') }}" type="text/css" media="screen">
   <link rel="stylesheet" href="{{ url_for('static', filename='goreecloud-search.css') }}" type="text/css" media="screen">
+  {% if private_query_transport %}<link rel="stylesheet" href="{{ url_for('static', filename='goreecloud-mockup.css') }}" type="text/css" media="screen">{% endif %}
   <noscript>
     <link rel="stylesheet" href="{{ url_for('static', filename='sxng-noscript.min.css') }}" type="text/css">
   </noscript>
@@ -30,7 +31,7 @@
   {% endblock %}
   <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
   <link rel="manifest" href="{{ url_for('manifest') }}" />
-  {% if private_query_transport %}<script type="module" src="{{ url_for('static', filename='goreecloud-preview.js') }}"></script>{% endif %}
+  {% if private_query_transport %}<script type="module" src="{{ url_for('static', filename='goreecloud-preview.js') }}"></script><script type="module" src="{{ url_for('static', filename='goreecloud-theme.js') }}"></script>{% endif %}
 </head>
 <body class="{{ endpoint }}_endpoint" >
   <main data-glaze-semantic-surface="protected" id="main_{{  self._TemplateReference__context.name|replace("simple/", "")|replace(".html", "") }}" class="{{body_class}}">
@@ -45,6 +46,7 @@
         </div>
     {% endif %}
 
+    {% if private_query_transport %}{% include 'simple/goreecloud_site_header.html' %}{% else %}
     <nav id="links_on_top" aria-label="GoreeCloud Search navigation" data-glaze-material="chrome">
       {%- from 'simple/icons.html' import icon_big -%}
       {%- block linkto_about -%}
@@ -63,11 +65,15 @@
         {%- endif -%}
       {%- endblock -%}
     </nav>
+    {% endif %}
     {% block header %}
     {% endblock %}
     {% block content %}
     {% endblock %}
   </main>
+  {% if private_query_transport %}
+    {% include 'simple/goreecloud_site_footer.html' %}
+  {% else %}
   <footer data-glaze-semantic-surface="protected">
     <p>
     GoreeCloud Search · {{ _('Powered by') }} <a href="https://github.com/searxng/searxng">SearXNG</a> · {{ searxng_version }} — {{ _('a privacy-respecting, open metasearch engine') }}<br>
@@ -89,5 +95,6 @@
         {% endfor %}
     </p>
   </footer>
+  {% endif %}
 </body>
 </html>
