@@ -157,7 +157,10 @@ def main() -> None:
             assert sorted(option.get_attribute('value') for option in approved) == ['brave', 'startpage']
             preview_search.assert_not_called()
             driver.save_screenshot(str(artifacts / 'phone-source-preview.png'))
-            driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-continue').click()
+            assert 'Startpage availability' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-startpage-note').text
+            continue_button = driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-continue')
+            driver.execute_script("arguments[0].scrollIntoView({block:'center'})", continue_button)
+            continue_button.click()
             WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: page.current_url.endswith('/search'))
             assert driver.current_url.endswith('/search'), driver.current_url
             assert not driver.execute_script('return location.search'), 'continued query entered URL'
