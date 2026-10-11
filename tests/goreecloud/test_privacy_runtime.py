@@ -24,6 +24,7 @@ class PrivateRequestTests(unittest.TestCase):
             response = client.get('/', headers={'X-Real-IP': '127.0.0.1'})
             self.assertIn('no-store', response.headers['Cache-Control'])
             self.assertIn(b'goreecloud-source-disclosure', response.data)
+            self.assertNotIn(b'application/opensearchdescription+xml', response.data)
             response.close()
 
     def test_provider_fanout_blocks_execution(self):

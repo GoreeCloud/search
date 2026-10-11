@@ -21,7 +21,7 @@ Never use the upstream placeholder key. The profile binds **127.0.0.1**, disable
 
 ## Private search disclosure safeguards
 
-The local profile now rejects query-bearing GET requests, preserves POST even on Android/WebKit, and disables caching for private search pages. Query-length and distinct-provider limits are set to 512 characters and 32 engines respectively; searches exceeding these limits return 413/422 rather than silently expanding disclosure. Private result pages omit query-bearing RSS/share URL metadata. The privacy-sensitive preferences for POST transport, title disclosure, autocomplete, favicons, and image proxy are locked against cookie and request overrides. These protections cannot prevent configured upstream providers from receiving queries, and they do not establish anonymity or production security acceptance.
+The local profile now rejects query-bearing GET requests, preserves POST even on Android/WebKit, and disables caching for private search pages. Query-length and distinct-provider limits are set to 512 characters and 32 engines respectively; searches exceeding these limits return 413/422 rather than silently expanding disclosure. Private result pages omit query-bearing RSS/share URL metadata, and the private homepage does not advertise OpenSearch GET-query registration until a safe browser integration is qualified. The privacy-sensitive preferences for POST transport, title disclosure, autocomplete, favicons, and image proxy are locked against cookie and request overrides. These protections cannot prevent configured upstream providers from receiving queries, and they do not establish anonymity or production security acceptance.
 
 ## Development validation
 
