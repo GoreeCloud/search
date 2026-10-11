@@ -29,7 +29,12 @@ class SearchPreviewTests(unittest.TestCase):
             buttons = page.xpath('//form[@id="search"]//div[@id="search_view"]/button[@formaction="/preview"]')
             self.assertEqual(1, len(buttons))
             self.assertEqual('post', buttons[0].get('formmethod'))
+            self.assertEqual(1, len(page.xpath('//script[contains(@src,"goreecloud-preview.js")]')))
             response.close()
+            asset = client.get('/static/themes/simple/goreecloud-preview.js', headers=self.headers)
+            self.assertEqual(200, asset.status_code)
+            self.assertIn(b'goreecloud-preview-trigger', asset.data)
+            asset.close()
 
     def test_preview_preserves_search_selection_without_network_execution(self):
         with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins') as network:
