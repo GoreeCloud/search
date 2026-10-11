@@ -8,11 +8,13 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import secrets
+import sys
 from threading import Thread
 
 from werkzeug.serving import make_server
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))  # direct-script CI launch from nested tests directory
 os.environ["SEARXNG_SETTINGS_PATH"] = str(ROOT / "configs/goreecloud/settings.yml")
 os.environ["SEARXNG_SECRET"] = secrets.token_hex(32)
 
