@@ -22,3 +22,9 @@ jobs:
         run: python -m compileall -q searx
       - name: Private Search contract and runtime smoke
         run: python -m unittest discover -s tests/goreecloud -v
+      - name: Install focused upstream test harness
+        run: python -m pip install nose2==0.16.0 aiounittest==1.5.0 parameterized==0.9.0
+      - name: SearXNG query, engine-routing and settings regressions
+        run: |
+          export SEARXNG_SECRET="$(python -c 'import secrets; print(secrets.token_hex(32))')"
+          python -m nose2 -s tests/unit test_query test_webadapter test_settings_loader -v
