@@ -111,6 +111,7 @@ def main() -> None:
             driver.get(url)
             driver.find_element(By.ID, 'q').send_keys('synthetic no-network test')
             driver.find_element(By.ID, 'send_search').click()
+            WebDriverWait(driver, 12).until(lambda page: page.current_url.endswith('/search'))
             assert driver.current_url.endswith('/search'), driver.current_url
             assert not driver.execute_script('return location.search'), 'search terms leaked into URL'
             summary = driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary')
