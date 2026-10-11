@@ -131,6 +131,15 @@ def main() -> None:
         driver.find_element(By.CSS_SELECTOR, '.goreecloud-theme-toggle').click()
         assert driver.execute_script("return document.documentElement.classList.contains('theme-light')"), 'Light toggle failed'
         print('PASS moon button toggles light/dark appearance for this browser tab')
+        # The slash shortcut is an optional focus aid, not a query-submission action.
+        driver.get(url)
+        driver.find_element(By.TAG_NAME, 'body').send_keys('/')
+        q_field = driver.find_element(By.ID, 'q')
+        assert driver.execute_script('return document.activeElement === arguments[0]', q_field), 'Slash did not focus query input'
+        q_field.send_keys('literal/segment')
+        assert q_field.get_attribute('value') == 'literal/segment', 'Slash was intercepted while typing'
+        assert not driver.execute_script('return location.search'), 'Keyboard shortcut leaked query into URL'
+        print('PASS slash focuses search and does not intercept typing inside search')
         # Preview selected providers first, then explicitly continue to the
         # synthetic search. The preview must never create a provider executor.
         with patch('searx.search.SearchWithPlugins', side_effect=SyntheticBrowserSearch) as preview_search:
