@@ -164,11 +164,11 @@ html[data-glaze-consumer] .goreecloud-why h2 { color: var(--gc-ink); font-size: 
 html[data-glaze-consumer] .goreecloud-why p { max-width: 675px; margin: 0 auto; font-size: 15px; line-height: 1.7; }
 @media (max-width: 700px) {
   html[data-glaze-consumer] .goreecloud-site-header { min-height: 76px; padding: 19px 20px; gap: 9px; }
-  html[data-glaze-consumer] .goreecloud-brand-name { font-size: 16px; }
-  html[data-glaze-consumer] .goreecloud-brand-product { font-size: 15px; }
-  html[data-glaze-consumer] .goreecloud-site-brand { gap: 8px; }
+  html[data-glaze-consumer] .goreecloud-brand-name { font-size: 15px; }
+  html[data-glaze-consumer] .goreecloud-brand-product { font-size: 14px; }
+  html[data-glaze-consumer] .goreecloud-site-brand { gap: 7px; }
   html[data-glaze-consumer] .goreecloud-mark-small { width: 34px; height: 34px; }
-  html[data-glaze-consumer] .goreecloud-site-nav { gap: 12px; }
+  html[data-glaze-consumer] .goreecloud-site-nav { gap: 8px; }
   html[data-glaze-consumer] .goreecloud-site-nav .goreecloud-nav-secondary { display: none; }
   html[data-glaze-consumer] .goreecloud-site-nav a { font-size: 12px; }
   html[data-glaze-consumer] .goreecloud-theme-toggle { width: 39px; height: 39px; padding: 7px; }
