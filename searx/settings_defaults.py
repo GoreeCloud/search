@@ -191,6 +191,11 @@ SCHEMA: dict[str, t.Any] = {
         'open_metrics': SettingsValue(str, ''),
     },
     'brand': SettingsBrand,
+    'goreecloud': {
+        'private_search': SettingsValue(bool, False),
+        'max_query_chars': SettingsValue(int, 0),
+        'max_provider_fanout': SettingsValue(int, 0),
+    },
     'search': {
         'safe_search': SettingsValue((0, 1, 2), 0),
         'autocomplete': SettingsValue(str, 'duckduckgo'),

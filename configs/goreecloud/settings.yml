@@ -1,6 +1,10 @@
 # Private/local GoreeCloud Search profile. Inherit upstream engines.
 # Do not use this profile unchanged for an Internet-facing instance.
 use_default_settings: true
+goreecloud:
+  private_search: true
+  max_query_chars: 512
+  max_provider_fanout: 32
 general:
   instance_name: "GoreeCloud Search"
   enable_metrics: false

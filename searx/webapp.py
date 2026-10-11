@@ -63,6 +63,7 @@ from searx.result_types import Answer
 from searx.settings_defaults import OUTPUT_FORMATS
 from searx.settings_loader import DEFAULT_SETTINGS_FILE
 from searx.exceptions import SearxParameterException
+from searx.goreecloud_policy import SearchPolicyViolation, validate_disclosure, validate_transport
 from searx.engines import (
     DEFAULT_CATEGORY,
     categories,
@@ -440,6 +441,7 @@ def render(template_name: str, **kwargs):
 
     # values from settings
     kwargs['search_formats'] = [x for x in settings['search']['formats'] if x != 'html']
+    kwargs['private_query_transport'] = settings['goreecloud']['private_search']
     kwargs['instance_name'] = get_setting('general.instance_name')
     kwargs['searxng_version'] = VERSION_STRING
     kwargs['searxng_git_url'] = GIT_URL
@@ -531,6 +533,9 @@ def pre_request():
         preferences.parse_dict({"locale": locale})
         logger.debug('set locale %s (from browser)', preferences.get_value("locale"))
 
+    if settings['goreecloud']['private_search']:
+        preferences.key_value_settings['method'].value = 'POST'
+
     # request.user_plugins
     sxng_request.user_plugins = []  # pylint: disable=assigning-non-slot
     allowed_plugins = preferences.plugins.get_enabled()
@@ -618,6 +623,11 @@ def index():
     )
 
 
+@app.errorhandler(SearchPolicyViolation)
+def goreecloud_policy_error(error):
+    return Response(str(error), status=error.http_status, mimetype='text/plain')
+
+
 @app.route('/healthz', methods=['GET'])
 def health():
     return Response('OK', mimetype='text/plain')
@@ -645,6 +655,9 @@ def search():
     """
     # pylint: disable=too-many-locals, too-many-return-statements, too-many-branches
     # pylint: disable=too-many-statements
+
+    if settings['goreecloud']['private_search'] and sxng_request.form.get('q'):
+        validate_transport(method=sxng_request.method, query_in_url=bool(sxng_request.args), private=True)
 
     # output_format
     output_format = sxng_request.form.get('format', 'html')
