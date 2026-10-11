@@ -29,7 +29,7 @@ Results display a source-selection summary listing the upstream engine names cho
 
 ## Development validation
 
-With SearXNG's pinned requirements installed (including the Python 3.10 compatibility backport when applicable), run:
+With SearXNG's pinned requirements installed (including the Python 3.10 compatibility backport when applicable), run the commands below. GitHub source/runtime CI now checks both Python 3.10 and 3.12, while the Chrome browser job uses Python 3.12:
 
 ```sh
 python -m compileall -q searx
