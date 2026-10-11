@@ -90,7 +90,9 @@ def main() -> None:
             driver.find_element(By.ID, 'send_search').click()
             assert driver.current_url.endswith('/search'), driver.current_url
             assert not driver.execute_script('return location.search'), 'search terms leaked into URL'
-            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').is_displayed()
+            summary = driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary')
+            assert summary.is_displayed()
+            assert '0 selected source(s) represented' in summary.text, summary.text
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').is_displayed()
             assert 'synthetic no-network test' not in driver.title, 'private query leaked into page title'
             driver.save_screenshot(str(artifacts / 'phone-synthetic-results.png'))

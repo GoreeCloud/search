@@ -22,7 +22,7 @@ from flask_babel import gettext, format_date  # type: ignore
 from searx import logger, get_setting
 
 from searx.engines import DEFAULT_CATEGORY
-from searx.goreecloud_policy import distinct_selected_sources, safe_primary_result_url
+from searx.goreecloud_policy import distinct_selected_sources, safe_primary_result_url, represented_result_sources
 
 if TYPE_CHECKING:
     from searx.enginelib import Engine
@@ -176,10 +176,14 @@ def get_json_response(sq: "SearchQuery", rc: "ResultContainer", *, include_sourc
     }
     if include_source_selection:
         selected = distinct_selected_sources(ref.name for ref in sq.engineref_list)
+        represented_counts = represented_result_sources(ordered, selected)
         data['goreecloud'] = {
             'selected_engines': selected,
             'selected_engine_count': len(selected),
             'selection_not_contact_confirmation': True,
+            'represented_engines': list(represented_counts),
+            'represented_result_counts': represented_counts,
+            'representation_not_contact_confirmation': True,
         }
     response = json.dumps(data, cls=JSONEncoder)
     return response

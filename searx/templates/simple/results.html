@@ -19,6 +19,12 @@
     <ul>{% for source in selected_source_names %}<li>{{ source }}</li>{% endfor %}</ul>
   </details>
   {% endif %}
+  <p><strong>{{ represented_source_counts|length }} selected source(s) represented</strong> in the displayed web results. These result labels are not proof of provider contact or successful network requests.</p>
+  {% if represented_source_counts %}
+  <details><summary>View represented sources and result counts</summary>
+    <ul>{% for source, count in represented_source_counts.items() %}<li>{{ source }} — {{ count }} displayed result(s)</li>{% endfor %}</ul>
+  </details>
+  {% endif %}
 </aside>
 {% endif %}
 

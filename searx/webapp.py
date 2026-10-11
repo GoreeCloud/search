@@ -65,7 +65,7 @@ from searx.settings_loader import DEFAULT_SETTINGS_FILE
 from searx.exceptions import SearxParameterException
 from searx.goreecloud_policy import (
     SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
-    distinct_selected_sources, safe_primary_result_url,
+    distinct_selected_sources, safe_primary_result_url, represented_result_sources,
 )
 from searx.engines import (
     DEFAULT_CATEGORY,
@@ -871,6 +871,9 @@ def search():
         # fmt: off
         'results.html',
         selected_source_names = distinct_selected_sources(ref.name for ref in search_query.engineref_list),
+        represented_source_counts = represented_result_sources(
+            results, (ref.name for ref in search_query.engineref_list)
+        ) if settings['goreecloud']['private_search'] else {},
         results = results,
         q=sxng_request.form['q'],
         selected_categories = search_query.categories,

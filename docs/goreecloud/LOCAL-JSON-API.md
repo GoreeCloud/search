@@ -18,12 +18,15 @@ An additive `goreecloud` response object is available when `goreecloud.private_s
   "goreecloud": {
     "selected_engines": ["Engine A", "Engine B"],
     "selected_engine_count": 2,
-    "selection_not_contact_confirmation": true
+    "selection_not_contact_confirmation": true,
+    "represented_engines": [],
+    "represented_result_counts": {},
+    "representation_not_contact_confirmation": true
   }
 }
 ```
 
-This is an illustrative shape, not a fabricated live-search response. SearXNG's original keys and result serialization remain unchanged; the private extension filters out primary result links that are not well-formed HTTP(S) destinations, while upstream callers not requesting the extension continue to receive the upstream response shape and result population. The selected list reflects the engine selection after query parsing, not contacted, completed or successful providers.
+This is an illustrative shape, not a fabricated live-search response. SearXNG's original keys and result serialization remain unchanged; the private extension filters out primary result links that are not well-formed HTTP(S) destinations, while upstream callers not requesting the extension continue to receive the upstream response shape and result population. The selected list reflects engine selection after query parsing, not contacted, completed or successful providers. `represented_engines` and `represented_result_counts` describe selected engine labels attached to the safe primary results actually returned on this page. A merged result tagged by multiple engines contributes once to each represented engine, so counts can overlap. These labels are attribution attached to result objects, not independently verified provider identity, network completion, response authenticity, or total provider requests. Empty results produce an empty attribution map.
 
 Private-profile limits: at most 512 raw submitted query characters and 32 distinct selected engines. Oversized queries return HTTP 413, excessive engine selection or automatic external-navigation requests return 422, and URL-query submission returns 405. Rejected JSON searches return a structured privacy policy error without echoing query terms. Unexpected upstream plugin redirects are also denied. Private responses are uncached (`Cache-Control: private, no-store, max-age=0`) and set `Referrer-Policy: no-referrer`.
 

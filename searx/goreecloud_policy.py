@@ -100,3 +100,33 @@ def safe_primary_result_url(url: object) -> bool:
         )
     except ValueError:
         return False
+
+
+def represented_result_sources(results: Iterable[object], selected_names: Iterable[str]) -> dict[str, int]:
+    """Count selected provider labels attached to *displayed* primary results.
+
+    Multiple selected engines can label a single aggregated result. Counts are
+    therefore overlapping result attributions, not network request counts,
+    response confirmations, or independent evidence of provider authenticity.
+    Only names in the query's selected set appear in the output.
+    """
+    selected = {label.casefold(): label for label in distinct_selected_sources(selected_names)}
+    counts: dict[str, int] = {}
+    for result in results:
+        raw = getattr(result, 'engines', None)
+        if isinstance(raw, str):
+            names = [raw]
+        elif isinstance(raw, (list, tuple, set, frozenset)):
+            names = list(raw)
+        else:
+            names = []
+        engine = getattr(result, 'engine', None)
+        if isinstance(engine, str):
+            names.append(engine)
+        matched = {
+            selected[name.casefold()] for name in names
+            if isinstance(name, str) and name.casefold() in selected
+        }
+        for name in matched:
+            counts[name] = counts.get(name, 0) + 1
+    return {name: counts[name] for name in sorted(counts, key=lambda label: (label.casefold(), label))}
