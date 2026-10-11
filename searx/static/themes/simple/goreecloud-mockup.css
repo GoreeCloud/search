@@ -298,3 +298,14 @@ html.no-js[data-glaze-consumer] .goreecloud-theme-toggle { display: none; }
 @media (forced-colors: active) {
   html[data-glaze-consumer] .goreecloud-skip-link { background: Canvas; color: CanvasText; border-color: Highlight; }
 }
+
+/* Private provider preflight needs true scroll clearance below its POST actions.
+   Do not let the fixed-height upstream layout trap controls behind the footer. */
+html[data-glaze-consumer] body.goreecloud_preview_endpoint .goreecloud-preview {
+  box-sizing: border-box;
+  width: min(calc(100% - 24px), 53rem);
+  margin: clamp(1.25rem, 4vh, 2.25rem) auto 9rem;
+}
+html[data-glaze-consumer] body.goreecloud_preview_endpoint .goreecloud-preview form {
+  scroll-margin-block: 5rem;
+}
