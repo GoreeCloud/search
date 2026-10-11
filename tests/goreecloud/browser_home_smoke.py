@@ -27,6 +27,7 @@ from selenium.webdriver.chrome.options import Options  # noqa: E402
 from selenium.webdriver.common.by import By  # noqa: E402
 from selenium.webdriver.common.keys import Keys  # noqa: E402
 from selenium.webdriver.support.ui import WebDriverWait  # noqa: E402
+from selenium.common.exceptions import StaleElementReferenceException  # noqa: E402
 
 
 class SyntheticBrowserSearch:
@@ -137,7 +138,7 @@ def main() -> None:
             driver.get(url)
             driver.find_element(By.ID, 'q').send_keys('synthetic private preflight')
             driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-trigger').click()
-            WebDriverWait(driver, 12).until(lambda page: page.current_url != url)
+            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: page.current_url != url)
             assert driver.current_url.endswith('/preview'), driver.current_url
             assert not driver.execute_script('return location.search'), 'preview query entered URL'
             preview_heading = driver.find_element(By.CSS_SELECTOR, '#preview-heading')
@@ -148,7 +149,7 @@ def main() -> None:
             preview_search.assert_not_called()
             driver.save_screenshot(str(artifacts / 'phone-source-preview.png'))
             driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-continue').click()
-            WebDriverWait(driver, 12).until(lambda page: page.current_url.endswith('/search'))
+            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: page.current_url.endswith('/search'))
             assert driver.current_url.endswith('/search'), driver.current_url
             assert not driver.execute_script('return location.search'), 'continued query entered URL'
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').is_displayed()
@@ -161,7 +162,7 @@ def main() -> None:
             driver.get(url)
             driver.find_element(By.ID, 'q').send_keys('synthetic no-network test')
             driver.find_element(By.ID, 'send_search').click()
-            WebDriverWait(driver, 12).until(lambda page: page.current_url.endswith('/search'))
+            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: page.current_url.endswith('/search'))
             assert driver.current_url.endswith('/search'), driver.current_url
             assert not driver.execute_script('return location.search'), 'search terms leaked into URL'
             summary = driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary')
@@ -174,25 +175,25 @@ def main() -> None:
             driver.save_screenshot(str(artifacts / 'phone-synthetic-results.png'))
             driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary details summary').click()
             driver.find_element(By.CSS_SELECTOR, '.goreecloud-refine-source button').click()
-            WebDriverWait(driver, 12).until(lambda page: '1 source(s) selected' in page.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text)
+            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: '1 source(s) selected' in page.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text)
             assert driver.current_url.endswith('/search'), driver.current_url
             assert not driver.execute_script('return location.search'), 'one-source query entered URL'
             assert '1 source(s) selected' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
             switch_startpage = driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(3) button')
             driver.execute_script("arguments[0].scrollIntoView({block:'center'})", switch_startpage)
             switch_startpage.click()
-            WebDriverWait(driver, 12).until(lambda page: bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(3) button:disabled')))
+            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(3) button:disabled')))
             assert '1 source(s) selected' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
             switch_both = driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(1) button')
             driver.execute_script("arguments[0].scrollIntoView({block:'center'})", switch_both)
             switch_both.click()
-            WebDriverWait(driver, 12).until(lambda page: bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(1) button:disabled')))
+            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(1) button:disabled')))
             assert '2 source(s) selected' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
             assert not driver.execute_script('return location.search'), 'switching sources entered URL query'
             print('PASS mobile POST, one-source refinement, Startpage/Both switching and URL privacy')
             driver.get(url)
             driver.find_element(By.ID, 'q').send_keys('synthetic keyboard submission' + Keys.ENTER)
-            WebDriverWait(driver, 12).until(lambda page: page.current_url.endswith('/search'))
+            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: page.current_url.endswith('/search'))
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').is_displayed()
             assert not driver.execute_script('return location.search'), 'Keyboard search leaked terms into URL'
             print('PASS keyboard Enter submits normal private POST search')
