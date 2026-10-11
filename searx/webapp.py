@@ -65,6 +65,7 @@ from searx.settings_loader import DEFAULT_SETTINGS_FILE
 from searx.exceptions import SearxParameterException
 from searx.goreecloud_policy import (
     SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
+    distinct_selected_sources,
 )
 from searx.engines import (
     DEFAULT_CATEGORY,
@@ -554,7 +555,9 @@ def add_default_headers(response: flask.Response):
         if header in response.headers:
             continue
         response.headers[header] = value
-    if settings['goreecloud']['private_search'] and sxng_request.endpoint in ('index', 'search'):
+    if settings['goreecloud']['private_search'] and sxng_request.endpoint in (
+        'index', 'search', 'autocompleter', 'opensearch',
+    ):
         response.headers['Cache-Control'] = 'private, no-store, max-age=0'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Referrer-Policy'] = 'no-referrer'
@@ -852,7 +855,7 @@ def search():
     return render(
         # fmt: off
         'results.html',
-        selected_source_names = sorted({ref.name for ref in search_query.engineref_list}, key=str.casefold),
+        selected_source_names = distinct_selected_sources(ref.name for ref in search_query.engineref_list),
         results = results,
         q=sxng_request.form['q'],
         selected_categories = search_query.categories,
@@ -906,7 +909,10 @@ def info(pagename, locale):
 
 @app.route('/autocompleter', methods=['GET'])
 def autocompleter():
-    """Return autocompleter results"""
+    """Return autocompleter results only outside the private local profile."""
+    if settings['goreecloud']['private_search']:
+        # A disabled UI feature must not be reachable via an alternate GET API.
+        flask.abort(404)
 
     # run autocompleter
     results = []
@@ -1285,6 +1291,9 @@ Disallow: /*?*q=*
 
 @app.route('/opensearch.xml', methods=['GET'])
 def opensearch():
+    if settings['goreecloud']['private_search']:
+        # Browser OpenSearch clients can downgrade searches to query-bearing GET.
+        flask.abort(404)
     method = sxng_request.preferences.get_value('method')
     autocomplete = sxng_request.preferences.get_value('autocomplete')
 

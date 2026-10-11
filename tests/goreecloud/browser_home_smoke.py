@@ -1,7 +1,7 @@
-"""Browser-only, no-provider home UI smoke. Requires Selenium and Chrome.
+"""Browser-only, no-provider home/search smoke. Requires Selenium and Chrome.
 
-Runs against an ephemeral loopback Flask WSGI server. No search is dispatched and
-screenshots contain only the unauthenticated synthetic homepage.
+Uses an ephemeral loopback server and synthetic search response; never sends a
+query to an actual upstream provider. Screenshot fixtures contain no user data.
 """
 from __future__ import annotations
 
@@ -10,6 +10,8 @@ from pathlib import Path
 import secrets
 import sys
 from threading import Thread
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from werkzeug.serving import make_server
 
@@ -23,6 +25,19 @@ from searx.webapp import app  # noqa: E402
 from selenium import webdriver  # noqa: E402
 from selenium.webdriver.chrome.options import Options  # noqa: E402
 from selenium.webdriver.common.by import By  # noqa: E402
+
+
+class SyntheticBrowserSearch:
+    """Return empty, local-only results after real form and query parsing."""
+    def __init__(self, search_query, *args):
+        self.search_query = search_query
+
+    def search(self):
+        return SimpleNamespace(
+            redirect_url=None, suggestions=[], corrections=[], answers=[],
+            infoboxes=[], engine_data={}, paging=False, unresponsive_engines=[],
+            get_timings=lambda: [], get_ordered_results=lambda: [],
+        )
 
 
 def main() -> None:
@@ -66,6 +81,20 @@ def main() -> None:
             assert spill <= 2, f"{label}: horizontal overflow of {spill}px"
             driver.save_screenshot(str(artifacts / f"{label}.png"))
             print(f"PASS {label} {width}x{height}; overflow={spill}px; POST and Glaze styles verified")
+        # Exercise a real browser POST through the real SearXNG query parser,
+        # while replacing provider execution with a synthetic local result.
+        with patch('searx.search.SearchWithPlugins', SyntheticBrowserSearch):
+            driver.set_window_size(390, 844)
+            driver.get(url)
+            driver.find_element(By.ID, 'q').send_keys('synthetic no-network test')
+            driver.find_element(By.ID, 'send_search').click()
+            assert driver.current_url.endswith('/search'), driver.current_url
+            assert not driver.execute_script('return location.search'), 'search terms leaked into URL'
+            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').is_displayed()
+            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').is_displayed()
+            assert 'synthetic no-network test' not in driver.title, 'private query leaked into page title'
+            driver.save_screenshot(str(artifacts / 'phone-synthetic-results.png'))
+            print('PASS synthetic mobile POST, selected-source disclosure, empty-result recovery and URL privacy')
         # Exercise a synthetic denied URL without dispatching a search.
         driver.get(url + 'search?q=synthetic-private-smoke-fixture')
         assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-policy-error[role=alert]').is_displayed()

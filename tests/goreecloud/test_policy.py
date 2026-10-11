@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 os.environ.setdefault('SEARXNG_SETTINGS_PATH', str(ROOT / 'configs/goreecloud/settings.yml'))
 os.environ.setdefault('SEARXNG_SECRET', 'goreecloud-runtime-smoke-test-only-secret-0000')
-from searx.goreecloud_policy import validate_transport, validate_disclosure, SearchPolicyViolation
+from searx.goreecloud_policy import validate_transport, validate_disclosure, distinct_selected_sources, SearchPolicyViolation
 
 class PolicyTests(unittest.TestCase):
     def test_post_only(self):
@@ -16,3 +16,10 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual(2, validate_disclosure('q', ['A', 'a', 'B'], max_query_chars=512, max_providers=2))
         with self.assertRaises(SearchPolicyViolation):
             validate_disclosure('q', ['a', 'b', 'c'], max_query_chars=512, max_providers=2)
+
+    def test_source_display_matches_casefold_provider_budget(self):
+        self.assertEqual(['Alpha', 'beta'], distinct_selected_sources(['Alpha', 'alpha', 'beta', 'BETA']))
+        self.assertEqual(2, validate_disclosure(
+            'synthetic', ['Alpha', 'alpha', 'beta', 'BETA'],
+            max_query_chars=512, max_providers=2,
+        ))

@@ -8,5 +8,5 @@
 4. Before public deployment, independently validate SSRF/XSS protections, rate limiting/Valkey, HTTPS and reverse proxies, secret management, query redaction, logging/retention, uptime, rollbacks and live security/privacy gates.
 5. Glaze is presentation-only: it must not imply consent, permission, authorized indexing, Identity state, Wardveil rules, or Production approval.
 6. The private mode rejects external bangs and first-result navigation before provider dispatch; unexpected redirects are denied after a search. Explicit user clicks on result links can still disclose information to destinations.
-7. Raw query length is checked before parsing operators. The submitted search remains POST-only, with selection caps before network dispatch.
+7. Raw query length is checked before parsing operators. The submitted search remains POST-only, with selection caps before network dispatch. Private mode returns uncached 404 responses for direct `/opensearch.xml` and `/autocompleter` GET endpoints, blocking alternate browser-discovery and suggestion routes even if a client bypasses the interface.
 8. Inherited upstream CI/release automation remains disabled. Bounded source/runtime and synthetic browser tests are not Production or official Glaze acceptance.

@@ -11,7 +11,7 @@ class SelectedSourcesTests(unittest.TestCase):
     def test_private_result_page_discloses_selected_sources(self):
         query = SearchQuery('synthetic sample', [
             EngineRef('Alpha', 'general'),
-            EngineRef('Alpha', 'images'),
+            EngineRef('alpha', 'images'),
             EngineRef('Beta', 'general'),
         ], lang='en')
         result = SimpleNamespace(
@@ -30,6 +30,7 @@ class SelectedSourcesTests(unittest.TestCase):
                     self.assertEqual(200, response.status_code)
                     self.assertIn(b'2 source(s) selected', response.data)
                     self.assertIn(b'<li>Alpha</li>', response.data)
+                    self.assertNotIn(b'<li>alpha</li>', response.data)
                     self.assertIn(b'<li>Beta</li>', response.data)
                     self.assertNotIn(b'application/rss+xml', response.data)
                     self.assertNotIn(b'id="search_url"', response.data)

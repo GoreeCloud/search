@@ -13,7 +13,7 @@ class LocalJsonSourceMetadataTests(unittest.TestCase):
     def test_local_json_extends_upstream_contract_without_contact_claim(self):
         query = SearchQuery('synthetic query', [
             EngineRef('Alpha', 'general'),
-            EngineRef('Alpha', 'news'),
+            EngineRef('alpha', 'news'),
             EngineRef('Beta', 'general'),
         ], lang='en')
         results = SimpleNamespace(

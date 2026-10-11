@@ -42,7 +42,7 @@ def validate_disclosure(
         raise ValueError("Privacy limits must be non-negative")
     if max_query_chars and len(query) > max_query_chars:
         raise SearchPolicyViolation("Search query exceeds the configured length limit.", 413)
-    unique = {name.casefold() for name in provider_names}
+    unique = distinct_selected_sources(provider_names)
     if max_providers and len(unique) > max_providers:
         raise SearchPolicyViolation(
             "Too many sources for this search. Select fewer categories or engines.", 422
@@ -62,3 +62,15 @@ def validate_no_external_redirects(*, external_bang: str | None, lucky_redirect:
             "Direct external search redirects are disabled in private mode. Remove external bangs or !!.",
             422,
         )
+
+
+def distinct_selected_sources(provider_names: Iterable[str]) -> list[str]:
+    """Canonical display/count for provider choices, matching fanout policy.
+
+    Retains the first label for case-insensitive duplicates, and sorts the
+    resulting labels predictably. It does not imply a successful provider call.
+    """
+    first_labels: dict[str, str] = {}
+    for name in provider_names:
+        first_labels.setdefault(name.casefold(), name)
+    return sorted(first_labels.values(), key=lambda label: (label.casefold(), label))
