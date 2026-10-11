@@ -11,6 +11,9 @@
     <ul>{% for source in selected_sources %}<li>{{ 'Brave Search' if source == 'brave' else 'Startpage' }}</li>{% endfor %}</ul>
   </details>
   <p>Continuing will send your search terms to the configured providers under their own policies. Their availability and handling of your terms have not been verified by this preview.</p>
+  {% if 'startpage' in selected_sources %}
+  <p class="goreecloud-startpage-note" role="note"><strong>Startpage availability:</strong> its upstream adapter may encounter anti-bot proof-of-work challenges. This preview has not checked Startpage's live availability. No other provider will be substituted.</p>
+  {% endif %}
   <form method="post" action="{{ url_for('search') }}">
     <input type="hidden" name="q" value="{{ query_text }}">
     {% for field, value in replay_fields.items() %}<input type="hidden" name="{{ field }}" value="{{ value }}">{% endfor %}
