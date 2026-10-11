@@ -7,4 +7,4 @@
 - Working mapping: semantic content versus interactive chrome, opaque result cards, local styling, focus-visible states, system/light/dark themes, RTL inherited from SearXNG, responsive scaling, Reduced Motion, Reduced Transparency, and Forced Colors fallback.
 - Non-claims: no Glaze JS runtime activation; no exact revision rendered acceptance, human assistive-technology validation, production-grade performance or full consumer registration/acceptance; no deployment or publication authorization.
 
-The browser UI has no GoreeCloud-added trackers, remote fonts, third-party icon packs, or scripting requirement. Presentation does not grant underlying privacy/security/identity provider authority.
+The packaged Glaze CSS retains its [MIT license](docs/licenses/GLAZE-MIT-LICENSE). The browser UI has no GoreeCloud-added trackers, remote fonts, third-party icon packs, or scripting requirement. Presentation does not grant underlying privacy/security/identity provider authority.

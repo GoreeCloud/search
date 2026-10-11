@@ -10,12 +10,11 @@ The codebase includes SearXNG's federated engine adapters, categorized web/image
 
 ## Develop locally
 
-Follow [upstream SearXNG development instructions](docs/dev/index.rst) to install dependencies. Set a strong unique key from a local secret store and select GoreeCloud's private settings:
+Follow [upstream SearXNG development instructions](docs/dev/index.rst) to install dependencies. Set a unique 32+-character secret in a local secret store, and launch through the fail-closed wrapper:
 
 ```sh
-export SEARXNG_SECRET="<unique-strong-secret>"
-export SEARXNG_SETTINGS_PATH="$PWD/configs/goreecloud/settings.yml"
-./manage webapp.run
+export SEARXNG_SECRET="<unique-strong-secret-from-your-secret-store>"
+./scripts/run-private.sh
 ```
 
 Never use the upstream placeholder key. The profile binds **127.0.0.1**, disables metrics and remote autocomplete, proxies images, defaults to POST, and exposes opt-in JSON on a private interface. It does **not** implement public rate limiting. Internet exposure requires a separate gated HTTPS/reverse-proxy, Valkey limiter, hardened secrets, security/privacy and operational acceptance.

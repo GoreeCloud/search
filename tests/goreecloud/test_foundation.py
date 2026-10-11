@@ -1,6 +1,8 @@
 """Source-contract checks requiring only the Python standard library."""
 from pathlib import Path
 import re
+import os
+import subprocess
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -51,6 +53,27 @@ class GoreeCloudFoundationTests(unittest.TestCase):
         self.assertNotIn("<script", icon)
         base = (THEME / "base.html").read_text()
         self.assertNotIn("img/favicon.png", base)
+
+    def test_private_launcher_refuses_missing_secret_and_public_overrides(self):
+        script = str(ROOT / "scripts/run-private.sh")
+        env = os.environ.copy()
+        for k in ("SEARXNG_SECRET", "SEARXNG_BIND_ADDRESS", "SEARXNG_PUBLIC_INSTANCE"):
+            env.pop(k, None)
+        missing = subprocess.run(["bash", script], env=env, capture_output=True, text=True, timeout=4)
+        self.assertEqual(64, missing.returncode)
+        self.assertIn("SEARXNG_SECRET", missing.stderr)
+        env["SEARXNG_SECRET"] = "a" * 40
+        env["SEARXNG_BIND_ADDRESS"] = "0.0.0.0"
+        exposed = subprocess.run(["bash", script], env=env, capture_output=True, text=True, timeout=4)
+        self.assertEqual(64, exposed.returncode)
+        self.assertIn("override refused", exposed.stderr)
+
+    def test_local_privacy_notice(self):
+        base = (THEME / "base.html").read_text()
+        self.assertIn("goreecloud/privacy.html", base)
+        notice = (ASSETS / "goreecloud/privacy.html").read_text()
+        self.assertIn("forwards terms", notice)
+        self.assertIn("does not guarantee anonymity", notice)
 
     def test_accessibility_fallbacks(self):
         css = (ASSETS / "goreecloud-search.css").read_text()
