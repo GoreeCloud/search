@@ -5,7 +5,7 @@ The supplied GoreeCloud Search feature catalog is a **proposed product target**,
 | Workstream | Current foundation | Open and gated work |
 | --- | --- | --- |
 | Web/multimedia/news | SearXNG provider ecosystem and federated aggregation | Provider qualification, ranking tuning, result quality evaluation |
-| Search operators | SearXNG syntax and preferences | GoreeCloud ranking profiles, advanced policy filters, source explanations |
+| Search operators | SearXNG syntax and preferences; private provider preflight with opt-in one-source search and result-page POST refinements | GoreeCloud ranking profiles, advanced policy filters and audited provider explanations |
 | Privacy | POST, image proxy and private profile | Public rate limiting, formal Privacy Shield/Wardveil integration, disclosure audits |
 | Local Index | None in SearXNG imported runtime | Index contract adapter and cycle-safe routing, independent index operation |
 | Glaze | Local stable CSS foundation and app-specific mapping | Runtime integration, accessibility, device/rendered acceptance, conformance registration |

@@ -25,4 +25,5 @@
   </div>
   <input type="hidden" name="theme" value="{{ theme }}" >
   {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}" >{% endif %}
+  {% if private_query_transport %}<button type="submit" class="goreecloud-preview-trigger" formaction="{{ url_for('goreecloud_preview') }}" formmethod="post">Preview sources without searching</button>{% endif %}
 </form>

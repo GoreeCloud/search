@@ -1,0 +1,40 @@
+{% extends 'simple/base.html' %}
+{% block title %}Preview selected sources - {% endblock %}
+{% block content %}
+<section class="goreecloud-preview" aria-labelledby="preview-heading">
+  <p class="goreecloud-eyebrow">Private search preflight</p>
+  <h1 id="preview-heading">Review your search sources</h1>
+  <p role="status"><strong>No search-provider requests have been sent.</strong> These are the sources selected by your current query and preferences, not confirmed responders.</p>
+  <p><strong>{{ selected_sources|length }} source(s) selected.</strong> Categories: {{ selected_categories_preview|join(', ') or 'None' }}. Language: {{ selected_locale_preview }}. Safe search: {{ selected_safesearch }}.</p>
+  {% if selected_sources %}
+  <details open><summary>Selected providers</summary>
+    <ul>{% for source in selected_sources %}<li>{{ source }}</li>{% endfor %}</ul>
+  </details>
+  <p>Continuing will send your search terms to the configured providers under their own policies. Their availability and handling of your terms have not been verified by this preview.</p>
+  <form method="post" action="{{ url_for('search') }}">
+    <input type="hidden" name="q" value="{{ query_text }}">
+    {% for field, value in replay_fields.items() %}<input type="hidden" name="{{ field }}" value="{{ value }}">{% endfor %}
+    <button class="goreecloud-preview-continue" type="submit">Continue and search these providers</button>
+  </form>
+  {% if selected_sources|length > 1 %}
+  <details class="goreecloud-preview-single">
+    <summary>Search using only one selected provider</summary>
+    <form method="post" action="{{ url_for('search') }}">
+      <input type="hidden" name="q" value="{{ query_text }}">
+      {% for field, value in replay_fields.items() %}{% if not field.startswith('category_') and field != 'engines' %}<input type="hidden" name="{{ field }}" value="{{ value }}">{% endif %}{% endfor %}
+      <label for="goreecloud-provider-choice">Choose a provider</label>
+      <select id="goreecloud-provider-choice" name="engines" required>
+        <option value="">Select a provider</option>
+        {% for source in selected_sources %}<option value="{{ source }}">{{ source }}</option>{% endfor %}
+      </select>
+      <button class="goreecloud-preview-continue" type="submit">Search this provider</button>
+    </form>
+  </details>
+  {% endif %}
+  {% else %}
+  <p role="alert">No enabled search providers were selected. Change your categories or update the local provider settings.</p>
+  <a href="{{ url_for('preferences') }}">Review local provider settings</a>
+  {% endif %}
+  <p><a href="{{ url_for('index') }}">Return to GoreeCloud Search</a></p>
+</section>
+{% endblock %}

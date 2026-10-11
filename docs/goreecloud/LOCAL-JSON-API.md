@@ -4,6 +4,33 @@
 
 The private profile enables SearXNG's inherited JSON search response through `POST /search` with `q` and `format=json` in the request body. GET with search terms is rejected. Running an actual search transmits the terms to the enabled upstream search providers; the source-selection metadata is not an assertion that any provider received or answered a request.
 
+### No-network preview contract
+
+Before searching, `POST /preview` with form-body `q=...&format=json` returns **no query text and no provider requests**. It uses the current SearXNG parser and the same privacy/fanout limits as execution. For example, an empty-source hypothetical response is:
+
+```json
+{
+  "goreecloud": {
+    "mode": "private_search_preview",
+    "network_requests_made": false,
+    "will_contact_providers_on_continue": false,
+    "selected_engines": [],
+    "selected_engine_count": 0,
+    "selected_categories": [],
+    "language": "en",
+    "safesearch": 1,
+    "time_range": "",
+    "page": 1,
+    "query_length": 12,
+    "selection_not_contact_confirmation": true
+  }
+}
+```
+
+The example is illustrative, not a live query or a guarantee that the same fields predict provider availability. `will_contact_providers_on_continue` indicates only that the plan has selectable providers; actual browser continuation posts a separate request. There is no public API/authentication contract.
+
+### Search execution response
+
 An additive `goreecloud` response object is available when `goreecloud.private_search` is enabled:
 
 ```json

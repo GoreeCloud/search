@@ -81,6 +81,25 @@ def main() -> None:
             assert spill <= 2, f"{label}: horizontal overflow of {spill}px"
             driver.save_screenshot(str(artifacts / f"{label}.png"))
             print(f"PASS {label} {width}x{height}; overflow={spill}px; POST and Glaze styles verified")
+        # Preview selected providers first, then explicitly continue to the
+        # synthetic search. The preview must never create a provider executor.
+        with patch('searx.search.SearchWithPlugins', SyntheticBrowserSearch) as preview_search:
+            driver.set_window_size(390, 844)
+            driver.get(url)
+            driver.find_element(By.ID, 'q').send_keys('synthetic private preflight')
+            driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-trigger').click()
+            assert driver.current_url.endswith('/preview'), driver.current_url
+            assert not driver.execute_script('return location.search'), 'preview query entered URL'
+            preview_heading = driver.find_element(By.CSS_SELECTOR, '#preview-heading')
+            assert preview_heading.is_displayed()
+            assert 'No search-provider requests have been sent' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview').text
+            preview_search.assert_not_called()
+            driver.save_screenshot(str(artifacts / 'phone-source-preview.png'))
+            driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-continue').click()
+            assert driver.current_url.endswith('/search'), driver.current_url
+            assert not driver.execute_script('return location.search'), 'continued query entered URL'
+            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').is_displayed()
+            print('PASS private preview, no provider executor, explicit POST continuation and URL privacy')
         # Exercise a real browser POST through the real SearXNG query parser,
         # while replacing provider execution with a synthetic local result.
         with patch('searx.search.SearchWithPlugins', SyntheticBrowserSearch):
@@ -96,7 +115,11 @@ def main() -> None:
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').is_displayed()
             assert 'synthetic no-network test' not in driver.title, 'private query leaked into page title'
             driver.save_screenshot(str(artifacts / 'phone-synthetic-results.png'))
-            print('PASS synthetic mobile POST, selected-source disclosure, empty-result recovery and URL privacy')
+            driver.find_element(By.CSS_SELECTOR, '.goreecloud-refine-source button').click()
+            assert driver.current_url.endswith('/search'), driver.current_url
+            assert not driver.execute_script('return location.search'), 'one-source query entered URL'
+            assert '1 source(s) selected' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
+            print('PASS synthetic mobile POST, source-only refinement, empty-result recovery and URL privacy')
         # Exercise a synthetic denied URL without dispatching a search.
         driver.get(url + 'search?q=synthetic-private-smoke-fixture')
         assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-policy-error[role=alert]').is_displayed()

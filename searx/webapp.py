@@ -565,7 +565,8 @@ def add_default_headers(response: flask.Response):
             continue
         response.headers[header] = value
     if settings['goreecloud']['private_search'] and (
-        sxng_request.endpoint in ('index', 'search', 'autocompleter', 'opensearch', 'preferences')
+        sxng_request.endpoint in ('index', 'search', 'goreecloud_preview', 'autocompleter', 'opensearch', 'preferences')
+        or sxng_request.path == '/preview'
         or 'preferences' in sxng_request.args
         or 'preferences' in sxng_request.form
     ):
@@ -694,6 +695,70 @@ def rss_xsl():
     return render_template(
         f"{sxng_request.preferences.get_value('theme')}/rss.xsl",
         url_for=custom_url_for,
+    )
+
+
+@app.route('/preview', methods=['POST'])
+def goreecloud_preview():
+    """Inspect local provider selection without creating a SearchWithPlugins executor.
+
+    This is a private, no-network preflight—not consent or a provider health check.
+    """
+    if not settings['goreecloud']['private_search']:
+        flask.abort(404)
+    validate_transport(method=sxng_request.method, query_in_url=bool(sxng_request.args), private=True)
+    raw_query = sxng_request.form.get('q', '')
+    if not raw_query:
+        raise SearchPolicyViolation('Enter a query to preview its selected sources.', 400)
+    validate_disclosure(
+        raw_query, (),
+        max_query_chars=settings['goreecloud']['max_query_chars'],
+        max_providers=settings['goreecloud']['max_provider_fanout'],
+    )
+    try:
+        query, _, _, _, selected_locale = get_search_query_from_webapp(
+            sxng_request.preferences, sxng_request.form
+        )
+    except SearxParameterException:
+        raise SearchPolicyViolation('Search settings could not be previewed. Review your filters.', 422) from None
+    validate_no_external_redirects(
+        external_bang=query.external_bang,
+        lucky_redirect=bool(query.redirect_to_first_result),
+    )
+    sources = distinct_selected_sources(ref.name for ref in query.engineref_list)
+    validate_disclosure(
+        query.query, sources,
+        max_query_chars=settings['goreecloud']['max_query_chars'],
+        max_providers=settings['goreecloud']['max_provider_fanout'],
+    )
+    categories = sorted(query.categories, key=str.casefold)
+    if sxng_request.form.get('format') == 'json':
+        return flask.jsonify({
+            'goreecloud': {
+                'mode': 'private_search_preview', 'network_requests_made': False,
+                'will_contact_providers_on_continue': bool(sources),
+                'selected_engines': sources, 'selected_engine_count': len(sources),
+                'selected_categories': categories, 'language': selected_locale,
+                'safesearch': query.safesearch, 'time_range': query.time_range or '',
+                'page': query.pageno, 'query_length': len(raw_query),
+                'selection_not_contact_confirmation': True,
+            }
+        })
+    # Preserve the validated search intent with a short, allowlisted form.
+    # No preferences import, URL arguments, or untrusted arbitrary fields replay.
+    replay = {}
+    for key in ('language', 'time_range', 'safesearch', 'pageno', 'theme', 'timeout_limit'):
+        if key in sxng_request.form:
+            replay[key] = sxng_request.form[key]
+    if 'engines' in sxng_request.form:
+        replay['engines'] = ','.join(sources)
+    for category in categories:
+        replay[f'category_{category}'] = '1'
+    return render(
+        'goreecloud_preview.html', query_text=raw_query,
+        selected_sources=sources, selected_categories_preview=categories,
+        selected_locale_preview=selected_locale, selected_safesearch=query.safesearch,
+        replay_fields=replay,
     )
 
 
