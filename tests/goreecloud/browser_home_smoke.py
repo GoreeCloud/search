@@ -25,6 +25,7 @@ from searx.webapp import app  # noqa: E402
 from selenium import webdriver  # noqa: E402
 from selenium.webdriver.chrome.options import Options  # noqa: E402
 from selenium.webdriver.common.by import By  # noqa: E402
+from selenium.webdriver.support.ui import WebDriverWait  # noqa: E402
 
 
 class SyntheticBrowserSearch:
@@ -88,6 +89,7 @@ def main() -> None:
             driver.get(url)
             driver.find_element(By.ID, 'q').send_keys('synthetic private preflight')
             driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-trigger').click()
+            WebDriverWait(driver, 12).until(lambda page: page.current_url != url)
             assert driver.current_url.endswith('/preview'), driver.current_url
             assert not driver.execute_script('return location.search'), 'preview query entered URL'
             preview_heading = driver.find_element(By.CSS_SELECTOR, '#preview-heading')
@@ -96,6 +98,7 @@ def main() -> None:
             preview_search.assert_not_called()
             driver.save_screenshot(str(artifacts / 'phone-source-preview.png'))
             driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-continue').click()
+            WebDriverWait(driver, 12).until(lambda page: page.current_url.endswith('/search'))
             assert driver.current_url.endswith('/search'), driver.current_url
             assert not driver.execute_script('return location.search'), 'continued query entered URL'
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').is_displayed()
@@ -116,6 +119,7 @@ def main() -> None:
             assert 'synthetic no-network test' not in driver.title, 'private query leaked into page title'
             driver.save_screenshot(str(artifacts / 'phone-synthetic-results.png'))
             driver.find_element(By.CSS_SELECTOR, '.goreecloud-refine-source button').click()
+            WebDriverWait(driver, 12).until(lambda page: '1 source(s) selected' in page.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text)
             assert driver.current_url.endswith('/search'), driver.current_url
             assert not driver.execute_script('return location.search'), 'one-source query entered URL'
             assert '1 source(s) selected' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
