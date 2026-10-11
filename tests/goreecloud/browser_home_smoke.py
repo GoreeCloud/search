@@ -120,6 +120,7 @@ def main() -> None:
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').is_displayed()
             assert 'synthetic no-network test' not in driver.title, 'private query leaked into page title'
             driver.save_screenshot(str(artifacts / 'phone-synthetic-results.png'))
+            driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary details summary').click()
             driver.find_element(By.CSS_SELECTOR, '.goreecloud-refine-source button').click()
             WebDriverWait(driver, 12).until(lambda page: '1 source(s) selected' in page.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text)
             assert driver.current_url.endswith('/search'), driver.current_url
