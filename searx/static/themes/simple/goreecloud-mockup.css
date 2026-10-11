@@ -80,17 +80,17 @@ html[data-glaze-consumer] #main_index .goreecloud-home {
   align-items: center; text-align: center;
 }
 html[data-glaze-consumer] .goreecloud-hero {
-  width: min(100%, 820px); box-sizing: border-box; padding: clamp(27px, 4vh, 45px) 18px 0;
+  width: min(100%, 820px); box-sizing: border-box; padding: clamp(34px, 4vh, 45px) 18px 0;
   margin: 0 auto; display: flex; flex-direction: column; align-items: center;
 }
 html[data-glaze-consumer] .goreecloud-mark-hero { width: 80px; height: 80px; border-radius: 20px; }
 html[data-glaze-consumer] #main_index .goreecloud-hero .title {
   display: block; visibility: visible; background: none; width: 100%; height: auto;
-  min-height: 0; margin: 27px auto 0; padding: 0;
+  min-height: 0; margin: 30px auto 0; padding: 0;
 }
 html[data-glaze-consumer] #main_index .goreecloud-hero h1 {
   display: block; visibility: visible; color: var(--gc-ink); margin: 0;
-  font-size: clamp(38px, 4.55vw, 64px); line-height: 1.1; letter-spacing: -.061em;
+  font-size: clamp(38px, 4.25vw, 58px); line-height: 1.1; letter-spacing: -.061em;
   font-weight: 790; white-space: nowrap;
 }
 html[data-glaze-consumer] .goreecloud-hero-brand { font-weight: 820; }
@@ -98,7 +98,7 @@ html[data-glaze-consumer] .goreecloud-hero-brand span { color: var(--gc-accent-s
 html[data-glaze-consumer] .goreecloud-hero-product { color: var(--gc-ink) !important; font-weight: 560; }
 html[data-glaze-consumer] .goreecloud-hero .goreecloud-tagline {
   color: var(--gc-muted); font-size: clamp(17px, 1.55vw, 21px);
-  margin: 14px 0 0; line-height: 1.5; font-weight: 400;
+  margin: 19px 0 0; line-height: 1.5; font-weight: 400;
 }
 html[data-glaze-consumer] #main_index .goreecloud-hero #search {
   display: block; width: 100%; max-width: 764px; margin: 44px auto 0;
@@ -111,7 +111,7 @@ html[data-glaze-consumer] #main_index .goreecloud-hero #search_view {
 }
 html[data-glaze-consumer] #main_index .goreecloud-hero .search_box {
   display: flex; align-items: center; position: relative; box-sizing: border-box;
-  width: 100%; min-width: 0; height: 54px; margin: 0; padding: 4px 4px 4px 0;
+  width: 100%; max-width: none; min-width: 0; height: 54px; margin: 0; padding: 4px 4px 4px 0;
   border: 1px solid var(--gc-outline); border-radius: 16px;
   box-shadow: 0 14px 36px rgba(44, 68, 125, .14); background: var(--gc-surface);
 }

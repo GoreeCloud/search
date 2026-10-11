@@ -99,6 +99,9 @@ def main() -> None:
             spill = driver.execute_script(
                 "return document.documentElement.scrollWidth - document.documentElement.clientWidth"
             )
+            if spill > 2:
+                offscreen = driver.execute_script("""return [...document.querySelectorAll('*')].map(e => ({e, r:e.getBoundingClientRect()})).filter(o => o.r.width > 1 && (o.r.right > document.documentElement.clientWidth+2 || o.r.left < -2) && getComputedStyle(o.e).display !== 'none').slice(0,15).map(o => [o.e.tagName, String(o.e.className).slice(0,55), Math.round(o.r.left), Math.round(o.r.right)])""")
+                print(f'OFFSCREEN {label}: {offscreen}', flush=True)
             assert spill <= 2, f"{label}: horizontal overflow of {spill}px"
             driver.save_screenshot(str(artifacts / f"{label}.png"))
             print(f"PASS {label} {width}x{height}; overflow={spill}px; POST and Glaze styles verified")
