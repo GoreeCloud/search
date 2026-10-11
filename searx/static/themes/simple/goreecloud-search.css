@@ -67,6 +67,7 @@ html[data-glaze-consumer] :is(.result, .result-default, .infobox, .answer, #side
 }
 html[data-glaze-consumer] :is(.result, .result-default) :is(.content, .url_header, .published_date) { color: var(--gc-muted); }
 html[data-glaze-consumer] footer { color: var(--gc-muted); background: var(--gc-surface); }
+.goreecloud-source-disclosure { margin: 1rem auto; max-width: 53rem; padding: .8rem 1rem; border: 1px solid var(--gc-outline); border-radius: 12px; background: var(--gc-surface); color: var(--gc-muted); }
 .goreecloud-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 @media (max-width: 680px) {
   html[data-glaze-consumer] #links_on_top { border-radius: 14px; }

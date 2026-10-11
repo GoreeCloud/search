@@ -552,6 +552,10 @@ def add_default_headers(response: flask.Response):
         if header in response.headers:
             continue
         response.headers[header] = value
+    if settings['goreecloud']['private_search'] and sxng_request.endpoint in ('index', 'search'):
+        response.headers['Cache-Control'] = 'private, no-store, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Referrer-Policy'] = 'no-referrer'
     return response
 
 
@@ -608,6 +612,9 @@ def index_error(output_format: str, error_message: str):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     """Render index page."""
+
+    if settings['goreecloud']['private_search'] and sxng_request.form.get('q'):
+        validate_transport(method=sxng_request.method, query_in_url=bool(sxng_request.args), private=True)
 
     # redirect to search if there's a query in the request
     if sxng_request.form.get('q'):
@@ -686,9 +693,18 @@ def search():
         search_query, raw_text_query, _, _, selected_locale = get_search_query_from_webapp(
             sxng_request.preferences, sxng_request.form
         )
+        if settings['goreecloud']['private_search']:
+            validate_disclosure(
+                search_query.query,
+                (ref.name for ref in search_query.engineref_list),
+                max_query_chars=settings['goreecloud']['max_query_chars'],
+                max_providers=settings['goreecloud']['max_provider_fanout'],
+            )
         search_obj = searx.search.SearchWithPlugins(search_query, sxng_request, sxng_request.user_plugins)
         result_container = search_obj.search()
 
+    except SearchPolicyViolation as e:
+        return Response(str(e), status=e.http_status, mimetype='text/plain')
     except SearxParameterException as e:
         logger.exception('search error: SearxParameterException')
         return index_error(output_format, e.message), 400

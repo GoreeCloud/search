@@ -6,7 +6,8 @@
     </a>
     <div id="search_view">
       <div class="search_box">
-        <input id="q" name="q" type="text" placeholder="{{ _('Search for...') }}" tabindex="1" autocomplete="off" autocapitalize="none" spellcheck="false" autocorrect="off" dir="auto" value="{{ q or '' }}">
+        <label class="goreecloud-visually-hidden" for="q">Search query</label>
+        <input id="q" name="q" type="search" placeholder="{{ _('Search for...') }}" tabindex="1" autocomplete="off" autocapitalize="none" spellcheck="false" autocorrect="off" dir="auto" value="{{ q or '' }}">
         <button id="clear_search" type="reset" aria-label="{{ _('clear') }}" class="hide_if_nojs"><span>{{ icon_big('close') }}</span></button>
         <button id="send_search" type="submit" {%- if search_on_category_select -%}name="category_{{ selected_categories[0]|replace(' ', '_') }}"{%- endif -%} aria-label="{{ _('search') }}"><span class="hide_if_nojs">{{ icon_big('search') }}</span><span class="show_if_nojs">{{ _('search') }}</span></button>
         <div class="autocomplete hide_if_nojs"><ul></ul></div>
@@ -15,6 +16,9 @@
     {% set display_tooltip = true %}
     {% include 'simple/categories.html' %}
   </div>
+  {% if private_query_transport %}
+  <p class="goreecloud-source-disclosure" role="note">Searches contact configured providers. <a href="{{ url_for('static', filename='goreecloud/privacy.html') }}">Source disclosure</a></p>
+  {% endif %}
   <div class="search_filters">
     {% include 'simple/filters/languages.html' %}
     {% include 'simple/filters/time_range.html' %}

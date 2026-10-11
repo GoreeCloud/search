@@ -4,5 +4,8 @@
 <div class="index">
     <div class="title"><p class="goreecloud-eyebrow">Private discovery</p><h1>GoreeCloud <span>Search</span></h1><p class="goreecloud-tagline">Explore sources. Keep control.</p></div>
     {% include 'simple/simple_search.html' %}
+    {% if private_query_transport %}
+    <p class="goreecloud-source-disclosure" role="note">Queries are forwarded to configured search providers. <a href="{{ url_for('static', filename='goreecloud/privacy.html') }}">Learn how sources receive queries</a></p>
+    {% endif %}
 </div>
 {% endblock %}
