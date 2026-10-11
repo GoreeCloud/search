@@ -33,6 +33,13 @@ server:
     Referrer-Policy: no-referrer
     X-Robots-Tag: noindex, nofollow
     Permissions-Policy: "camera=(), microphone=(), geolocation=()"
+preferences:
+  lock:
+    - method
+    - query_in_title
+    - autocomplete
+    - favicon_resolver
+    - image_proxy
 ui:
   default_theme: simple
   query_in_title: false
