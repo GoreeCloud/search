@@ -39,13 +39,14 @@ export SEARXNG_SECRET="$(python -c 'import secrets;print(secrets.token_hex(32))'
 python -m nose2 -s tests/unit test_query test_webadapter test_settings_loader -v
 ```
 
-The 2026-10-10 local verification passed 19 GoreeCloud foundation/privacy/Flask-runtime tests and 46 upstream SearXNG query, routing, and settings regressions (65 tests total, in separate isolated runs). The Flask homepage and three local CSS/privacy assets returned HTTP 200. No live provider searches, device/browser acceptance, full upstream regression suite, or production security acceptance have been verified. This local environment also logged SQLite threading warnings and failures loading the optional Ahmia and Torch engines; provider availability remains a separate qualification requirement.
+The 2026-10-10 local verification passed 20 GoreeCloud foundation/privacy/Flask-runtime tests and 46 upstream SearXNG query, routing, and settings regressions (66 tests total, in separate isolated runs). The Flask homepage and three local CSS/privacy assets returned HTTP 200. No live provider searches, device/browser acceptance, full upstream regression suite, or production security acceptance have been verified. This local environment also logged SQLite threading warnings and failures loading the optional Ahmia and Torch engines; provider availability remains a separate qualification requirement.
 
 ## Source boundaries
 
 - [SearXNG provenance and AGPL obligations](UPSTREAM.md)
 - [Partial Glaze implementation and acceptance gaps](GLAZE-INTEGRATION.md)
 - [Capability roadmap](docs/goreecloud/ROADMAP.md)
+- [Local JSON source-selection extension](docs/goreecloud/LOCAL-JSON-API.md)
 - [Upstream SearXNG documentation](README.rst)
 
 Pre-reset GoreeCloud Search code persists on historic branches; this import does not automatically provide or authorize GoreeCloud Index, Identity, Privacy Shield, Wardveil Security, or Everkeep integration.

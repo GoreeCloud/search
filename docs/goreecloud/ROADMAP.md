@@ -9,7 +9,7 @@ The supplied GoreeCloud Search feature catalog is a **proposed product target**,
 | Privacy | POST, image proxy and private profile | Public rate limiting, formal Privacy Shield/Wardveil integration, disclosure audits |
 | Local Index | None in SearXNG imported runtime | Index contract adapter and cycle-safe routing, independent index operation |
 | Glaze | Local stable CSS foundation and app-specific mapping | Runtime integration, accessibility, device/rendered acceptance, conformance registration |
-| API | SearXNG JSON (local profile) | Authenticated versioned GoreeCloud API, quotas, schemas, source-proof metadata |
+| API | SearXNG JSON with opt-in, local-only selected-source metadata (not provider-contact proof) | Authenticated versioned GoreeCloud API, quotas, stable schemas and verified source-proof metadata |
 | AI/research | No GoreeCloud AI layer | Source-grounded answers, citations, conversational research and safety |
 | Maps/local/commerce | Upstream search links/adapters where available | Licensed structured data, coordinates, reviews and geographic privacy |
 | Saved search/alerts | Not implemented | Opt-in local-first storage, retention, scheduling and notifications |

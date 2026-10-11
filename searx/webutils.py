@@ -158,7 +158,7 @@ class JSONEncoder(json.JSONEncoder):  # pylint: disable=missing-class-docstring
         return super().default(o)
 
 
-def get_json_response(sq: "SearchQuery", rc: "ResultContainer") -> str:
+def get_json_response(sq: "SearchQuery", rc: "ResultContainer", *, include_source_selection: bool = False) -> str:
     """Returns the JSON string of the results to a query (``application/json``)"""
     data = {
         'query': sq.query,
@@ -169,6 +169,13 @@ def get_json_response(sq: "SearchQuery", rc: "ResultContainer") -> str:
         'suggestions': list(rc.suggestions),
         'unresponsive_engines': get_translated_errors(rc.unresponsive_engines),
     }
+    if include_source_selection:
+        selected = sorted({ref.name for ref in sq.engineref_list}, key=str.casefold)
+        data['goreecloud'] = {
+            'selected_engines': selected,
+            'selected_engine_count': len(selected),
+            'selection_not_contact_confirmation': True,
+        }
     response = json.dumps(data, cls=JSONEncoder)
     return response
 
