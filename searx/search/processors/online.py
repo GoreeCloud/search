@@ -4,6 +4,7 @@
 __all__ = ["OnlineProcessor", "OnlineParams"]
 
 import typing as t
+from typing_extensions import NotRequired
 
 from timeit import default_timer
 import asyncio
@@ -85,13 +86,13 @@ class HTTPParams(t.TypedDict):
         https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status
     """
 
-    impersonate: t.NotRequired[str]
+    impersonate: NotRequired[str]
     """curl_cffi impersonate target. Default: ``chrome``."""
 
-    default_headers: t.NotRequired[bool]
+    default_headers: NotRequired[bool]
     """Ask curl_cffi to skip setting the impersonated browser's default headers."""
 
-    curl_options: t.NotRequired[dict[int, t.Any]]
+    curl_options: NotRequired[dict[int, t.Any]]
     """Any extra libcurl options for the request."""
 
 

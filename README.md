@@ -19,6 +19,17 @@ export SEARXNG_SECRET="<unique-strong-secret-from-your-secret-store>"
 
 Never use the upstream placeholder key. The profile binds **127.0.0.1**, disables metrics and remote autocomplete, proxies images, defaults to POST, and exposes opt-in JSON on a private interface. It does **not** implement public rate limiting. Internet exposure requires a separate gated HTTPS/reverse-proxy, Valkey limiter, hardened secrets, security/privacy and operational acceptance.
 
+## Development validation
+
+With SearXNG's pinned requirements installed (including the Python 3.10 compatibility backport when applicable), run:
+
+```sh
+python -m compileall -q searx
+python -m unittest discover -s tests/goreecloud -v
+```
+
+The 2026-10-10 local verification passed 10 focused foundation/runtime tests, with the Flask homepage and three local CSS/privacy assets returning HTTP 200. No live provider searches, device/browser acceptance, full upstream regression suite, or production security acceptance have been verified. This local environment also logged SQLite threading warnings and failures loading the optional Ahmia and Torch engines; provider availability remains a separate qualification requirement.
+
 ## Source boundaries
 
 - [SearXNG provenance and AGPL obligations](UPSTREAM.md)

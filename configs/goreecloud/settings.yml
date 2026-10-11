@@ -9,7 +9,7 @@ brand:
   docs_url: https://github.com/GoreeCloud/search
   wiki_url: https://github.com/GoreeCloud/search
   issue_url: https://github.com/GoreeCloud/search/issues
-  public_instances: false
+  public_instances: ""
 search:
   safe_search: 1
   autocomplete: ""
