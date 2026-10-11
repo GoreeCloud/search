@@ -1,0 +1,118 @@
+:root {
+  --glaze-depth-base: 0;
+  --glaze-depth-raised: 10;
+  --glaze-depth-navigation: 100;
+  --glaze-depth-scrim: 900;
+  --glaze-depth-overlay: 1000;
+  --glaze-depth-toast: 1100;
+
+  --glaze-material-functional-blur: 24px;
+  --glaze-material-functional-saturation: 145%;
+  --glaze-material-functional-opacity: 0.78;
+  --glaze-material-clear-blur: 12px;
+  --glaze-material-clear-saturation: 118%;
+  --glaze-material-clear-opacity: 0.34;
+}
+
+.glaze-material-canvas {
+  position: relative;
+  z-index: var(--glaze-depth-base);
+  background: var(--glaze-canvas, #eef3f9);
+  color: var(--glaze-text, #172033);
+}
+
+.glaze-material-solid {
+  position: relative;
+  z-index: var(--glaze-depth-base);
+  background: var(--glaze-surface-strong, rgba(255, 255, 255, 0.94));
+  color: var(--glaze-text, #172033);
+  border: 1px solid var(--glaze-line, rgba(95, 116, 146, 0.16));
+}
+
+.glaze-material-raised {
+  position: relative;
+  z-index: var(--glaze-depth-raised);
+  background: var(--glaze-surface-strong, rgba(255, 255, 255, 0.94));
+  color: var(--glaze-text, #172033);
+  border: 1px solid var(--glaze-line, rgba(95, 116, 146, 0.16));
+  box-shadow: var(--glaze-shadow-raised, 0 18px 48px rgba(37, 55, 82, 0.09));
+}
+
+.glaze-material-functional-glass {
+  position: relative;
+  z-index: var(--glaze-depth-navigation);
+  background: color-mix(in srgb, var(--glaze-surface, rgba(255, 255, 255, 0.76)) calc(var(--glaze-material-functional-opacity) * 100%), transparent);
+  color: var(--glaze-text, #172033);
+  border: 1px solid var(--glaze-line, rgba(95, 116, 146, 0.16));
+  -webkit-backdrop-filter: blur(var(--glaze-material-functional-blur)) saturate(var(--glaze-material-functional-saturation));
+  backdrop-filter: blur(var(--glaze-material-functional-blur)) saturate(var(--glaze-material-functional-saturation));
+}
+
+.glaze-material-clear-glass {
+  position: relative;
+  z-index: var(--glaze-depth-navigation);
+  background: color-mix(in srgb, var(--glaze-surface, rgba(255, 255, 255, 0.76)) calc(var(--glaze-material-clear-opacity) * 100%), transparent);
+  color: var(--glaze-text, #172033);
+  border: 1px solid var(--glaze-line, rgba(95, 116, 146, 0.16));
+  -webkit-backdrop-filter: blur(var(--glaze-material-clear-blur)) saturate(var(--glaze-material-clear-saturation));
+  backdrop-filter: blur(var(--glaze-material-clear-blur)) saturate(var(--glaze-material-clear-saturation));
+}
+
+.glaze-material-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--glaze-depth-scrim);
+  background: var(--glaze-scrim, rgba(8, 18, 34, 0.42));
+}
+
+.glaze-material-overlay {
+  position: relative;
+  z-index: var(--glaze-depth-overlay);
+  background: var(--glaze-surface-strong, rgba(255, 255, 255, 0.94));
+  color: var(--glaze-text, #172033);
+  border: 1px solid var(--glaze-line, rgba(95, 116, 146, 0.16));
+  box-shadow: var(--glaze-shadow-overlay, 0 28px 80px rgba(0, 0, 0, 0.22));
+}
+
+.glaze-material-toast {
+  position: relative;
+  z-index: var(--glaze-depth-toast);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glaze-material-functional-glass,
+  .glaze-material-clear-glass {
+    background: var(--glaze-surface-strong, rgba(255, 255, 255, 0.96));
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glaze-material-functional-glass {
+    --glaze-material-functional-opacity: 0.96;
+    --glaze-material-functional-blur: 0px;
+    --glaze-material-functional-saturation: 100%;
+    background: var(--glaze-surface-strong, rgba(255, 255, 255, 0.96));
+  }
+
+  .glaze-material-clear-glass {
+    --glaze-material-clear-opacity: 0.92;
+    --glaze-material-clear-blur: 0px;
+    --glaze-material-clear-saturation: 100%;
+    background: var(--glaze-surface-strong, rgba(255, 255, 255, 0.94));
+  }
+}
+
+[data-glaze-reduced-transparency="true"] .glaze-material-functional-glass,
+[data-glaze-reduced-transparency="true"] .glaze-material-clear-glass,
+[data-glaze-performance="constrained"] .glaze-material-functional-glass,
+[data-glaze-performance="constrained"] .glaze-material-clear-glass {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: var(--glaze-surface-strong, rgba(255, 255, 255, 0.96));
+}
+
+@media (prefers-color-scheme: dark) {
+  .glaze-material-raised {
+    box-shadow: var(--glaze-shadow-dark-raised, 0 18px 54px rgba(0, 0, 0, 0.24));
+  }
+}

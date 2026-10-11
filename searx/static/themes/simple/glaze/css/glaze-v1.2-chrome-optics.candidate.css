@@ -1,0 +1,319 @@
+/*
+ * GLAZE UI V1.2 — Frosted Optical chrome refinement Candidate
+ * Activation: html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]
+ *
+ * This layer specializes floating navigation, transient overlays, signature chrome,
+ * and explicit Glaze control variants. It does not glassify durable reading content
+ * or consequential decisions, and it does not move Stable authority from V1.1.
+ */
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] {
+  --glz12-chrome-edge: color-mix(in srgb, var(--glz12-crystal-white) 46%, var(--glz12-structural-border));
+  --glz12-chrome-edge-focus: color-mix(in srgb, var(--glz12-glacier-blue) 34%, var(--glz12-structural-border));
+  --glz12-chrome-edge-selected: color-mix(in srgb, var(--glz12-glacier-blue) 42%, var(--glz12-crystal-white));
+  --glz12-chrome-hover: color-mix(in srgb, var(--glz12-frost-white) 9%, transparent);
+  --glz12-chrome-pressed: color-mix(in srgb, var(--glz12-frost-white) 14%, transparent);
+  --glz12-chrome-current: color-mix(in srgb, var(--glz12-ice-blue) 46%, transparent);
+  --glz12-chrome-current-strong: color-mix(in srgb, var(--glz12-ice-blue) 62%, transparent);
+  --glz12-chrome-symbol-current: color-mix(in srgb, var(--glz12-glacier-blue) 46%, currentColor);
+}
+
+/* Explicit controls: the user opted into Glaze, so keep diffusion compact and local. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-button[data-variant="glaze"],
+  .glz1-icon-button[data-variant="glaze"]
+) {
+  background-color: var(--glz12-glass-overlay);
+  border-color: var(--glz12-chrome-edge);
+  -webkit-backdrop-filter: blur(var(--glz12-frost-clear-blur)) saturate(var(--glz12-saturation-standard));
+  backdrop-filter: blur(var(--glz12-frost-clear-blur)) saturate(var(--glz12-saturation-standard));
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-profile-shadow-soft);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-field-control[data-variant="glaze"],
+  .glz1-select[data-variant="glaze"],
+  .glz1-source-chip[data-material="frosted"]
+) {
+  background-color: var(--glz12-glass-base);
+  border-color: var(--glz12-chrome-edge);
+  -webkit-backdrop-filter: blur(var(--glz12-frost-mist-blur)) saturate(var(--glz12-saturation-soft));
+  backdrop-filter: blur(var(--glz12-frost-mist-blur)) saturate(var(--glz12-saturation-soft));
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-profile-shadow-soft);
+}
+
+/* Persistent navigation earns lower diffusion because it stays on screen longer. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-sidebar[data-variant="floating"],
+  .glz1-navigation-rail[data-variant="floating"]
+) {
+  background-color: var(--glz12-glass-base);
+  border-color: var(--glz12-chrome-edge);
+  -webkit-backdrop-filter: blur(var(--glz12-frost-mist-blur)) saturate(var(--glz12-saturation-soft));
+  backdrop-filter: blur(var(--glz12-frost-mist-blur)) saturate(var(--glz12-saturation-soft));
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-inner-edge), var(--glz12-profile-shadow-soft);
+}
+
+/* Detached command/navigation chrome receives the standard Frost treatment. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-dock,
+  .glz1-toolbar[data-variant="floating"],
+  .glz1-capsule,
+  .glz1-smart-rail
+) {
+  background-color: var(--glz12-glass-overlay);
+  border-color: var(--glz12-chrome-edge);
+  -webkit-backdrop-filter: blur(var(--glz12-frost-standard-blur)) saturate(var(--glz12-saturation-standard));
+  backdrop-filter: blur(var(--glz12-frost-standard-blur)) saturate(var(--glz12-saturation-standard));
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-inner-edge), var(--glz12-profile-shadow-soft);
+}
+
+/* Overlay depth: tooltip is lightest, sheet is deliberately the densest. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(.glz1-tooltip, .glz1-tooltip[data-open]) {
+  background-color: var(--glz12-glass-overlay);
+  border-color: var(--glz12-chrome-edge);
+  -webkit-backdrop-filter: blur(var(--glz12-frost-clear-blur)) saturate(var(--glz12-saturation-standard));
+  backdrop-filter: blur(var(--glz12-frost-clear-blur)) saturate(var(--glz12-saturation-standard));
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-profile-shadow-soft);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-popover,
+  .glz1-menu,
+  .glz1-toast
+) {
+  background-color: var(--glz12-glass-overlay);
+  border-color: var(--glz12-chrome-edge);
+  -webkit-backdrop-filter: blur(var(--glz12-frost-standard-blur)) saturate(var(--glz12-saturation-standard));
+  backdrop-filter: blur(var(--glz12-frost-standard-blur)) saturate(var(--glz12-saturation-standard));
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-inner-edge), var(--glz12-profile-shadow-soft);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-sheet {
+  background-color: var(--glz12-glass-panel);
+  border-color: var(--glz12-chrome-edge);
+  -webkit-backdrop-filter: blur(var(--glz12-frost-dense-blur)) saturate(var(--glz12-saturation-standard));
+  backdrop-filter: blur(var(--glz12-frost-dense-blur)) saturate(var(--glz12-saturation-standard));
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-inner-edge), var(--glz12-profile-shadow-float);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-sheet-handle {
+  background: color-mix(in srgb, var(--glz12-crystal-white) 54%, var(--glz1-text-tertiary));
+}
+
+/* Interaction state: Ice is restrained atmosphere plus a structural edge, never the sole signal. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-sidebar-item,
+  .glz1-rail-item,
+  .glz1-dock-item,
+  .glz1-menu-item
+) {
+  transition:
+    background-color 160ms var(--glz1-ease-snap),
+    border-color 160ms var(--glz1-ease-snap),
+    box-shadow 160ms var(--glz1-ease-snap);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-sidebar-item,
+  .glz1-rail-item,
+  .glz1-dock-item,
+  .glz1-menu-item
+):hover:not([aria-current="page"]) {
+  background-color: var(--glz12-chrome-hover);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-sidebar-item,
+  .glz1-rail-item,
+  .glz1-dock-item,
+  .glz1-menu-item
+):active {
+  background-color: var(--glz12-chrome-pressed);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-sidebar-item[aria-current="page"],
+  .glz1-rail-item[aria-current="page"],
+  .glz1-dock-item[aria-current="page"],
+  .glz1-button[data-variant="glaze"][data-state="selected"],
+  .glz1-icon-button[data-variant="glaze"][data-state="selected"]
+) {
+  background-color: var(--glz12-chrome-current);
+  border-color: var(--glz12-chrome-edge-selected);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--glz12-chrome-edge-selected) 58%, transparent);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-sidebar-item[aria-current="page"],
+  .glz1-rail-item[aria-current="page"],
+  .glz1-dock-item[aria-current="page"]
+) :is(.glz1-rail-icon, .glz1-dock-icon) {
+  color: var(--glz12-chrome-symbol-current);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-field-control[data-variant="glaze"]:focus-within,
+  .glz1-select[data-variant="glaze"]:focus-visible
+) {
+  border-color: var(--glz12-chrome-edge-focus);
+}
+
+/* Parent material wins. A frosted child inside a frosted overlay never starts a second blur pass. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-popover,
+  .glz1-menu,
+  .glz1-sheet,
+  .glz1-toast
+) :is(
+  .glz1-button[data-variant="glaze"],
+  .glz1-icon-button[data-variant="glaze"],
+  .glz1-field-control[data-variant="glaze"],
+  .glz1-select[data-variant="glaze"],
+  .glz1-toolbar[data-variant="floating"],
+  .glz1-capsule,
+  .glz1-smart-rail,
+  .glz1-source-chip[data-material="frosted"]
+) {
+  background-color: var(--glz12-glass-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: var(--glz12-inner-highlight);
+}
+
+/* Minimal profile: effects disappear before hierarchy, state, focus or content. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-material-performance="minimal"] :is(
+  .glz1-button[data-variant="glaze"],
+  .glz1-icon-button[data-variant="glaze"],
+  .glz1-field-control[data-variant="glaze"],
+  .glz1-select[data-variant="glaze"],
+  .glz1-source-chip[data-material="frosted"],
+  .glz1-sidebar[data-variant="floating"],
+  .glz1-navigation-rail[data-variant="floating"],
+  .glz1-dock,
+  .glz1-toolbar[data-variant="floating"],
+  .glz1-tooltip,
+  .glz1-popover,
+  .glz1-menu,
+  .glz1-sheet,
+  .glz1-toast,
+  .glz1-capsule,
+  .glz1-smart-rail
+) {
+  background-color: var(--glz1-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-profile-shadow-soft);
+}
+
+/* Reduced Transparency is stricter than a performance preference. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] :is(
+  .glz1-button[data-variant="glaze"],
+  .glz1-icon-button[data-variant="glaze"],
+  .glz1-field-control[data-variant="glaze"],
+  .glz1-select[data-variant="glaze"],
+  .glz1-source-chip[data-material="frosted"],
+  .glz1-sidebar[data-variant="floating"],
+  .glz1-navigation-rail[data-variant="floating"],
+  .glz1-dock,
+  .glz1-toolbar[data-variant="floating"],
+  .glz1-tooltip,
+  .glz1-popover,
+  .glz1-menu,
+  .glz1-sheet,
+  .glz1-toast,
+  .glz1-capsule,
+  .glz1-smart-rail
+) {
+  background-color: var(--glz1-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+html[data-mode="increased-contrast"][data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-button[data-variant="glaze"],
+  .glz1-icon-button[data-variant="glaze"],
+  .glz1-field-control[data-variant="glaze"],
+  .glz1-select[data-variant="glaze"],
+  .glz1-source-chip[data-material="frosted"],
+  .glz1-sidebar[data-variant="floating"],
+  .glz1-navigation-rail[data-variant="floating"],
+  .glz1-dock,
+  .glz1-toolbar[data-variant="floating"],
+  .glz1-tooltip,
+  .glz1-popover,
+  .glz1-menu,
+  .glz1-sheet,
+  .glz1-toast,
+  .glz1-capsule,
+  .glz1-smart-rail
+) {
+  border-width: 2px;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz1-button[data-variant="glaze"],
+    .glz1-icon-button[data-variant="glaze"],
+    .glz1-field-control[data-variant="glaze"],
+    .glz1-select[data-variant="glaze"],
+    .glz1-source-chip[data-material="frosted"],
+    .glz1-sidebar[data-variant="floating"],
+    .glz1-navigation-rail[data-variant="floating"],
+    .glz1-dock,
+    .glz1-toolbar[data-variant="floating"],
+    .glz1-tooltip,
+    .glz1-popover,
+    .glz1-menu,
+    .glz1-sheet,
+    .glz1-toast,
+    .glz1-capsule,
+    .glz1-smart-rail
+  ) {
+    background-color: var(--glz1-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz1-button[data-variant="glaze"],
+    .glz1-icon-button[data-variant="glaze"],
+    .glz1-field-control[data-variant="glaze"],
+    .glz1-select[data-variant="glaze"],
+    .glz1-source-chip[data-material="frosted"],
+    .glz1-sidebar[data-variant="floating"],
+    .glz1-navigation-rail[data-variant="floating"],
+    .glz1-dock,
+    .glz1-toolbar[data-variant="floating"],
+    .glz1-tooltip,
+    .glz1-popover,
+    .glz1-menu,
+    .glz1-sheet,
+    .glz1-toast,
+    .glz1-capsule,
+    .glz1-smart-rail
+  ) {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz1-sidebar-item[aria-current="page"],
+    .glz1-rail-item[aria-current="page"],
+    .glz1-dock-item[aria-current="page"],
+    .glz1-button[data-variant="glaze"][data-state="selected"],
+    .glz1-icon-button[data-variant="glaze"][data-state="selected"]
+  ) {
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+    box-shadow: none;
+  }
+}

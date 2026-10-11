@@ -1,0 +1,249 @@
+/*
+ * GLAZE UI V1.0 Optical Reachability — consolidated Candidate presentation layer.
+ * Applies the GoreeCloud visual direction across Foundation, Structure, Overlay,
+ * Signature, Intelligence, and System Shell references.
+ *
+ * Content remains structurally solid. Interaction becomes layered, reachable,
+ * sculpted, and optically glazed. Accessibility and performance contracts outrank
+ * decorative effects. Official version: GLAZE UI V1.0.
+ */
+@import url("./glaze-v1.visual-refinement.css");
+
+:root {
+  --glz1-optical-control-radius: 20px;
+  --glz1-optical-control-radius-large: 24px;
+  --glz1-optical-content-radius: 26px;
+  --glz1-optical-chrome-radius: 30px;
+  --glz1-optical-track: 7px;
+  --glz1-optical-thumb: 20px;
+}
+
+/* --------------------------------------------------------------------------
+   Foundation — larger reachable geometry, quiet solid defaults, optical Glaze
+   only on interaction variants.
+   -------------------------------------------------------------------------- */
+.glz1-button,
+.glz1-icon-button {
+  --glz1-button-radius: var(--glz1-optical-control-radius);
+  border-color: color-mix(in srgb,var(--glz1-optical-edge) 44%,var(--glz1-control-border));
+  box-shadow: inset 0 1px 0 color-mix(in srgb,var(--glz1-optical-highlight) 38%,transparent);
+}
+.glz1-button[data-size="xs"],.glz1-icon-button[data-size="xs"],
+.glz1-button[data-size="sm"],.glz1-icon-button[data-size="sm"] {
+  --glz1-button-radius: 16px;
+}
+.glz1-button[data-size="md"],.glz1-icon-button[data-size="md"] {
+  --glz1-button-radius: 18px;
+}
+.glz1-button[data-size="lg"],.glz1-icon-button[data-size="lg"],
+.glz1-button[data-size="xl"],.glz1-icon-button[data-size="xl"] {
+  --glz1-button-radius: var(--glz1-optical-control-radius-large);
+}
+.glz1-button[data-variant="primary"] {
+  background:linear-gradient(180deg,color-mix(in srgb,var(--glz1-focus) 86%,white 14%),var(--glz1-focus));
+  border-color:color-mix(in srgb,var(--glz1-focus) 72%,white 28%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.34),0 8px 20px color-mix(in srgb,var(--glz1-focus) 20%,transparent);
+}
+.glz1-button[data-variant="glaze"],
+.glz1-icon-button[data-variant="glaze"] {
+  background:var(--glz1-glass-soft);
+  border-color:color-mix(in srgb,var(--glz1-optical-edge) 66%,var(--glz1-control-border));
+  -webkit-backdrop-filter:blur(var(--glz1-overlay-blur)) saturate(1.24);
+  backdrop-filter:blur(var(--glz1-overlay-blur)) saturate(1.24);
+  box-shadow:inset 0 1px 0 var(--glz1-optical-highlight),var(--glz1-optical-shadow-soft);
+}
+.glz1-button[data-state="selected"],
+.glz1-icon-button[data-state="selected"] {
+  background:var(--glz1-selected-fill);
+  border-color:var(--glz1-selected-ring);
+  box-shadow:inset 0 0 0 1px var(--glz1-selected-ring),inset 0 1px 0 var(--glz1-optical-highlight);
+}
+.glz1-icon-button {
+  border-radius:50%;
+}
+.glz1-field-control,
+.glz1-select {
+  --glz1-control-radius: var(--glz1-optical-control-radius);
+  border-radius:var(--glz1-optical-control-radius)!important;
+}
+.glz1-field-control[data-size="sm"],.glz1-select[data-size="sm"] {border-radius:16px!important}
+.glz1-field-control[data-size="md"],.glz1-select[data-size="md"] {border-radius:20px!important}
+.glz1-field-control[data-size="lg"],.glz1-select[data-size="lg"] {border-radius:22px!important}
+.glz1-field-control[data-variant="glaze"],.glz1-select[data-variant="glaze"] {
+  background:var(--glz1-glass-soft);
+  border-color:color-mix(in srgb,var(--glz1-optical-edge) 58%,var(--glz1-control-border));
+  -webkit-backdrop-filter:blur(var(--glz1-overlay-blur)) saturate(1.2);
+  backdrop-filter:blur(var(--glz1-overlay-blur)) saturate(1.2);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--glz1-optical-highlight) 62%,transparent),var(--glz1-optical-shadow-soft);
+}
+.glz1-choice[data-kind="checkbox"] .glz1-choice-control {border-radius:9px}
+.glz1-switch-track {
+  inline-size:56px;
+  block-size:34px;
+  padding:3px;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.08),inset 0 1px 0 color-mix(in srgb,var(--glz1-optical-highlight) 40%,transparent);
+}
+.glz1-switch-thumb {
+  inline-size:26px;
+  block-size:26px;
+  box-shadow:0 3px 9px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.65);
+}
+.glz1-switch input:checked + .glz1-switch-track .glz1-switch-thumb {transform:translateX(22px)}
+:dir(rtl) .glz1-switch input:checked + .glz1-switch-track .glz1-switch-thumb {transform:translateX(-22px)}
+.glz1-slider input[type="range"] {--glz1-slider-track:var(--glz1-optical-track)}
+.glz1-slider input[type="range"]::-webkit-slider-thumb {
+  inline-size:var(--glz1-optical-thumb);block-size:var(--glz1-optical-thumb);
+  margin-block-start:calc((var(--glz1-slider-track) - var(--glz1-optical-thumb)) / 2);
+  border:2px solid color-mix(in srgb,var(--glz1-focus) 80%,white 20%);
+  background:var(--glz1-base);
+  box-shadow:0 5px 14px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.7)
+}
+.glz1-slider input[type="range"]::-moz-range-thumb {
+  inline-size:var(--glz1-optical-thumb);block-size:var(--glz1-optical-thumb);
+  border:2px solid color-mix(in srgb,var(--glz1-focus) 80%,white 20%);
+  background:var(--glz1-base);box-shadow:0 5px 14px rgba(0,0,0,.20)
+}
+
+/* --------------------------------------------------------------------------
+   Structure — content planes stay solid; navigation and command chrome gain
+   optical depth. Selected destinations become contained capsules, not edge bars.
+   -------------------------------------------------------------------------- */
+.glz1-card,
+.glz1-list,
+.glz1-table-wrap {
+  border-radius:var(--glz1-optical-content-radius);
+}
+.glz1-card[data-selected="true"] {
+  background:color-mix(in srgb,var(--glz1-focus) 8%,var(--glz1-base));
+  border-color:color-mix(in srgb,var(--glz1-focus) 50%,var(--glz1-line));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--glz1-focus) 24%,transparent);
+}
+.glz1-list {padding:8px}
+.glz1-list-item {border-radius:18px;padding-inline:12px}
+.glz1-list-item[data-selected="true"] {
+  background:var(--glz1-selected-fill);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--glz1-focus) 24%,transparent);
+}
+.glz1-tabs {
+  gap:5px;padding:5px;border:1px solid color-mix(in srgb,var(--glz1-optical-edge) 48%,var(--glz1-line));
+  border-radius:999px;background:var(--glz1-glass-soft);-webkit-backdrop-filter:blur(var(--glz1-overlay-blur)) saturate(1.18);backdrop-filter:blur(var(--glz1-overlay-blur)) saturate(1.18);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--glz1-optical-highlight) 52%,transparent),var(--glz1-optical-shadow-soft)
+}
+.glz1-tab {border-radius:999px;padding-inline:16px}
+.glz1-tab[aria-selected="true"] {
+  background:var(--glz1-selected-fill);color:var(--glz1-text-primary);
+  box-shadow:inset 0 0 0 1px var(--glz1-selected-ring),inset 0 1px 0 var(--glz1-optical-highlight)
+}
+.glz1-tab[aria-selected="true"]::after {display:none}
+.glz1-sidebar,
+.glz1-navigation-rail,
+.glz1-dock,
+.glz1-toolbar {
+  border-color:color-mix(in srgb,var(--glz1-optical-edge) 60%,var(--glz1-line));
+  background:var(--glz1-glass-soft);
+  -webkit-backdrop-filter:blur(var(--glz1-overlay-blur)) saturate(1.18);
+  backdrop-filter:blur(var(--glz1-overlay-blur)) saturate(1.18);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--glz1-optical-highlight) 62%,transparent),var(--glz1-optical-shadow-soft)
+}
+.glz1-sidebar {border-radius:var(--glz1-optical-chrome-radius);padding:11px}
+.glz1-sidebar-item {border-radius:18px;padding-inline:12px}
+.glz1-sidebar-item[aria-current="page"] {
+  background:var(--glz1-selected-fill);font-weight:650;
+  box-shadow:inset 0 0 0 1px var(--glz1-selected-ring),inset 0 1px 0 var(--glz1-optical-highlight)
+}
+.glz1-navigation-rail {inline-size:76px;min-inline-size:76px;max-inline-size:76px;border-radius:30px;padding:9px 7px}
+.glz1-rail-item {border-radius:20px}
+.glz1-rail-item[aria-current="page"] {
+  background:var(--glz1-selected-fill);box-shadow:inset 0 0 0 1px var(--glz1-selected-ring),inset 0 1px 0 var(--glz1-optical-highlight)
+}
+.glz1-dock {min-block-size:68px;border-radius:30px;padding:7px 9px}
+.glz1-dock-item {border-radius:20px}
+.glz1-dock-item[aria-current="page"] {
+  background:var(--glz1-selected-fill);box-shadow:inset 0 0 0 1px var(--glz1-selected-ring),inset 0 1px 0 var(--glz1-optical-highlight)
+}
+.glz1-toolbar {min-block-size:56px;border-radius:28px;padding:6px 9px}
+.glz1-toolbar-overflow {
+  border-radius:999px;background:var(--glz1-interaction-fill);border-color:color-mix(in srgb,var(--glz1-optical-edge) 52%,var(--glz1-line));
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--glz1-optical-highlight) 50%,transparent)
+}
+
+/* --------------------------------------------------------------------------
+   Overlay — compact transient surfaces are optical; explicit modal decisions
+   remain high-opacity/solid. Mobile sheets stay reachable from the lower screen.
+   -------------------------------------------------------------------------- */
+.glz1-thick-overlay {
+  border-color:color-mix(in srgb,var(--glz1-optical-edge) 70%,var(--glz1-line));
+  background:var(--glz1-glass-strong);
+  -webkit-backdrop-filter:blur(var(--glz1-overlay-blur)) saturate(1.24);
+  backdrop-filter:blur(var(--glz1-overlay-blur)) saturate(1.24);
+  box-shadow:inset 0 1px 0 var(--glz1-optical-highlight),var(--glz1-optical-shadow-float)
+}
+.glz1-overlay-button {
+  border-radius:999px;padding-inline:16px;background:var(--glz1-interaction-fill);
+  border-color:color-mix(in srgb,var(--glz1-optical-edge) 50%,var(--glz1-line));
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--glz1-optical-highlight) 46%,transparent)
+}
+.glz1-overlay-button[data-primary="true"] {
+  background:linear-gradient(180deg,color-mix(in srgb,var(--glz1-focus) 86%,white 14%),var(--glz1-focus));
+  border-color:color-mix(in srgb,var(--glz1-focus) 72%,white 28%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.34),0 8px 20px color-mix(in srgb,var(--glz1-focus) 20%,transparent)
+}
+.glz1-tooltip {border-radius:16px;padding:8px 11px}
+.glz1-popover {border-radius:28px;padding:16px}
+.glz1-popover input {border-radius:18px;background:color-mix(in srgb,var(--glz1-base) 88%,transparent)}
+.glz1-menu {border-radius:24px;padding:7px}
+.glz1-menu-item {border-radius:16px;padding-inline:12px}
+.glz1-menu-item[data-destructive="true"] {border-radius:16px}
+.glz1-dialog {
+  border-radius:30px;background:var(--glz1-raised);
+  box-shadow:0 30px 90px rgba(14,18,28,.26),inset 0 1px 0 color-mix(in srgb,var(--glz1-optical-highlight) 24%,transparent)
+}
+.glz1-sheet {border-radius:34px;padding:20px}
+.glz1-toast {
+  border-radius:26px;background:var(--glz1-glass-strong);
+  border-color:color-mix(in srgb,var(--glz1-optical-edge) 62%,var(--glz1-line));
+  -webkit-backdrop-filter:blur(var(--glz1-overlay-blur)) saturate(1.2);
+  backdrop-filter:blur(var(--glz1-overlay-blur)) saturate(1.2);
+  box-shadow:inset 0 1px 0 var(--glz1-optical-highlight),var(--glz1-optical-shadow-float)
+}
+.glz1-toast button {border-radius:999px}
+
+/* --------------------------------------------------------------------------
+   Accessibility precedence — never require optical effects for state or meaning.
+   -------------------------------------------------------------------------- */
+[data-glz-transparency="reduced"] .glz1-button[data-variant="glaze"],
+[data-glz-transparency="reduced"] .glz1-icon-button[data-variant="glaze"],
+[data-glz-transparency="reduced"] .glz1-field-control[data-variant="glaze"],
+[data-glz-transparency="reduced"] .glz1-select[data-variant="glaze"],
+[data-glz-transparency="reduced"] .glz1-tabs,
+[data-glz-transparency="reduced"] .glz1-sidebar,
+[data-glz-transparency="reduced"] .glz1-navigation-rail,
+[data-glz-transparency="reduced"] .glz1-dock,
+[data-glz-transparency="reduced"] .glz1-toolbar,
+[data-glz-transparency="reduced"] .glz1-thick-overlay,
+[data-glz-transparency="reduced"] .glz1-sheet,
+[data-glz-transparency="reduced"] .glz1-toast {
+  background:var(--glz1-raised);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none
+}
+
+@media(prefers-reduced-transparency:reduce) {
+  .glz1-button[data-variant="glaze"],.glz1-icon-button[data-variant="glaze"],.glz1-field-control[data-variant="glaze"],.glz1-select[data-variant="glaze"],
+  .glz1-tabs,.glz1-sidebar,.glz1-navigation-rail,.glz1-dock,.glz1-toolbar,.glz1-thick-overlay,.glz1-sheet,.glz1-toast {
+    background:var(--glz1-raised);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none
+  }
+}
+
+@media(forced-colors:active) {
+  .glz1-button,.glz1-icon-button,.glz1-field-control,.glz1-select,.glz1-tabs,.glz1-tab,.glz1-card,.glz1-list,.glz1-list-item,
+  .glz1-sidebar,.glz1-sidebar-item,.glz1-navigation-rail,.glz1-rail-item,.glz1-dock,.glz1-dock-item,.glz1-toolbar,.glz1-toolbar-overflow,
+  .glz1-thick-overlay,.glz1-overlay-button,.glz1-tooltip,.glz1-popover,.glz1-menu,.glz1-menu-item,.glz1-dialog,.glz1-sheet,.glz1-toast {
+    background:Canvas;color:CanvasText;border-color:CanvasText;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none
+  }
+  .glz1-button[data-variant="glaze"],.glz1-icon-button[data-variant="glaze"],.glz1-field-control[data-variant="glaze"],.glz1-select[data-variant="glaze"] {
+    background:Canvas;color:CanvasText;border-color:CanvasText;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none
+  }
+  .glz1-button[data-variant="primary"],.glz1-overlay-button[data-primary="true"],.glz1-tab[aria-selected="true"],.glz1-sidebar-item[aria-current="page"],
+  .glz1-rail-item[aria-current="page"],.glz1-dock-item[aria-current="page"],.glz1-list-item[data-selected="true"],.glz1-card[data-selected="true"] {
+    background:Highlight;color:HighlightText;border-color:Highlight
+  }
+}

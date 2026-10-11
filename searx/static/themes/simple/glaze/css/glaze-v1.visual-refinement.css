@@ -1,0 +1,254 @@
+/*
+ * GLAZE UI V1.0 visual refinement layer.
+ * Direction: GoreeCloud synthesis of One UI 8.5 reachability/modularity and
+ * layered optical glass principles. This is an original GoreeCloud language,
+ * not a reproduction of Samsung or Apple product UI.
+ * Lifecycle: Candidate only. Current Stable remains 2.1.0.
+ */
+@import url("./glaze-v1.advanced.css");
+
+:root {
+  --glz1-optical-white: rgba(255,255,255,.58);
+  --glz1-optical-highlight: rgba(255,255,255,.72);
+  --glz1-optical-edge: rgba(255,255,255,.52);
+  --glz1-optical-shadow: rgba(24,34,50,.18);
+  --glz1-optical-inner-shadow: rgba(26,44,78,.08);
+  --glz1-glass-soft: color-mix(in srgb,var(--glz1-overlay-bg) 84%,transparent);
+  --glz1-glass-strong: color-mix(in srgb,var(--glz1-panel-bg) 92%,transparent);
+  --glz1-interaction-fill: color-mix(in srgb,var(--glz1-raised) 72%,transparent);
+  --glz1-selected-fill: color-mix(in srgb,var(--glz1-focus) 18%,var(--glz1-glass-soft));
+  --glz1-selected-ring: color-mix(in srgb,var(--glz1-focus) 42%,transparent);
+  --glz1-optical-radius: 28px;
+  --glz1-optical-radius-small: 18px;
+  --glz1-optical-radius-pill: 999px;
+  --glz1-optical-shadow-soft: 0 12px 32px rgba(22,31,48,.12),0 2px 8px rgba(22,31,48,.06);
+  --glz1-optical-shadow-float: 0 28px 80px rgba(20,30,48,.20),0 8px 24px rgba(20,30,48,.10);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --glz1-optical-white: rgba(255,255,255,.09);
+    --glz1-optical-highlight: rgba(255,255,255,.16);
+    --glz1-optical-edge: rgba(255,255,255,.18);
+    --glz1-optical-shadow: rgba(0,0,0,.48);
+    --glz1-optical-inner-shadow: rgba(255,255,255,.04);
+    --glz1-glass-soft: color-mix(in srgb,var(--glz1-overlay-bg) 78%,transparent);
+    --glz1-glass-strong: color-mix(in srgb,var(--glz1-panel-bg) 88%,transparent);
+    --glz1-interaction-fill: color-mix(in srgb,var(--glz1-raised) 78%,transparent);
+    --glz1-optical-shadow-soft: 0 14px 38px rgba(0,0,0,.28),0 2px 8px rgba(0,0,0,.18);
+    --glz1-optical-shadow-float: 0 30px 90px rgba(0,0,0,.46),0 8px 28px rgba(0,0,0,.24);
+  }
+}
+
+[data-glz-appearance="deep-dark"],.glz1-deep-dark {
+  --glz1-optical-white: rgba(255,255,255,.065);
+  --glz1-optical-highlight: rgba(255,255,255,.14);
+  --glz1-optical-edge: rgba(255,255,255,.15);
+  --glz1-glass-soft: rgba(17,22,30,.66);
+  --glz1-glass-strong: rgba(18,23,31,.82);
+  --glz1-interaction-fill: rgba(38,45,58,.72);
+}
+
+/* Optical edge recipe: a bright upper edge, restrained internal highlight,
+   then a depth shadow. Blur values remain owned by the 2.2 performance contract. */
+.glz1-system-overlay,
+.glz1-system-panel,
+.glz1-capsule,
+.glz1-search-entry,
+.glz1-smart-rail {
+  border-color: color-mix(in srgb,var(--glz1-optical-edge) 72%,var(--glz1-line));
+  box-shadow:
+    inset 0 1px 0 var(--glz1-optical-highlight),
+    inset 0 -1px 0 var(--glz1-optical-inner-shadow),
+    var(--glz1-optical-shadow-soft);
+}
+
+.glz1-system-overlay,.glz1-capsule,.glz1-search-entry,.glz1-smart-rail {
+  background: var(--glz1-glass-soft);
+  -webkit-backdrop-filter: blur(var(--glz1-overlay-blur)) saturate(1.24);
+  backdrop-filter: blur(var(--glz1-overlay-blur)) saturate(1.24);
+}
+
+.glz1-system-panel {
+  background: var(--glz1-glass-strong);
+  -webkit-backdrop-filter: blur(var(--glz1-panel-blur)) saturate(1.18);
+  backdrop-filter: blur(var(--glz1-panel-blur)) saturate(1.18);
+  box-shadow:
+    inset 0 1px 0 var(--glz1-optical-highlight),
+    inset 0 -1px 0 var(--glz1-optical-inner-shadow),
+    var(--glz1-optical-shadow-float);
+}
+
+.glz1-advanced-button,.glz1-ai-action,.glz1-source-chip {
+  border-color: color-mix(in srgb,var(--glz1-optical-edge) 56%,var(--glz1-line));
+  background: var(--glz1-interaction-fill);
+  border-radius: var(--glz1-optical-radius-pill);
+  box-shadow: inset 0 1px 0 color-mix(in srgb,var(--glz1-optical-highlight) 65%,transparent);
+}
+.glz1-advanced-button[data-primary="true"] {
+  background: linear-gradient(180deg,color-mix(in srgb,var(--glz1-focus) 84%,white 16%),var(--glz1-focus));
+  border-color: color-mix(in srgb,var(--glz1-focus) 72%,white 28%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.32),0 8px 20px color-mix(in srgb,var(--glz1-focus) 24%,transparent);
+}
+
+.glz1-capsule {
+  padding: 7px 9px 7px 16px;
+  min-block-size: 52px;
+}
+.glz1-capsule[data-expanded="true"] {border-radius:32px}
+
+.glz1-smart-rail {
+  inline-size:82px;
+  border-radius:32px;
+  padding:10px 8px;
+}
+.glz1-rail-item {border-radius:22px}
+.glz1-rail-item[aria-current="page"] {
+  background: var(--glz1-selected-fill);
+  box-shadow: inset 0 0 0 1px var(--glz1-selected-ring),inset 0 1px 0 var(--glz1-optical-highlight);
+}
+
+.glz1-search-entry {
+  min-block-size:56px;
+  padding:6px 10px 6px 18px;
+  border-radius:999px;
+}
+.glz1-universal-search[data-open="true"] .glz1-search-entry {border-radius:28px}
+.glz1-search-panel {
+  margin-block-start:10px;
+  padding:8px;
+  border-radius:32px;
+  background: color-mix(in srgb,var(--glz1-raised) 90%,transparent);
+  border:1px solid color-mix(in srgb,var(--glz1-optical-edge) 54%,var(--glz1-line));
+  box-shadow: inset 0 1px 0 color-mix(in srgb,var(--glz1-optical-highlight) 44%,transparent),var(--glz1-optical-shadow-float);
+}
+.glz1-search-group {padding:8px 6px}
+.glz1-search-group+.glz1-search-group {border-block-start:0}
+.glz1-search-group h4 {margin:8px 12px 7px;letter-spacing:.035em}
+.glz1-search-result {
+  min-block-size:52px;
+  border-radius:20px;
+  padding:9px 12px;
+}
+.glz1-search-result[aria-selected="true"] {
+  background:var(--glz1-selected-fill);
+  box-shadow:inset 0 0 0 1px var(--glz1-selected-ring),inset 0 1px 0 var(--glz1-optical-highlight);
+}
+.glz1-search-generated {
+  border-radius:24px;
+  background:color-mix(in srgb,var(--glz1-base) 86%,var(--glz1-aurora-a));
+}
+
+.glz1-morph-card,.glz1-ai-suggestion,.glz1-ai-answer,.glz1-smart-summary,.glz1-aurora {
+  border-color:color-mix(in srgb,var(--glz1-optical-edge) 44%,var(--glz1-line));
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--glz1-optical-highlight) 48%,transparent),0 8px 24px rgba(24,34,50,.06);
+}
+.glz1-morph-card {border-radius:30px}
+.glz1-morph-card[aria-expanded="true"] {border-radius:34px;box-shadow:var(--glz1-optical-shadow-soft)}
+.glz1-morph-media {border-radius:24px}
+.glz1-ai-suggestion,.glz1-ai-answer,.glz1-smart-summary {border-radius:28px}
+.glz1-aurora {border-radius:30px}
+.glz1-aurora::before {opacity:.15}
+.glz1-aurora[data-intensity="standard"]::before {opacity:.21}
+.glz1-aurora[data-intensity="hero"]::before {opacity:.28}
+.glz1-summary-signal {border-radius:999px;background:var(--glz1-interaction-fill)}
+
+/* Remove OS-specific desktop decoration cues from the reference. */
+.traffic {display:none!important}
+.window-sidebar .nav-label:first-of-type {margin-top:0}
+.floating-dock {
+  gap:4px!important;
+  padding:5px 7px!important;
+  border-radius:26px!important;
+}
+.dock-item {
+  inline-size:52px!important;
+  block-size:44px!important;
+  border-radius:18px!important;
+  background:transparent!important;
+}
+.dock-item.current {
+  background:var(--glz1-selected-fill)!important;
+  color:var(--glz1-focus)!important;
+  box-shadow:inset 0 0 0 1px var(--glz1-selected-ring),inset 0 1px 0 var(--glz1-optical-highlight)!important;
+}
+
+/* Intelligence keeps its cards calm while the surrounding field provides depth. */
+.intel-stage::before,.intel-stage::after {
+  content:"";position:absolute;pointer-events:none;border-radius:50%;filter:blur(18px);opacity:.7
+}
+.intel-stage::before {
+  inline-size:260px;block-size:260px;inset:10% auto auto 8%;
+  background:radial-gradient(circle,var(--glz1-aurora-a),transparent 68%)
+}
+.intel-stage::after {
+  inline-size:320px;block-size:320px;inset:auto 7% 5% auto;
+  background:radial-gradient(circle,var(--glz1-aurora-b),transparent 70%)
+}
+.intel-backdrop {
+  background:linear-gradient(145deg,color-mix(in srgb,var(--glz1-base) 86%,var(--glz1-aurora-a)),color-mix(in srgb,var(--glz1-base) 88%,var(--glz1-aurora-b)))!important;
+  border-color:color-mix(in srgb,var(--glz1-optical-edge) 44%,var(--glz1-line))!important;
+}
+.intel-grid .glz1-ai-answer,.intel-grid .glz1-smart-summary,.intel-grid .glz1-ai-suggestion,.intel-grid .glz1-morph-card {
+  background:color-mix(in srgb,var(--glz1-base) 80%,transparent)!important;
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--glz1-optical-highlight) 46%,transparent),var(--glz1-optical-shadow-soft)
+}
+
+/* Explicit accessibility precedence remains stronger than optical styling. */
+[data-glz-transparency="reduced"] .glz1-system-overlay,
+[data-glz-transparency="reduced"] .glz1-system-panel,
+[data-glz-transparency="reduced"] .glz1-capsule,
+[data-glz-transparency="reduced"] .glz1-search-entry,
+[data-glz-transparency="reduced"] .glz1-smart-rail {
+  background:var(--glz1-raised);
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+  box-shadow:none;
+}
+[data-glz-transparency="reduced"] .glz1-search-panel {background:var(--glz1-raised);box-shadow:none}
+[data-glz-transparency="reduced"] .intel-stage::before,[data-glz-transparency="reduced"] .intel-stage::after {display:none}
+
+html[data-mode="increased-contrast"] .glz1-system-overlay,
+html[data-mode="increased-contrast"] .glz1-system-panel,
+html[data-mode="increased-contrast"] .glz1-capsule,
+html[data-mode="increased-contrast"] .glz1-search-entry,
+html[data-mode="increased-contrast"] .glz1-search-panel {box-shadow:none}
+
+@media(max-width:700px) {
+  .state-search .eyebrow {display:none}
+  .glz1-universal-search[data-open="true"] {
+    inset:auto 9px 12px!important;
+    inline-size:auto!important;
+    max-block-size:calc(100vh - 76px);
+  }
+  .glz1-universal-search[data-open="true"] .glz1-search-entry {
+    background:var(--glz1-glass-strong);
+    border-radius:999px;
+  }
+  .glz1-universal-search[data-open="true"] .glz1-search-panel {
+    block-size:auto!important;
+    max-block-size:min(64vh,640px)!important;
+    border-radius:28px;
+    background:var(--glz1-glass-strong);
+    -webkit-backdrop-filter:blur(var(--glz1-panel-blur)) saturate(1.18);
+    backdrop-filter:blur(var(--glz1-panel-blur)) saturate(1.18);
+  }
+  .floating-dock {bottom:12px!important}
+}
+
+@media(forced-colors:active) {
+  .glz1-system-overlay,.glz1-system-panel,.glz1-capsule,.glz1-search-entry,.glz1-search-panel,.glz1-smart-rail,
+  .glz1-advanced-button,.glz1-ai-action,.glz1-source-chip,.glz1-morph-card,.glz1-ai-suggestion,.glz1-ai-answer,.glz1-smart-summary,.glz1-aurora,
+  .floating-dock,.dock-item,.intel-backdrop {
+    background:Canvas!important;color:CanvasText!important;border-color:CanvasText!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important
+  }
+  .intel-stage::before,.intel-stage::after {display:none}
+  .dock-item.current {background:Highlight!important;color:HighlightText!important}
+  .critical-button.primary {
+    forced-color-adjust:none;
+    background:ButtonFace!important;
+    color:ButtonText!important;
+    border:2px solid ButtonText!important;
+    font-weight:700;
+  }
+}

@@ -1,0 +1,218 @@
+/* GLAZE UI V1.2 Candidate — bounded Motion and Connected Transformation.
+ * Motion explains state, relationship, hierarchy, continuity, navigation, or direct manipulation.
+ * Semantic state updates immediately; animation is presentation and may never become an authority boundary.
+ */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root {
+  --glz12-motion-instant: 80ms;
+  --glz12-motion-fast: 160ms;
+  --glz12-motion-standard: 240ms;
+  --glz12-motion-deliberate: 360ms;
+  --glz12-motion-spatial: 480ms;
+  --glz12-motion-instant-effective: 80ms;
+  --glz12-motion-fast-effective: 160ms;
+  --glz12-motion-standard-effective: 240ms;
+  --glz12-motion-deliberate-effective: 360ms;
+  --glz12-motion-spatial-effective: 480ms;
+  --glz12-motion-responsive: cubic-bezier(0.2, 0, 0, 1);
+  --glz12-motion-glide: cubic-bezier(0.16, 1, 0.3, 1);
+  --glz12-motion-settle: cubic-bezier(0, 0, 0, 1);
+  --glz12-motion-direct: linear;
+  --glz12-motion-travel-short: 8px;
+  --glz12-motion-travel-medium: 16px;
+  --glz12-motion-travel-long: 32px;
+  --glz12-motion-press-scale: .98;
+  --glz12-motion-enter-scale: .985;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-material-performance="reduced"]:root {
+  --glz12-motion-instant-effective: 60ms;
+  --glz12-motion-fast-effective: 120ms;
+  --glz12-motion-standard-effective: 180ms;
+  --glz12-motion-deliberate-effective: 270ms;
+  --glz12-motion-spatial-effective: 360ms;
+  --glz12-motion-travel-short: 4px;
+  --glz12-motion-travel-medium: 8px;
+  --glz12-motion-travel-long: 16px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-material-performance="minimal"]:root {
+  --glz12-motion-instant-effective: 0ms;
+  --glz12-motion-fast-effective: 0ms;
+  --glz12-motion-standard-effective: 0ms;
+  --glz12-motion-deliberate-effective: 0ms;
+  --glz12-motion-spatial-effective: 0ms;
+  --glz12-motion-travel-short: 0px;
+  --glz12-motion-travel-medium: 0px;
+  --glz12-motion-travel-long: 0px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-motion="press"] {
+  transition:
+    transform var(--glz12-motion-instant-effective) var(--glz12-motion-responsive),
+    box-shadow var(--glz12-motion-instant-effective) var(--glz12-motion-responsive),
+    background-color var(--glz12-motion-instant-effective) var(--glz12-motion-responsive);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-motion="press"]:active,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-motion="press"][data-pressed="true"] {
+  transform: scale(var(--glz12-motion-press-scale));
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-motion-selection-track { position: relative; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-motion-selection-indicator {
+  transform: translateX(var(--glz12-selection-x, 0px));
+  transition: transform var(--glz12-motion-standard-effective) var(--glz12-motion-glide);
+  will-change: auto;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-motion-surface="popover"] {
+  transform-origin: var(--glz12-motion-origin-x, 50%) var(--glz12-motion-origin-y, 0%);
+  transition:
+    opacity var(--glz12-motion-fast-effective) var(--glz12-motion-responsive),
+    transform var(--glz12-motion-fast-effective) var(--glz12-motion-responsive);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-motion-surface="popover"][data-open="false"] {
+  opacity: 0;
+  transform: translateY(calc(0px - var(--glz12-motion-travel-short))) scale(var(--glz12-motion-enter-scale));
+  visibility: hidden;
+  pointer-events: none;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-motion-surface="popover"][data-open="true"] {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-motion-surface="dialog"] {
+  transform-origin: 50% 50%;
+  transition:
+    opacity var(--glz12-motion-standard-effective) var(--glz12-motion-settle),
+    transform var(--glz12-motion-standard-effective) var(--glz12-motion-settle),
+    box-shadow var(--glz12-motion-standard-effective) var(--glz12-motion-settle);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-motion-surface="dialog"][data-open="false"] {
+  opacity: 0;
+  transform: scale(var(--glz12-motion-enter-scale));
+  visibility: hidden;
+  pointer-events: none;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-motion-surface="dialog"][data-open="true"] {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-motion-surface="sheet"] {
+  transition:
+    opacity var(--glz12-motion-deliberate-effective) var(--glz12-motion-settle),
+    transform var(--glz12-motion-deliberate-effective) var(--glz12-motion-settle);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-motion-surface="sheet"][data-open="false"] {
+  opacity: 0;
+  transform: translateY(var(--glz12-motion-travel-long));
+  visibility: hidden;
+  pointer-events: none;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-motion-surface="sheet"][data-open="true"] {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search[data-glz-connected="search"] .glz1-search-entry {
+  transition:
+    border-radius var(--glz12-motion-deliberate-effective) var(--glz12-motion-glide),
+    background-color var(--glz12-motion-standard-effective) var(--glz12-motion-glide),
+    box-shadow var(--glz12-motion-standard-effective) var(--glz12-motion-glide);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search[data-glz-connected="search"] .glz1-search-panel {
+  display: block;
+  overflow: hidden;
+  max-block-size: 0;
+  margin-block-start: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(calc(0px - var(--glz12-motion-travel-short))) scale(var(--glz12-motion-enter-scale));
+  transform-origin: 50% 0%;
+  transition:
+    max-block-size var(--glz12-motion-deliberate-effective) var(--glz12-motion-glide),
+    margin-block-start var(--glz12-motion-deliberate-effective) var(--glz12-motion-glide),
+    opacity var(--glz12-motion-standard-effective) var(--glz12-motion-responsive),
+    transform var(--glz12-motion-deliberate-effective) var(--glz12-motion-glide);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search[data-glz-connected="search"][data-open="true"] .glz1-search-panel {
+  max-block-size: min(620px, 70vh);
+  margin-block-start: 8px;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-morph-card[data-glz-connected="card-detail"] {
+  transition:
+    transform var(--glz12-motion-instant-effective) var(--glz12-motion-responsive),
+    box-shadow var(--glz12-motion-standard-effective) var(--glz12-motion-settle),
+    border-radius var(--glz12-motion-deliberate-effective) var(--glz12-motion-glide),
+    min-block-size var(--glz12-motion-deliberate-effective) var(--glz12-motion-glide);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-direct-manipulation="true"] {
+  transition: none !important;
+  transform: translate(var(--glz12-direct-x, 0px), var(--glz12-direct-y, 0px));
+  will-change: auto;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-mode="reduced-motion"]:root [data-glz-motion="press"],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-mode="reduced-motion"]:root .glz1-morph-card[data-glz-connected="card-detail"] {
+  transition: none;
+  transform: none;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-mode="reduced-motion"]:root .glz12-motion-selection-indicator { transition: none; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-mode="reduced-motion"]:root [data-glz-motion-surface],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-mode="reduced-motion"]:root .glz1-universal-search[data-glz-connected="search"] .glz1-search-panel {
+  transition: opacity 80ms linear;
+  transform: none;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-mode="reduced-motion"]:root .glz1-universal-search[data-glz-connected="search"] .glz1-search-entry { transition: none; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-mode="reduced-motion"]:root [data-glz-direct-manipulation="true"] {
+  transition: none !important;
+  transform: translate(var(--glz12-direct-x, 0px), var(--glz12-direct-y, 0px));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-motion="press"],
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-morph-card[data-glz-connected="card-detail"] {
+    transition: none;
+    transform: none;
+  }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-motion-selection-indicator { transition: none; }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-motion-surface],
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search[data-glz-connected="search"] .glz1-search-panel {
+    transition: opacity 80ms linear;
+    transform: none;
+  }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search[data-glz-connected="search"] .glz1-search-entry { transition: none; }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-direct-manipulation="true"] {
+    transition: none !important;
+    transform: translate(var(--glz12-direct-x, 0px), var(--glz12-direct-y, 0px));
+  }
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    [data-glz-motion="press"],
+    .glz12-motion-selection-indicator,
+    [data-glz-motion-surface],
+    .glz1-universal-search[data-glz-connected="search"] .glz1-search-entry,
+    .glz1-universal-search[data-glz-connected="search"] .glz1-search-panel,
+    .glz1-morph-card[data-glz-connected="card-detail"]
+  ) {
+    transition: none !important;
+    animation: none !important;
+  }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-direct-manipulation="true"] {
+    transition: none !important;
+    animation: none !important;
+  }
+}

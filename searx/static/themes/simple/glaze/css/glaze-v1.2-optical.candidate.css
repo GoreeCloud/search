@@ -1,0 +1,438 @@
+/*
+ * GLAZE UI V1.2 — Frosted Optical implementation Candidate
+ * Activation: html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]
+ *
+ * This layer implements the proposed Frost White / Ice Blue optical identity on top
+ * of the neutral Frosted Material substrate. It does not move Stable authority.
+ * White behaves as light. Blue behaves as atmosphere. Substrates remain neutral.
+ */
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] {
+  /* Named optical references. These are presentation roles, not semantic-state colors. */
+  --glz12-frost-white: #F4F8FA;
+  --glz12-crystal-white: #FBFDFE;
+  --glz12-ice-blue: #DCECF6;
+  --glz12-glacier-blue: #8FC4E8;
+  --glz12-clear-sky-blue: #68AEE0;
+  --glz12-cloud-gray: #DCE3E8;
+  --glz12-slate-gray: #7E8D99;
+  --glz12-cool-graphite: #151C22;
+  --glz12-deep-graphite: #0E1419;
+  --glz12-blue-black: #070C11;
+
+  /* Frost and Aura are independent from opacity and semantic state. */
+  --glz12-frost-clear-blur: 10px;
+  --glz12-frost-mist-blur: 18px;
+  --glz12-frost-standard-blur: 28px;
+  --glz12-frost-dense-blur: 44px;
+  --glz12-frost-opaque-blur: 0px;
+
+  --glz12-aura-frost: rgba(251, 253, 254, 0.42);
+  --glz12-aura-ice: rgba(143, 196, 232, 0.14);
+  --glz12-aura-crystal: rgba(251, 253, 254, 0.30);
+  --glz12-aura-content: rgba(104, 174, 224, 0.045);
+  --glz12-aura-opacity: 1;
+  --glz12-aura-blur: 42px;
+  --glz12-aura-local-opacity: 0.72;
+  --glz12-aura-local-blur: 24px;
+
+  /* The V1.2 optical layer retires V1.1 teal/amber Aura as a default atmosphere. */
+  --glz11-aura-teal-max: transparent;
+  --glz11-aura-amber-max: transparent;
+
+  /* Full is the Candidate reference profile unless an explicit lower profile is selected. */
+  --glz12-material-profile: full;
+  --glz12-profile-shadow-soft: var(--glz12-shadow-soft);
+  --glz12-profile-shadow-float: var(--glz12-shadow-float);
+  --glz12-profile-transition-scale: 1;
+  --glz12-profile-adaptive-opacity: 1;
+}
+
+/* Light: cool-white environment with pale Ice light, never a large saturated blue fill. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-appearance="light"] {
+  --glz12-optical-canvas: color-mix(in srgb, var(--glz12-cloud-gray) 34%, var(--glz1-canvas));
+  --glz12-optical-durable: color-mix(in srgb, var(--glz12-frost-white) 18%, var(--glz1-base));
+}
+
+/* Dark: graphite environment; Ice is reflected light rather than colored glass. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-appearance="dark"] {
+  --glz12-optical-canvas: color-mix(in srgb, var(--glz12-cool-graphite) 72%, var(--glz1-canvas));
+  --glz12-optical-durable: color-mix(in srgb, var(--glz12-cool-graphite) 28%, var(--glz1-base));
+  --glz12-aura-frost: rgba(244, 248, 250, 0.12);
+  --glz12-aura-ice: rgba(143, 196, 232, 0.10);
+  --glz12-aura-crystal: rgba(251, 253, 254, 0.16);
+  --glz12-aura-content: rgba(104, 174, 224, 0.035);
+}
+
+/* Deep Dark: Blue-Black is the environmental base, not a neon accent. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-appearance="deep-dark"] {
+  --glz12-optical-canvas: color-mix(in srgb, var(--glz12-blue-black) 86%, var(--glz1-canvas));
+  --glz12-optical-durable: color-mix(in srgb, var(--glz12-deep-graphite) 50%, var(--glz1-base));
+  --glz12-aura-frost: rgba(244, 248, 250, 0.10);
+  --glz12-aura-ice: rgba(143, 196, 232, 0.085);
+  --glz12-aura-crystal: rgba(251, 253, 254, 0.13);
+  --glz12-aura-content: rgba(104, 174, 224, 0.03);
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:not([data-glz-appearance="light"]):not([data-glz-appearance="deep-dark"]) {
+    --glz12-optical-canvas: color-mix(in srgb, var(--glz12-cool-graphite) 72%, var(--glz1-canvas));
+    --glz12-optical-durable: color-mix(in srgb, var(--glz12-cool-graphite) 28%, var(--glz1-base));
+    --glz12-aura-frost: rgba(244, 248, 250, 0.12);
+    --glz12-aura-ice: rgba(143, 196, 232, 0.10);
+    --glz12-aura-crystal: rgba(251, 253, 254, 0.16);
+    --glz12-aura-content: rgba(104, 174, 224, 0.035);
+  }
+}
+
+/*
+ * Optical environment: Aura is a separate light field behind content and material.
+ * It never carries semantic meaning and never changes the neutral glass substrate.
+ */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-optical-stage,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz11-atmosphere {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--glz12-optical-canvas, var(--glz1-canvas));
+  background-image:
+    radial-gradient(circle at 16% 10%, color-mix(in srgb, var(--glz12-aura-crystal) 76%, transparent), transparent 32%),
+    radial-gradient(circle at 84% 14%, color-mix(in srgb, var(--glz12-aura-ice) 100%, transparent), transparent 34%),
+    linear-gradient(145deg,
+      color-mix(in srgb, var(--glz12-frost-white) 4%, transparent),
+      transparent 52%,
+      color-mix(in srgb, var(--glz12-ice-blue) 3%, transparent));
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-optical-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--glz12-aura-opacity);
+  background:
+    radial-gradient(circle at 74% 24%, var(--glz12-aura-ice), transparent 31%),
+    radial-gradient(circle at 24% 18%, var(--glz12-aura-frost), transparent 24%);
+  filter: blur(var(--glz12-aura-blur));
+  transform: translateZ(0);
+}
+
+/* Named Aura opt-ins. Aura remains light, not glow, and never replaces semantic state. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-optical-aura] {
+  position: relative;
+  isolation: isolate;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-optical-aura]::after {
+  content: "";
+  position: absolute;
+  inset: -12%;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: var(--glz12-aura-local-opacity);
+  filter: blur(var(--glz12-aura-local-blur));
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-optical-aura="frost"]::after {
+  background: radial-gradient(circle at 44% 32%, var(--glz12-aura-frost), transparent 64%);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-optical-aura="ice"]::after {
+  background: radial-gradient(circle at 58% 34%, var(--glz12-aura-ice), transparent 66%);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-optical-aura="crystal"]::after {
+  background: radial-gradient(circle at 42% 28%, var(--glz12-aura-crystal), transparent 60%);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-optical-aura="content"]::after {
+  background: radial-gradient(circle at 52% 40%, var(--glz12-aura-content), transparent 68%);
+}
+
+/*
+ * Frost intensity is an explicit optical input. Durable reading surfaces are not
+ * automatically opted into these selectors.
+ */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-frost="clear"] {
+  --glz12-local-frost-blur: var(--glz12-frost-clear-blur);
+  --glz12-local-frost-bg: color-mix(in srgb, var(--glz12-glass-base) 82%, transparent);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-frost="mist"] {
+  --glz12-local-frost-blur: var(--glz12-frost-mist-blur);
+  --glz12-local-frost-bg: color-mix(in srgb, var(--glz12-glass-base) 90%, transparent);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-frost="frost"] {
+  --glz12-local-frost-blur: var(--glz12-frost-standard-blur);
+  --glz12-local-frost-bg: var(--glz12-glass-overlay);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-frost="dense-frost"] {
+  --glz12-local-frost-blur: var(--glz12-frost-dense-blur);
+  --glz12-local-frost-bg: var(--glz12-glass-panel);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-frost="opaque-frost"] {
+  --glz12-local-frost-blur: var(--glz12-frost-opaque-blur);
+  --glz12-local-frost-bg: var(--glz1-raised);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz12-soft-glaze,
+  .glz12-glaze,
+  .glz12-deep-glaze,
+  .glz12-live-glaze,
+  .glz1-search-entry,
+  .glz1-search-panel,
+  .glz1-button[data-variant="glaze"],
+  .glz1-icon-button[data-variant="glaze"],
+  .glz1-field-control[data-variant="glaze"],
+  .glz1-select[data-variant="glaze"],
+  .glz1-card[data-material="frosted"],
+  .glz1-sidebar[data-variant="floating"],
+  .glz1-navigation-rail[data-variant="floating"],
+  .glz1-capsule,
+  .glz1-smart-rail,
+  .glz1-dock,
+  .glz1-toolbar[data-variant="floating"],
+  .glz1-popover,
+  .glz1-menu,
+  .glz1-sheet,
+  .glz1-toast
+)[data-glz-frost] {
+  background-color: var(--glz12-local-frost-bg);
+  -webkit-backdrop-filter: blur(var(--glz12-local-frost-blur)) saturate(var(--glz12-saturation-standard));
+  backdrop-filter: blur(var(--glz12-local-frost-blur)) saturate(var(--glz12-saturation-standard));
+}
+
+/* Universal Search is the first V1.2 signature optical surface. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search {
+  position: relative;
+  isolation: isolate;
+  --glz12-search-edge: color-mix(in srgb, var(--glz12-crystal-white) 54%, var(--glz12-structural-border));
+  --glz12-search-focus-edge: color-mix(in srgb, var(--glz12-glacier-blue) 34%, var(--glz12-structural-border));
+  --glz12-search-selection: color-mix(in srgb, var(--glz12-ice-blue) 54%, transparent);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search .glz1-search-entry,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search .glz1-search-panel {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--glz12-search-edge);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search .glz1-search-entry::before,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search .glz1-search-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(145deg,
+      color-mix(in srgb, var(--glz12-crystal-white) 22%, transparent),
+      transparent 46%),
+    radial-gradient(circle at 82% 18%, color-mix(in srgb, var(--glz12-ice-blue) 12%, transparent), transparent 42%);
+  opacity: var(--glz12-aura-opacity);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search .glz1-search-entry:focus-within {
+  border-color: var(--glz12-search-focus-edge);
+  box-shadow:
+    var(--glz12-inner-highlight),
+    var(--glz12-inner-edge),
+    var(--glz12-profile-shadow-soft),
+    0 0 0 1px color-mix(in srgb, var(--glz12-glacier-blue) 18%, transparent);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search .glz1-search-panel {
+  box-shadow:
+    var(--glz12-inner-highlight),
+    var(--glz12-inner-edge),
+    var(--glz12-profile-shadow-float);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search .glz1-search-result {
+  position: relative;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search .glz1-search-result[aria-selected="true"] {
+  background-color: var(--glz12-search-selection);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search .glz1-search-result[aria-selected="true"]::before {
+  content: "";
+  position: absolute;
+  inset-block: 22%;
+  inset-inline-start: 4px;
+  inline-size: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--glz12-glacier-blue) 58%, var(--glz12-frost-white));
+}
+
+/*
+ * Performance profiles scale presentation only. Semantics, focus, target size,
+ * reading order, state and content are protected from degradation.
+ */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-material-performance="reduced"] {
+  --glz12-material-profile: reduced;
+  --glz12-blur-soft: 14px;
+  --glz12-blur-standard: 20px;
+  --glz12-blur-heavy: 28px;
+  --glz12-frost-clear-blur: 6px;
+  --glz12-frost-mist-blur: 12px;
+  --glz12-frost-standard-blur: 20px;
+  --glz12-frost-dense-blur: 28px;
+  --glz12-aura-opacity: 0.46;
+  --glz12-aura-blur: 28px;
+  --glz12-aura-local-opacity: 0.33;
+  --glz12-aura-local-blur: 16px;
+  --glz12-shadow-soft: 0 10px 26px rgba(0, 0, 0, 0.10);
+  --glz12-shadow-float: 0 20px 48px rgba(0, 0, 0, 0.16);
+  --glz12-profile-shadow-soft: var(--glz12-shadow-soft);
+  --glz12-profile-shadow-float: var(--glz12-shadow-float);
+  --glz12-profile-transition-scale: 0.75;
+  --glz12-profile-adaptive-opacity: 0;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-material-performance="minimal"] {
+  --glz12-material-profile: minimal;
+  --glz12-blur-soft: 0px;
+  --glz12-blur-standard: 0px;
+  --glz12-blur-heavy: 0px;
+  --glz12-frost-clear-blur: 0px;
+  --glz12-frost-mist-blur: 0px;
+  --glz12-frost-standard-blur: 0px;
+  --glz12-frost-dense-blur: 0px;
+  --glz12-aura-opacity: 0;
+  --glz12-aura-blur: 0px;
+  --glz12-aura-local-opacity: 0;
+  --glz12-aura-local-blur: 0px;
+  --glz12-glass-base: color-mix(in srgb, var(--glz1-raised) 96%, var(--glz12-frost-white) 4%);
+  --glz12-glass-raised: var(--glz1-raised);
+  --glz12-glass-overlay: var(--glz1-raised);
+  --glz12-glass-panel: var(--glz1-raised);
+  --glz12-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.10);
+  --glz12-shadow-float: 0 4px 16px rgba(0, 0, 0, 0.14);
+  --glz12-profile-shadow-soft: var(--glz12-shadow-soft);
+  --glz12-profile-shadow-float: var(--glz12-shadow-float);
+  --glz12-profile-transition-scale: 0;
+  --glz12-profile-adaptive-opacity: 0;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-material-performance="minimal"] :is(
+  .glz11-soft-glaze,
+  .glz11-glaze,
+  .glz11-deep-glaze,
+  .glz11-live-glaze,
+  .glz12-soft-glaze,
+  .glz12-glaze,
+  .glz12-deep-glaze,
+  .glz12-live-glaze,
+  .glz1-system-overlay,
+  .glz1-system-panel,
+  .glz1-button[data-variant="glaze"],
+  .glz1-icon-button[data-variant="glaze"],
+  .glz1-field-control[data-variant="glaze"],
+  .glz1-select[data-variant="glaze"],
+  .glz1-card[data-material="frosted"],
+  .glz1-sidebar[data-variant="floating"],
+  .glz1-navigation-rail[data-variant="floating"],
+  .glz1-morph-card[data-material="frosted"],
+  .glz1-source-chip[data-material="frosted"],
+  .glz1-capsule,
+  .glz1-smart-rail,
+  .glz1-dock,
+  .glz1-toolbar[data-variant="floating"],
+  .glz1-tooltip,
+  .glz1-popover,
+  .glz1-menu,
+  .glz1-sheet,
+  .glz1-toast,
+  .glz1-search-entry,
+  .glz1-search-panel
+) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background-color: var(--glz1-raised);
+}
+
+/* Accessibility remains stricter than performance preference. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] {
+  --glz12-aura-opacity: 0;
+  --glz12-aura-blur: 0px;
+  --glz12-aura-local-opacity: 0;
+  --glz12-aura-local-blur: 0px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] [data-glz-frost],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] .glz1-universal-search .glz1-search-entry,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] .glz1-universal-search .glz1-search-panel {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background-color: var(--glz1-raised);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] {
+    --glz12-profile-transition-scale: 0;
+  }
+
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-optical-stage::before,
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-optical-aura]::after {
+    transform: none;
+  }
+}
+
+html[data-mode="increased-contrast"][data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] {
+  --glz12-aura-opacity: 0.28;
+  --glz12-aura-local-opacity: 0.20;
+  --glz12-search-edge: color-mix(in srgb, currentColor 36%, transparent);
+}
+
+@media (prefers-contrast: more) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] {
+    --glz12-aura-opacity: 0.28;
+    --glz12-aura-local-opacity: 0.20;
+  }
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] {
+    --glz12-aura-opacity: 0;
+    --glz12-aura-local-opacity: 0;
+    --glz12-aura-blur: 0px;
+    --glz12-aura-local-blur: 0px;
+  }
+
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-optical-stage,
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz11-atmosphere {
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    [data-glz-frost],
+    .glz1-universal-search .glz1-search-entry,
+    .glz1-universal-search .glz1-search-panel
+  ) {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search .glz1-search-entry::before,
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search .glz1-search-panel::before,
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-optical-aura]::after {
+    display: none;
+  }
+
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-universal-search .glz1-search-result[aria-selected="true"]::before {
+    background: Highlight;
+  }
+}

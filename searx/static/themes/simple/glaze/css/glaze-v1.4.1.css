@@ -1,0 +1,119 @@
+/*
+ * GLAZE UI V1.4.1 — Candidate semantic readability + capability-aware optics.
+ *
+ * Additive to the immutable V1.4.0 Stable stylesheet. Consumers opt in to
+ * semantic foreground protection with data-glaze-semantic-surface="protected".
+ * The V1.4.1 Candidate runtime supplies bounded appearance, surface-strength,
+ * and accepted performance-level variables. No ambient sensing, telemetry,
+ * remote state, hardware-price/model heuristics, or hidden context is used.
+ */
+@import url("./glaze-v1.4.0.css");
+
+:root {
+  --glz141-semantic-surface-strength: 82%;
+  --glz141-semantic-surface-color: #ffffff;
+  --glz141-semantic-foreground: #111827;
+  --glz141-semantic-muted-foreground: #374151;
+  --glz141-semantic-action-bg: #18213a;
+  --glz141-semantic-action-fg: #ffffff;
+  --glz141-motion-scale: 1;
+  --glz141-sampling-scale: 1;
+  --glz141-reflection-scale: 1;
+  --glz141-aura-scale: 1;
+}
+
+[data-glaze-optical-v141-appearance="light"] {
+  --glz141-semantic-surface-color: #ffffff;
+  --glz141-semantic-foreground: #111827;
+  --glz141-semantic-muted-foreground: #374151;
+  --glz141-semantic-action-bg: #18213a;
+  --glz141-semantic-action-fg: #ffffff;
+}
+
+[data-glaze-optical-v141-appearance="dark"],
+[data-glaze-optical-v141-appearance="deep-dark"] {
+  --glz141-semantic-surface-color: #0f172a;
+  --glz141-semantic-foreground: #f8fafc;
+  --glz141-semantic-muted-foreground: #d8dee9;
+  --glz141-semantic-action-bg: #f3f6ff;
+  --glz141-semantic-action-fg: #10141e;
+}
+
+/*
+ * Protected semantic surfaces consume the engine's semanticProtection result
+ * through the bounded --glz141-semantic-surface-strength variable. This closes
+ * the V1.4.0 gap where semanticProtection was calculated but not reflected in
+ * material opacity/foreground isolation.
+ */
+[data-glaze-semantic-surface="protected"] {
+  color: var(--glz141-semantic-foreground);
+  background-color: color-mix(
+    in srgb,
+    var(--glz141-semantic-surface-color) var(--glz141-semantic-surface-strength),
+    transparent
+  );
+}
+
+[data-glaze-semantic-surface="protected"] [data-glaze-semantic="muted"] {
+  color: var(--glz141-semantic-muted-foreground);
+  opacity: 1;
+}
+
+[data-glaze-semantic-surface="protected"] [data-glaze-action="secondary"] {
+  color: var(--glz141-semantic-action-fg);
+  background: var(--glz141-semantic-action-bg);
+  border-color: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+/*
+ * Capability-aware performance levels preserve hierarchy and identity while
+ * reducing expensive optical work. The candidate runtime sets the accepted
+ * level after applying accessibility, capability, resource-budget, and local
+ * frame-pressure constraints. Full Optical intentionally keeps V1.4 behavior.
+ */
+[data-glaze-optical-v141-performance="balanced-optical"] {
+  --glz141-optical-detail: 0.75;
+}
+
+[data-glaze-optical-v141-performance="efficient-optical"] {
+  --glz141-optical-detail: 0.45;
+}
+
+[data-glaze-optical-v141-performance="durable-optical"] {
+  --glz141-optical-detail: 0;
+}
+
+/* Efficient mode keeps a frosted identity but avoids costly decorative work. */
+[data-glaze-optical-v141-performance="efficient-optical"] [data-glaze-semantic-surface="protected"] {
+  box-shadow: none;
+}
+
+/* Durable mode deliberately becomes near-solid instead of looking broken. */
+[data-glaze-optical-v141-performance="durable-optical"] [data-glaze-semantic-surface="protected"] {
+  background-color: color-mix(in srgb, var(--glz141-semantic-surface-color) 96%, transparent);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* Accessibility authority remains stronger than decorative optics. */
+[data-glaze-optical-v14="solid-accessible"] [data-glaze-semantic-surface="protected"] {
+  background-color: var(--glz141-semantic-surface-color);
+  color: var(--glz141-semantic-foreground);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+@media (forced-colors: active) {
+  [data-glaze-semantic-surface="protected"] {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+  }
+
+  [data-glaze-semantic-surface="protected"] [data-glaze-action="secondary"] {
+    color: ButtonText;
+    background: ButtonFace;
+    border-color: ButtonText;
+  }
+}

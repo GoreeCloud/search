@@ -1,0 +1,84 @@
+/* GLAZE UI V1.2 Intelligence component Candidate refinement. */
+:root { --glz12-intelligence-hit: 48px; }
+[data-glz-touch-assistance="true"] { --glz12-intelligence-hit: 56px; }
+
+.glz1-ai-action {
+  min-block-size: var(--glz12-intelligence-hit);
+  min-inline-size: var(--glz12-intelligence-hit);
+  position: relative;
+}
+.glz1-ai-action[data-confirming="true"] { box-shadow: inset 0 0 0 2px currentColor; }
+.glz1-ai-action[data-confirming="true"]::after { content: "Confirm"; font-size: .75rem; font-weight: 750; margin-inline-start: .35rem; }
+.glz12-ai-impact { display: flex; flex-wrap: wrap; gap: .5rem; margin-block-start: .55rem; color: var(--glz1-text-secondary); font-size: .82rem; }
+.glz12-ai-impact > span { display: inline-flex; align-items: center; gap: .3rem; }
+
+.glz1-ai-suggestion,
+.glz1-ai-answer,
+.glz1-smart-summary {
+  background: var(--glz1-base);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.glz12-ai-label { display: inline-flex; align-items: center; gap: .4rem; margin-block-end: .6rem; font-size: .78rem; font-weight: 750; color: var(--glz1-text-secondary); }
+.glz12-ai-label::before { content: "✦"; }
+.glz12-ai-suggestion-head,
+.glz12-ai-answer-head,
+.glz12-summary-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
+.glz12-ai-dismiss,
+.glz12-summary-toggle {
+  min-block-size: var(--glz12-intelligence-hit);
+  min-inline-size: var(--glz12-intelligence-hit);
+  border: 1px solid var(--glz1-line);
+  border-radius: 14px;
+  background: var(--glz1-raised);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.glz12-ai-dismiss:focus-visible,
+.glz12-summary-toggle:focus-visible { outline: var(--glz1-focus-width) solid var(--glz1-focus); outline-offset: 2px; }
+.glz1-ai-suggestion[data-dismissed="true"] { display: none; }
+
+.glz12-ai-answer-section { margin-block-start: 1rem; padding-block-start: .9rem; border-block-start: 1px solid var(--glz1-line); }
+.glz12-ai-answer-section > h4 { margin: 0 0 .35rem; font-size: .82rem; color: var(--glz1-text-secondary); }
+.glz12-ai-uncertainty { margin-block-start: .75rem; padding: .65rem .75rem; border: 1px dashed var(--glz1-line); border-radius: 14px; }
+.glz12-system-truth { margin-block-start: .75rem; padding: .7rem .8rem; border-inline-start: 3px solid currentColor; background: var(--glz1-raised); }
+
+.glz12-summary-values { display: grid; grid-template-columns: repeat(auto-fit,minmax(9rem,1fr)); gap: .65rem; margin-block: .85rem; }
+.glz12-summary-value { padding: .7rem; border: 1px solid var(--glz1-line); border-radius: 14px; background: var(--glz1-raised); }
+.glz12-summary-value strong,
+.glz12-summary-value span { display: block; }
+.glz12-summary-value span { color: var(--glz1-text-secondary); font-size: .8rem; }
+
+.glz1-source-chip:is(button,a,[role="button"]) { min-block-size: var(--glz12-intelligence-hit); }
+.glz1-source-chip[aria-selected="true"] { box-shadow: inset 0 0 0 2px currentColor; }
+.glz1-source-chip[data-available="false"] { cursor: not-allowed; text-decoration: line-through; opacity: .72; }
+.glz12-source-type { font-size: .76rem; color: var(--glz1-text-secondary); }
+
+[data-glz-text-scale="200"] .glz12-ai-suggestion-head,
+[data-glz-text-scale="200"] .glz12-ai-answer-head,
+[data-glz-text-scale="200"] .glz12-summary-head { flex-direction: column; }
+[data-glz-text-scale="200"] .glz1-ai-actions { flex-direction: column; }
+[data-glz-text-scale="200"] .glz1-ai-actions > * { inline-size: 100%; max-inline-size: 100%; }
+[data-glz-text-scale="200"] .glz12-summary-values { grid-template-columns: 1fr; }
+
+html[data-mode="increased-contrast"] .glz12-ai-uncertainty,
+html[data-mode="increased-contrast"] .glz12-system-truth { border-width: 2px; }
+html[data-mode="reduced-motion"] .glz1-ai-suggestion,
+html[data-mode="reduced-motion"] .glz1-smart-summary { scroll-behavior: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .glz1-ai-suggestion,
+  .glz1-smart-summary { scroll-behavior: auto; }
+}
+@media (max-width: 700px) {
+  .glz12-ai-suggestion-head,
+  .glz12-ai-answer-head,
+  .glz12-summary-head { flex-direction: column; }
+  .glz12-summary-values { grid-template-columns: 1fr; }
+}
+@media (forced-colors: active) {
+  .glz1-ai-action[data-confirming="true"],
+  .glz1-source-chip[aria-selected="true"] { box-shadow: inset 0 0 0 2px Highlight; }
+  .glz12-system-truth { border-inline-start-color: CanvasText; }
+}
