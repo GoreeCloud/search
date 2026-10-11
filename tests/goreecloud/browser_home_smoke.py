@@ -160,6 +160,13 @@ def main() -> None:
             assert 'Startpage availability' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-startpage-note').text
             continue_button = driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-continue')
             driver.execute_script("arguments[0].scrollIntoView({block:'center'})", continue_button)
+            hit = driver.execute_script("""const r=arguments[0].getBoundingClientRect();
+              const x=r.left+r.width/2, y=r.top+r.height/2;
+              const above=document.elementFromPoint(x,y);
+              return {button:[r.x,r.y,r.width,r.height], overlay:above?.outerHTML?.slice(0,350),
+                      innerHeight:innerHeight,scrollY:scrollY,scrollHeight:document.documentElement.scrollHeight,
+                      bodyClass:document.body.className, mainId:document.querySelector('main')?.id};""", continue_button)
+            print(f'PREVIEW CLICK DEBUG: {hit}', flush=True)
             continue_button.click()
             WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: page.current_url.endswith('/search'))
             assert driver.current_url.endswith('/search'), driver.current_url
