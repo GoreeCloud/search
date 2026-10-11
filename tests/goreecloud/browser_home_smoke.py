@@ -84,7 +84,7 @@ def main() -> None:
             print(f"PASS {label} {width}x{height}; overflow={spill}px; POST and Glaze styles verified")
         # Preview selected providers first, then explicitly continue to the
         # synthetic search. The preview must never create a provider executor.
-        with patch('searx.search.SearchWithPlugins', SyntheticBrowserSearch) as preview_search:
+        with patch('searx.search.SearchWithPlugins', side_effect=SyntheticBrowserSearch) as preview_search:
             driver.set_window_size(390, 844)
             driver.get(url)
             driver.find_element(By.ID, 'q').send_keys('synthetic private preflight')
@@ -102,6 +102,7 @@ def main() -> None:
             assert driver.current_url.endswith('/search'), driver.current_url
             assert not driver.execute_script('return location.search'), 'continued query entered URL'
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').is_displayed()
+            preview_search.assert_called_once()
             print('PASS private preview, no provider executor, explicit POST continuation and URL privacy')
         # Exercise a real browser POST through the real SearXNG query parser,
         # while replacing provider execution with a synthetic local result.
