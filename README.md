@@ -27,6 +27,10 @@ The local profile now rejects query-bearing GET requests, preserves POST even on
 
 Results display a source-selection summary listing the upstream engine names chosen for that request; it does not pretend that every engine responded. The search header uses GoreeCloud branding, with accessible search labels and responsive Glaze styling. An empty search provides local preference guidance instead of sending users to another service. Privacy policy refusals now have an accessible recovery screen that never reflects query text; local JSON callers receive a structured policy error. These interfaces are source- and Flask-render validated but still need browser, screen-reader, and visual acceptance.
 
+## Local readiness diagnostics
+
+The loopback-only Development profile exposes `GET /readyz`. It returns `200 READY` only when at least one configured, enabled provider processor registered at startup; otherwise it returns `503 NOT_READY`. It reports no provider names or user data. The original `/healthz` liveness route remains unchanged. Readiness is an **in-process startup check**, not proof that any external search provider is reachable, authorized, safe or responding. It is hidden (404) when the private profile is disabled; public operations require a separately authenticated and reviewed health contract.
+
 ## Development validation
 
 With SearXNG's pinned requirements installed (including the Python 3.10 compatibility backport when applicable), run the commands below. GitHub source/runtime CI now checks both Python 3.10 and 3.12, while the Chrome browser job uses Python 3.12:
@@ -39,7 +43,7 @@ export SEARXNG_SECRET="$(python -c 'import secrets;print(secrets.token_hex(32))'
 python -m nose2 -s tests/unit test_query test_webadapter test_settings_loader test_webapp -v
 ```
 
-The 2026-10-10 local verification passed 28 GoreeCloud foundation/privacy/Flask-runtime tests and 72 upstream SearXNG query, routing, settings and webapp regressions (100 tests total, in separate isolated runs). The Flask homepage and three local CSS/privacy assets returned HTTP 200. No live provider searches, device/browser acceptance, full upstream regression suite, or production security acceptance have been verified. This local environment still reports SQLite threading warnings; Ahmia and Torch no longer enter the supplied local engine registry because they require a separately qualified Tor setup. Actual upstream provider availability remains unverified.
+The 2026-10-10 local verification passed 32 GoreeCloud foundation/privacy/Flask-runtime tests and 72 upstream SearXNG query, routing, settings and webapp regressions (104 tests total, in separate isolated runs). The Flask homepage and three local CSS/privacy assets returned HTTP 200. No live provider searches, device/browser acceptance, full upstream regression suite, or production security acceptance have been verified. This local environment still reports SQLite threading warnings; Ahmia and Torch no longer enter the supplied local engine registry because they require a separately qualified Tor setup. Actual upstream provider availability remains unverified.
 
 ## Source boundaries
 

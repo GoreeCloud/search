@@ -13,6 +13,6 @@ The supplied GoreeCloud Search feature catalog is a **proposed product target**,
 | AI/research | No GoreeCloud AI layer | Source-grounded answers, citations, conversational research and safety |
 | Maps/local/commerce | Upstream search links/adapters where available | Licensed structured data, coordinates, reviews and geographic privacy |
 | Saved search/alerts | Not implemented | Opt-in local-first storage, retention, scheduling and notifications |
-| Operations | Upstream self-hosting | Hardened public instance, actual metrics/privacy settings, rollout and rollback tests |
+| Operations | Loopback-only source runtime, liveness and provider-processor startup readiness (not live network health), source/runtime and Chrome CI | Authenticated public diagnostics, hardening, live source health, independent monitoring, rollout and rollback tests |
 
 Source presence, a compile check or a green CI build does not confer production eligibility, independent-index capability or Glaze conformance.

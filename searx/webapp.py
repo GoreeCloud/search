@@ -655,6 +655,20 @@ def health():
     return Response('OK', mimetype='text/plain')
 
 
+@app.route('/readyz', methods=['GET'])
+def goreecloud_readiness():
+    """Local startup readiness only; not a live-provider health claim."""
+    if not settings['goreecloud']['private_search']:
+        flask.abort(404)
+    configured = {
+        engine['name'] for engine in settings['engines']
+        if not engine.get('inactive', False) and not engine.get('disabled', False)
+    }
+    if not configured.intersection(searx.search.processors.PROCESSORS):
+        return Response('NOT_READY', status=503, mimetype='text/plain')
+    return Response('READY', mimetype='text/plain')
+
+
 @app.route('/client<token>.css', methods=['GET', 'POST'])
 def client_token(token=None):
     link_token.ping(sxng_request, token)
