@@ -28,3 +28,25 @@ jobs:
         run: |
           export SEARXNG_SECRET="$(python -c 'import secrets; print(secrets.token_hex(32))')"
           python -m nose2 -s tests/unit test_query test_webadapter test_settings_loader -v
+  browser-home-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install SearXNG and browser harness
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install selenium==4.50.0
+      - name: Verify local homepage at desktop and phone widths
+        run: python tests/goreecloud/browser_home_smoke.py
+      - name: Retain synthetic UI screenshots for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: search-glaze-browser-smoke
+          path: artifacts/search-browser/*.png
+          retention-days: 7
+          if-no-files-found: warn
