@@ -159,7 +159,10 @@ def main() -> None:
             driver.save_screenshot(str(artifacts / 'phone-source-preview.png'))
             assert 'Startpage availability' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-startpage-note').text
             continue_button = driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-continue')
-            driver.execute_script("arguments[0].scrollIntoView({block:'center'})", continue_button)
+            driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", continue_button)
+            WebDriverWait(driver, 8).until(lambda page: page.execute_script(
+                "const rect=arguments[0].getBoundingClientRect(); return rect.top >= 0 && rect.bottom <= innerHeight;", continue_button
+            ))
             hit = driver.execute_script("""const r=arguments[0].getBoundingClientRect();
               const x=r.left+r.width/2, y=r.top+r.height/2;
               const above=document.elementFromPoint(x,y);
