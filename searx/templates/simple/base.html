@@ -31,7 +31,7 @@
   {% endblock %}
   <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
   <link rel="manifest" href="{{ url_for('manifest') }}" />
-  {% if private_query_transport %}<script type="module" src="{{ url_for('static', filename='goreecloud-preview.js') }}"></script><script type="module" src="{{ url_for('static', filename='goreecloud-theme.js') }}"></script>{% endif %}
+  {% if private_query_transport %}<script type="module" src="{{ url_for('static', filename='goreecloud-preview.js') }}"></script><script type="module" src="{{ url_for('static', filename='goreecloud-theme.js') }}"></script><script type="module" src="{{ url_for('static', filename='goreecloud-shortcuts.js') }}"></script>{% endif %}
 </head>
 <body class="{{ endpoint }}_endpoint" >
   {% if private_query_transport %}<a class="goreecloud-skip-link" href="#goreecloud-content-start">Skip to search and content</a>{% endif %}

@@ -4,7 +4,7 @@
       <div class="search_box">
         <label class="goreecloud-visually-hidden" for="q">Search query</label>
         <svg class="goreecloud-input-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"><circle cx="10.8" cy="10.8" r="6.7" stroke="currentColor" stroke-width="1.9"/><path d="m16.1 16.1 4.4 4.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
-        <input id="q" name="q" type="search" placeholder="Search the web..." autocomplete="off" autocapitalize="none" spellcheck="false" autocorrect="off" dir="auto" value="{{ q or '' }}">
+        <input id="q" name="q" type="search" aria-keyshortcuts="/" title="Press / to focus search" placeholder="Search the web..." autocomplete="off" autocapitalize="none" spellcheck="false" autocorrect="off" dir="auto" value="{{ q or '' }}">
         <button id="clear_search" type="reset" aria-label="Clear search" class="hide_if_nojs"><span>×</span></button>
         <button id="send_search" type="submit" aria-label="Search"><span class="goreecloud-submit-label">Search</span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M4 12h15m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div class="autocomplete hide_if_nojs"><ul></ul></div>
