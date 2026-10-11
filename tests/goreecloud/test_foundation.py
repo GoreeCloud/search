@@ -77,6 +77,8 @@ class GoreeCloudFoundationTests(unittest.TestCase):
 
     def test_accessibility_fallbacks(self):
         css = (ASSETS / "goreecloud-search.css").read_text()
+        self.assertIn('background-image: none', css)
+        self.assertIn('visibility: visible', css)
         for feature in ("focus-visible", "prefers-reduced-motion", "prefers-reduced-transparency",
                         "forced-colors: active", "max-width: 680px"):
             self.assertIn(feature, css)

@@ -49,6 +49,9 @@ def main() -> None:
             heading_text = (heading.get_attribute("textContent") or "").strip()
             assert "GoreeCloud" in heading_text and "Search" in heading_text, heading_text
             assert heading.is_displayed(), f"{label}: GoreeCloud heading is hidden"
+            assert driver.execute_script(
+                "return getComputedStyle(document.querySelector('#main_index .index .title')).backgroundImage"
+            ) == 'none', f"{label}: inherited upstream image logo is still visible"
             search = driver.find_element(By.CSS_SELECTOR, "form#search")
             assert search.get_attribute("method").lower() == "post"
             assert driver.find_element(By.CSS_SELECTOR, "[role=note].goreecloud-source-disclosure").is_displayed()

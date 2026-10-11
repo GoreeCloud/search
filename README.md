@@ -34,12 +34,12 @@ With SearXNG's pinned requirements installed (including the Python 3.10 compatib
 ```sh
 python -m compileall -q searx
 python -m unittest discover -s tests/goreecloud -v
-python -m pip install nose2==0.16.0 aiounittest==1.5.0 parameterized==0.9.0
+python -m pip install nose2==0.16.0 aiounittest==1.5.0 parameterized==0.9.0 mock==5.2.0
 export SEARXNG_SECRET="$(python -c 'import secrets;print(secrets.token_hex(32))')"
-python -m nose2 -s tests/unit test_query test_webadapter test_settings_loader -v
+python -m nose2 -s tests/unit test_query test_webadapter test_settings_loader test_webapp -v
 ```
 
-The 2026-10-10 local verification passed 20 GoreeCloud foundation/privacy/Flask-runtime tests and 46 upstream SearXNG query, routing, and settings regressions (66 tests total, in separate isolated runs). The Flask homepage and three local CSS/privacy assets returned HTTP 200. No live provider searches, device/browser acceptance, full upstream regression suite, or production security acceptance have been verified. This local environment also logged SQLite threading warnings and failures loading the optional Ahmia and Torch engines; provider availability remains a separate qualification requirement.
+The 2026-10-10 local verification passed 20 GoreeCloud foundation/privacy/Flask-runtime tests and 72 upstream SearXNG query, routing, settings and webapp regressions (92 tests total, in separate isolated runs). The Flask homepage and three local CSS/privacy assets returned HTTP 200. No live provider searches, device/browser acceptance, full upstream regression suite, or production security acceptance have been verified. This local environment also logged SQLite threading warnings and failures loading the optional Ahmia and Torch engines; provider availability remains a separate qualification requirement.
 
 ## Source boundaries
 

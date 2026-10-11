@@ -135,3 +135,12 @@ html[data-glaze-consumer] .goreecloud-empty-state p { color: var(--gc-muted); }
 @media (forced-colors: active) {
   html[data-glaze-consumer] .goreecloud-empty-state { background: Canvas; color: CanvasText; border-color: CanvasText; box-shadow: none; }
 }
+
+/* Override SearXNG's image-logo and hidden-h1 homepage treatment. */
+html[data-glaze-consumer] #main_index { margin-top: clamp(3rem, 11vh, 7rem); }
+html[data-glaze-consumer] #main_index .index .title {
+  background-image: none; min-height: 0; margin: 1.25rem auto 2rem;
+}
+html[data-glaze-consumer] #main_index .index .title h1 {
+  visibility: visible; display: block;
+}
