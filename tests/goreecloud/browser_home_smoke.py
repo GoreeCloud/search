@@ -66,6 +66,12 @@ def main() -> None:
             assert spill <= 2, f"{label}: horizontal overflow of {spill}px"
             driver.save_screenshot(str(artifacts / f"{label}.png"))
             print(f"PASS {label} {width}x{height}; overflow={spill}px; POST and Glaze styles verified")
+        # Exercise a synthetic denied URL without dispatching a search.
+        driver.get(url + 'search?q=synthetic-private-smoke-fixture')
+        assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-policy-error[role=alert]').is_displayed()
+        assert 'synthetic-private-smoke-fixture' not in driver.find_element(By.TAG_NAME, 'body').text
+        assert driver.find_element(By.LINK_TEXT, 'Return to GoreeCloud Search').is_displayed()
+        print('PASS accessible no-query-reflection policy error view')
         # Verify the readable dark-mode token fallback without a remote asset.
         driver.execute_script("document.documentElement.classList.add('theme-dark')")
         bg = driver.execute_script("return getComputedStyle(document.body).backgroundColor")

@@ -48,3 +48,17 @@ def validate_disclosure(
             "Too many sources for this search. Select fewer categories or engines.", 422
         )
     return len(unique)
+
+
+def validate_no_external_redirects(*, external_bang: str | None, lucky_redirect: bool) -> None:
+    """Keep privately submitted searches on GoreeCloud's result page.
+
+    External bangs and '!!' direct-result navigation otherwise turn a private
+    search POST into a browser navigation with terms in a third-party URL.
+    Ordinary engine/category bangs remain supported.
+    """
+    if external_bang or lucky_redirect:
+        raise SearchPolicyViolation(
+            "Direct external search redirects are disabled in private mode. Remove external bangs or !!.",
+            422,
+        )

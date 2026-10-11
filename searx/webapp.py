@@ -63,7 +63,9 @@ from searx.result_types import Answer
 from searx.settings_defaults import OUTPUT_FORMATS
 from searx.settings_loader import DEFAULT_SETTINGS_FILE
 from searx.exceptions import SearxParameterException
-from searx.goreecloud_policy import SearchPolicyViolation, validate_disclosure, validate_transport
+from searx.goreecloud_policy import (
+    SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
+)
 from searx.engines import (
     DEFAULT_CATEGORY,
     categories,
@@ -613,8 +615,15 @@ def index_error(output_format: str, error_message: str):
 def index():
     """Render index page."""
 
-    if settings['goreecloud']['private_search'] and sxng_request.form.get('q'):
+    if settings['goreecloud']['private_search'] and 'q' in sxng_request.form:
         validate_transport(method=sxng_request.method, query_in_url=bool(sxng_request.args), private=True)
+
+    if settings['goreecloud']['private_search'] and 'q' in sxng_request.form:
+        validate_disclosure(
+            sxng_request.form['q'], (),
+            max_query_chars=settings['goreecloud']['max_query_chars'],
+            max_providers=settings['goreecloud']['max_provider_fanout'],
+        )
 
     # redirect to search if there's a query in the request
     if sxng_request.form.get('q'):
@@ -632,7 +641,13 @@ def index():
 
 @app.errorhandler(SearchPolicyViolation)
 def goreecloud_policy_error(error):
-    return Response(str(error), status=error.http_status, mimetype='text/plain')
+    # Do not reflect user-provided search terms or destinations in error pages.
+    if sxng_request.form.get('format') == 'json':
+        return Response(
+            json.dumps({'error': str(error), 'goreecloud': {'code': 'private_search_policy_violation'}}),
+            status=error.http_status, mimetype='application/json',
+        )
+    return render('goreecloud_policy_error.html', policy_message=str(error)), error.http_status
 
 
 @app.route('/healthz', methods=['GET'])
@@ -663,8 +678,14 @@ def search():
     # pylint: disable=too-many-locals, too-many-return-statements, too-many-branches
     # pylint: disable=too-many-statements
 
-    if settings['goreecloud']['private_search'] and sxng_request.form.get('q'):
+    if settings['goreecloud']['private_search'] and 'q' in sxng_request.form:
         validate_transport(method=sxng_request.method, query_in_url=bool(sxng_request.args), private=True)
+        # Reject the original submitted value before SearXNG rewrites operators.
+        validate_disclosure(
+            sxng_request.form['q'], (),
+            max_query_chars=settings['goreecloud']['max_query_chars'],
+            max_providers=settings['goreecloud']['max_provider_fanout'],
+        )
 
     # output_format
     output_format = sxng_request.form.get('format', 'html')
@@ -694,6 +715,10 @@ def search():
             sxng_request.preferences, sxng_request.form
         )
         if settings['goreecloud']['private_search']:
+            validate_no_external_redirects(
+                external_bang=search_query.external_bang,
+                lucky_redirect=bool(search_query.redirect_to_first_result),
+            )
             validate_disclosure(
                 search_query.query,
                 (ref.name for ref in search_query.engineref_list),
@@ -704,7 +729,7 @@ def search():
         result_container = search_obj.search()
 
     except SearchPolicyViolation as e:
-        return Response(str(e), status=e.http_status, mimetype='text/plain')
+        return goreecloud_policy_error(e)
     except SearxParameterException as e:
         logger.exception('search error: SearxParameterException')
         return index_error(output_format, e.message), 400
@@ -712,8 +737,13 @@ def search():
         logger.exception(e, exc_info=True)
         return index_error(output_format, gettext('search error')), 500
 
-    # 1. check if the result is a redirect for an external bang
+    # 1. An upstream plugin may still provide a redirect. Never perform a
+    # third-party browser navigation from this privacy profile.
     if result_container.redirect_url:
+        if settings['goreecloud']['private_search']:
+            return goreecloud_policy_error(
+                SearchPolicyViolation('External redirects are disabled in private mode.', 422)
+            )
         return redirect(result_container.redirect_url)
 
     # 2. add Server-Timing header for measuring performance characteristics of

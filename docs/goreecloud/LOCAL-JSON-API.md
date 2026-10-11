@@ -25,6 +25,6 @@ An additive `goreecloud` response object is available when `goreecloud.private_s
 
 This is an illustrative shape, not a fabricated live-search response. SearXNG's original keys and result serialization remain unchanged; upstream callers not requesting the GoreeCloud extension continue to receive their original response format. The selected list reflects the engine selection after query parsing, not contacted, completed or successful providers.
 
-Private-profile limits: at most 512 query characters and 32 distinct selected engines. Oversized queries return HTTP 413, excessive engine selection returns 422, and URL-query submission returns 405. Private responses are uncached (`Cache-Control: private, no-store, max-age=0`) and set `Referrer-Policy: no-referrer`.
+Private-profile limits: at most 512 raw submitted query characters and 32 distinct selected engines. Oversized queries return HTTP 413, excessive engine selection or automatic external-navigation requests return 422, and URL-query submission returns 405. Rejected JSON searches return a structured privacy policy error without echoing query terms. Unexpected upstream plugin redirects are also denied. Private responses are uncached (`Cache-Control: private, no-store, max-age=0`) and set `Referrer-Policy: no-referrer`.
 
 **Not included:** public authentication, OAuth, quotas, versioned API stability, audited upstream provider identity, Privacy Shield consent, or Wardveil admission. Those require independently governed contracts and security acceptance before network exposure.
