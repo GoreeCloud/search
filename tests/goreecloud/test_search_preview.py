@@ -123,6 +123,22 @@ class SearchPreviewTests(unittest.TestCase):
                     response.close()
             network.assert_not_called()
 
+    def test_startpage_warning_only_appears_when_that_provider_is_selected(self):
+        with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins') as network:
+            for selected, show_warning in (('brave', False), ('startpage', True), ('brave,startpage', True)):
+                with self.subTest(selected=selected):
+                    response = client.post('/preview', data={'q': 'synthetic provider selection', 'engines': selected}, headers=self.headers)
+                    self.assertEqual(200, response.status_code)
+                    page = html.fromstring(response.data)
+                    warnings = page.xpath('//*[@role="note" and contains(@class, "goreecloud-startpage-note")]')
+                    self.assertEqual(1 if show_warning else 0, len(warnings))
+                    if show_warning:
+                        self.assertIn('not checked', warnings[0].text_content())
+                        self.assertIn('No other provider will be substituted.', warnings[0].text_content())
+                    self.assertIn('no-store', response.headers['Cache-Control'])
+                    response.close()
+            network.assert_not_called()
+
     def test_preflight_is_hidden_without_private_search_mode(self):
         with smoke.app.test_client() as client, patch.dict(smoke.settings['goreecloud'], {'private_search':False}):
             response = client.post('/preview', data={'q':'synthetic'}, headers=self.headers)

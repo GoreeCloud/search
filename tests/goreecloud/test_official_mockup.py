@@ -42,7 +42,7 @@ class OfficialHomepageTests(unittest.TestCase):
             form=forms[0]
             self.assertEqual('post',form.get('method').lower())
             self.assertEqual('/search',form.get('action'))
-            self.assertEqual(1,len(form.xpath('.//input[@name="q"][@type="search"]')))
+            self.assertEqual(1,len(form.xpath('.//input[@name="q"][@type="search"][@aria-keyshortcuts="/"]')))
             self.assertEqual(1,len(form.xpath('.//button[@id="send_search"][@type="submit"]')))
             self.assertEqual(1,len(form.xpath('.//button[@formaction="/preview"][@formmethod="post"]')))
             self.assertEqual(1,len(root.xpath('//a[@href="#why-goreecloud-search"]')))
@@ -56,13 +56,15 @@ class OfficialHomepageTests(unittest.TestCase):
             root=html.fromstring(reply.data)
             css=root.xpath('//link[contains(@href,"goreecloud-mockup.css")]/@href')
             script=root.xpath('//script[contains(@src,"goreecloud-theme.js")]/@src')
+            shortcuts=root.xpath('//script[contains(@src,"goreecloud-shortcuts.js")]/@src')
             self.assertEqual(['/static/themes/simple/goreecloud-mockup.css'],css)
             self.assertEqual(['/static/themes/simple/goreecloud-theme.js'],script)
+            self.assertEqual(['/static/themes/simple/goreecloud-shortcuts.js'],shortcuts)
             button=root.xpath('//button[contains(@class,"goreecloud-theme-toggle")]')[0]
             self.assertEqual('false',button.get('aria-pressed'))
             self.assertIn('dark mode',button.get('aria-label'))
             reply.close()
-            for path,content_type in ((css[0],'text/css'),(script[0],'javascript')):
+            for path,content_type in ((css[0],'text/css'),(script[0],'javascript'),(shortcuts[0],'javascript')):
                 asset=client.get(path,headers=self.headers)
                 self.assertEqual(200,asset.status_code)
                 self.assertIn(content_type,asset.content_type)
