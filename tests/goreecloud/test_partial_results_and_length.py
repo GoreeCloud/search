@@ -33,6 +33,17 @@ class SyntheticPartialFailure(SyntheticPopulatedSearch):
     errors = True
 
 
+class SyntheticTimedPopulatedSearch(SyntheticPopulatedSearch):
+    def search(self):
+        response = super().search()
+        response.get_timings = lambda: [SimpleNamespace(engine='brave', total=0.38, load=0.12)]
+        return response
+
+
+class SyntheticTimedPartialFailure(SyntheticTimedPopulatedSearch):
+    errors = True
+
+
 class PartialResultsAndLengthTests(unittest.TestCase):
     headers = {'X-Real-IP': '127.0.0.1'}
 
@@ -100,3 +111,25 @@ class PartialResultsAndLengthTests(unittest.TestCase):
         hints = doc.xpath('//*[@id="goreecloud-query-length-hint"]')
         self.assertEqual(1, len(hints))
         self.assertIn('512 characters', hints[0].text_content())
+
+    def test_source_messages_expand_only_when_timed_results_include_provider_errors(self):
+        for provider_cls, expanded in (
+            (SyntheticTimedPopulatedSearch, False),
+            (SyntheticTimedPartialFailure, True),
+        ):
+            with self.subTest(provider_errors=expanded), smoke.app.test_client() as client, patch(
+                'searx.search.SearchWithPlugins', provider_cls
+            ):
+                response = client.post('/search', data={
+                    'q': 'synthetic source message status', 'engines': 'brave,startpage',
+                }, headers=self.headers)
+                self.assertEqual(200, response.status_code)
+                doc = html.fromstring(response.data)
+                panels = doc.xpath('//div[@id="engines_msg"]/details')
+                self.assertEqual(1, len(panels))
+                self.assertEqual(expanded, panels[0].get('open') is not None)
+                messages = panels[0].xpath('.//td[contains(@class,"response-error")]')
+                self.assertEqual(int(expanded), len(messages))
+                self.assertEqual(expanded, bool(doc.xpath('//p[contains(@class,"goreecloud-partial-results")]')))
+                self.assertIn('no-store', response.headers['Cache-Control'])
+                response.close()

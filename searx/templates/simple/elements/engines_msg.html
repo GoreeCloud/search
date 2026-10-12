@@ -1,5 +1,5 @@
 <div id="engines_msg">
-  {% if (not results and not answers) or not max_response_time %}
+  {% if (not results and not answers) or not max_response_time or (private_query_transport and unresponsive_engines) %}
   <details class="sidebar-collapsible" open>
     <summary class="title" id="engines_msg-title">{{ _('Messages from the search engines') }}</summary>
   {% else %}

@@ -10,7 +10,10 @@ from test_search_preview import OfflineSearch
 class SourceRefinementTests(unittest.TestCase):
     def test_result_source_only_action_preserves_query_privacy_and_limits_engine(self):
         with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins', OfflineSearch):
-            page = client.post('/search', data={'q':'synthetic source refinement'},
+            page = client.post('/search', data={'q':'synthetic source refinement','category_general':'1',
+                                                  'language':'en','safesearch':'2',
+                                                  'time_range':'week','theme':'simple',
+                                                  'timeout_limit':'2.75'},
                                headers={'X-Real-IP':'127.0.0.1'})
             self.assertEqual(200, page.status_code)
             root = html.fromstring(page.data)
@@ -22,7 +25,12 @@ class SourceRefinementTests(unittest.TestCase):
             fields = {node.get('name'): node.get('value') for node in selected.xpath('.//input')}
             self.assertEqual('synthetic source refinement', fields['q'])
             self.assertTrue(fields['engines'])
-            self.assertFalse(any(key.startswith('category_') for key in fields))
+            self.assertEqual('1', fields['category_general'])
+            self.assertEqual('en', fields['language'])
+            self.assertEqual('2', fields['safesearch'])
+            self.assertEqual('week', fields['time_range'])
+            self.assertEqual('simple', fields['theme'])
+            self.assertEqual('2.75', fields['timeout_limit'])
             self.assertNotIn('preferences', fields)
             self.assertNotIn('Location', page.headers)
             page.close()

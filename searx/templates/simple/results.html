@@ -19,11 +19,14 @@
     <ul>{% for source in selected_source_names %}
       <li>{{ 'Brave Search' if source == 'brave' else 'Startpage' }}
         <form class="goreecloud-refine-source" method="post" action="{{ url_for('search') }}">
-          <input type="hidden" name="q" value="{{ q }}">
+          <input type="hidden" name="q" value="{{ source_switch_query }}">
           <input type="hidden" name="engines" value="{{ source }}">
+          {% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}
           <input type="hidden" name="language" value="{{ current_language }}">
           <input type="hidden" name="safesearch" value="{{ safesearch }}">
           <input type="hidden" name="time_range" value="{{ time_range }}">
+          <input type="hidden" name="theme" value="{{ theme }}">
+          {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}">{% endif %}
           <button type="submit" aria-label="Search only {{ 'Brave Search' if source == 'brave' else 'Startpage' }}">Search only</button>
         </form>
       </li>
@@ -43,9 +46,12 @@
       <form method="post" action="{{ url_for('search') }}">
         <input type="hidden" name="q" value="{{ source_switch_query }}">
         <input type="hidden" name="engines" value="{{ source_value }}">
+        {% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}
         <input type="hidden" name="language" value="{{ current_language }}">
         <input type="hidden" name="safesearch" value="{{ safesearch }}">
         <input type="hidden" name="time_range" value="{{ time_range }}">
+        <input type="hidden" name="theme" value="{{ theme }}">
+        {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}">{% endif %}
         <button type="submit" {% if selected_engine_post == source_value %}disabled aria-label="{{ source_label }} (current selection)"{% else %}aria-label="Search with {{ source_label }}"{% endif %}>{{ source_label }}</button>
       </form>
     {% endfor %}
