@@ -1,6 +1,6 @@
 <section class="goreecloud-empty-state" role="status" aria-labelledby="goreecloud-no-results-title">
   <h2 id="goreecloud-no-results-title">
-    {% if private_query_transport and pageno == 1 and unresponsive_engines %}Search results unavailable
+    {% if private_query_transport and unresponsive_engines %}Search results unavailable
     {% elif pageno == 1 %}{{ _('No results found') }}{% else %}{{ _('No more results') }}{% endif %}
   </h2>
   {% if private_query_transport %}
@@ -21,7 +21,24 @@
     {% elif pageno == 1 %}
       <p>No displayed web matches are available for this search. Try different search terms or explicitly switch between Brave Search and Startpage above.</p>
     {% else %}
+      {% if unresponsive_engines %}
+      <p>At least one selected source reported an error, so results for this page could not be confirmed. <a href="#engines_msg-title">Review source messages</a>. No replacement provider was selected automatically.</p>
+      <form class="goreecloud-page-error-retry goreecloud-empty-retry" method="post" action="{{ url_for('search') }}">
+        <input type="hidden" name="q" value="{{ source_switch_query }}">
+        <input type="hidden" name="engines" value="{{ selected_engine_post }}">
+        {% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}
+        <input type="hidden" name="pageno" value="{{ pageno }}">
+        <input type="hidden" name="language" value="{{ current_language }}">
+        <input type="hidden" name="time_range" value="{{ time_range }}">
+        <input type="hidden" name="safesearch" value="{{ safesearch }}">
+        <input type="hidden" name="theme" value="{{ theme }}">
+        {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}">{% endif %}
+        <button type="submit">Retry this results page</button>
+      </form>
+      <p>Retrying sends these terms to the same selected sources again on this page.</p>
+      {% else %}
       <p>No more displayed web matches on this page. You can request the previous results page from the same selected sources.</p>
+      {% endif %}
       <form class="goreecloud-previous-results goreecloud-empty-retry" method="post" action="{{ url_for('search') }}">
         <input type="hidden" name="q" value="{{ source_switch_query }}">
         <input type="hidden" name="engines" value="{{ selected_engine_post }}">

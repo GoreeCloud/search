@@ -151,3 +151,80 @@ class PrivateEmptyResultsTests(unittest.TestCase):
             doc = html.fromstring(result.data)
             self.assertFalse(doc.xpath('//form[contains(@class,"goreecloud-previous-results")]'))
             result.close()
+
+    def test_later_page_errors_show_uncertainty_and_two_explicit_actions(self):
+        scenarios = (
+            ({'q': 'synthetic <private> & "terms"', 'engines': 'brave,startpage',
+              'pageno': '3', 'category_general': '1', 'language': 'en',
+              'safesearch': '2', 'time_range': 'week', 'theme': 'simple',
+              'timeout_limit': '2.75'},
+             'brave,startpage', 'synthetic <private> & "terms"', '3', '2'),
+            ({'q': '!sp synthetic later error', 'pageno': '2'},
+             'startpage', 'synthetic later error', '2', '1'),
+        )
+        for submitted, selected, terms, current, previous in scenarios:
+            with self.subTest(provider=selected), smoke.app.test_client() as client, patch(
+                'searx.search.SearchWithPlugins', FailedSourceSearch
+            ):
+                response = client.post('/search', data=submitted, headers=self.headers)
+                self.assertEqual(200, response.status_code)
+                doc = html.fromstring(response.data)
+                area = doc.xpath('//section[contains(@class, "goreecloud-empty-state")]')[0]
+                self.assertEqual('Search results unavailable',
+                                 ' '.join(area.xpath('./h2')[0].text_content().split()))
+                self.assertIn('results for this page could not be confirmed', area.text_content())
+                self.assertNotIn('No more displayed web matches', area.text_content())
+                self.assertIn('No replacement provider was selected automatically', area.text_content())
+                self.assertEqual(['#engines_msg-title'], area.xpath('./p/a/@href'))
+                self.assertIsNotNone(doc.xpath('//div[@id="engines_msg"]/details')[0].get('open'))
+                self.assertIn('no-store', response.headers['Cache-Control'])
+                self.assertEqual('no-referrer', response.headers['Referrer-Policy'])
+                self.assertNotIn('Set-Cookie', response.headers)
+                self.assertNotIn('Location', response.headers)
+                refine = doc.xpath('//form[contains(@class, "goreecloud-refine-source")]')[0]
+                categories = {e.get('name'): e.get('value') for e in refine.xpath('.//input')
+                              if e.get('name', '').startswith('category_')}
+                for selector, page_no, button in (
+                    ('goreecloud-page-error-retry', current, 'Retry this results page'),
+                    ('goreecloud-previous-results', previous, 'Previous results page'),
+                ):
+                    with self.subTest(action=selector):
+                        form = area.xpath('./form[contains(@class, "' + selector + '")]')
+                        self.assertEqual(1, len(form))
+                        self.assertEqual('post', form[0].get('method').lower())
+                        self.assertEqual('/search', form[0].get('action'))
+                        self.assertEqual(button, form[0].xpath('./button')[0].text_content().strip())
+                        fields = {e.get('name'): e.get('value') for e in form[0].xpath('.//input')}
+                        self.assertEqual(terms, fields['q'])
+                        self.assertEqual(selected, fields['engines'])
+                        self.assertEqual(page_no, fields['pageno'])
+                        self.assertNotIn('format', fields)
+                        self.assertNotIn('q=', form[0].get('action'))
+                        self.assertEqual(categories, {k: v for k, v in fields.items()
+                                                      if k.startswith('category_')})
+                        for key in ('language', 'safesearch', 'time_range', 'theme', 'timeout_limit'):
+                            if key in submitted:
+                                self.assertEqual(submitted[key], fields[key])
+                        with patch('searx.search.SearchWithPlugins', OfflineSearch):
+                            replay = client.post('/search', data={**fields, 'format': 'json'},
+                                                 headers=self.headers)
+                            self.assertEqual(200, replay.status_code)
+                            self.assertEqual(sorted(selected.split(',')),
+                                             replay.json['goreecloud']['selected_engines'])
+                            self.assertEqual(terms, replay.json['query'])
+                            self.assertNotIn('Location', replay.headers)
+                            replay.close()
+                response.close()
+
+    def test_later_page_without_error_remains_exhausted_not_failed(self):
+        with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins', OfflineSearch):
+            response = client.post('/search', data={'q': 'synthetic exhausted',
+                'engines': 'brave', 'pageno': '3'}, headers=self.headers)
+            self.assertEqual(200, response.status_code)
+            doc = html.fromstring(response.data)
+            area = doc.xpath('//section[contains(@class, "goreecloud-empty-state")]')[0]
+            self.assertEqual('No more results', area.xpath('./h2')[0].text_content().strip())
+            self.assertFalse(area.xpath('./form[contains(@class, "goreecloud-page-error-retry")]'))
+            self.assertEqual(1, len(area.xpath('./form[contains(@class, "goreecloud-previous-results")]')))
+            self.assertNotIn('reported an error', area.text_content())
+            response.close()
