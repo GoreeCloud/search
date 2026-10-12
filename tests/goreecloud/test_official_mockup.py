@@ -59,7 +59,7 @@ class OfficialHomepageTests(unittest.TestCase):
             self.assertEqual(['brave', 'startpage'], [button.get('value') for button in buttons])
             self.assertEqual(['engines', 'engines'], [button.get('name') for button in buttons])
             self.assertEqual(['submit', 'submit'], [button.get('type') for button in buttons])
-            self.assertEqual('post', root.xpath('//form[@id="search"]')[0].get('method'))
+            self.assertEqual('post', root.xpath('//form[@id="search"]')[0].get('method').lower())
             self.assertEqual(1, len(root.xpath('//script[contains(@src,"goreecloud-preview.js")]')))
             page.close()
 
