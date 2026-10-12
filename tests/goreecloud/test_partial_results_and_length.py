@@ -133,3 +133,77 @@ class PartialResultsAndLengthTests(unittest.TestCase):
                 self.assertEqual(expanded, bool(doc.xpath('//p[contains(@class,"goreecloud-partial-results")]')))
                 self.assertIn('no-store', response.headers['Cache-Control'])
                 response.close()
+
+    def test_partial_failure_retry_replays_only_selected_sources(self):
+        cases = (
+            (
+                {'q': 'synthetic <offline> & "private"', 'engines': 'brave,startpage',
+                 'category_general': '1', 'language': 'en', 'time_range': 'week',
+                 'safesearch': '2', 'theme': 'simple', 'timeout_limit': '2.75',
+                 'pageno': '2'},
+                'brave,startpage', 'synthetic <offline> & "private"', '2',
+            ),
+            (
+                {'q': '!sp synthetic partial failure', 'language': 'en',
+                 'theme': 'simple'},
+                'startpage', 'synthetic partial failure', '1',
+            ),
+        )
+        for request_fields, expected_sources, expected_query, expected_page in cases:
+            with self.subTest(sources=expected_sources), smoke.app.test_client() as client, patch(
+                'searx.search.SearchWithPlugins', SyntheticTimedPartialFailure
+            ):
+                response = client.post('/search', data=request_fields, headers=self.headers)
+                self.assertEqual(200, response.status_code)
+                doc = html.fromstring(response.data)
+                self.assertEqual(1, len(doc.xpath('//p[contains(@class,"goreecloud-partial-results")][@role="status"]')))
+                forms = doc.xpath('//form[contains(@class,"goreecloud-partial-retry")]')
+                self.assertEqual(1, len(forms))
+                form = forms[0]
+                self.assertEqual('post', form.get('method').lower())
+                self.assertEqual('/search', form.get('action'))
+                self.assertEqual(['Retry selected sources'], [
+                    ' '.join(node.text_content().split()) for node in form.xpath('./button')
+                ])
+                fields = {node.get('name'): node.get('value') for node in form.xpath('.//input')}
+                self.assertEqual(expected_query, fields['q'])
+                self.assertEqual(expected_sources, fields['engines'])
+                self.assertEqual(expected_page, fields['pageno'])
+                self.assertNotIn('format', fields)
+                self.assertNotIn('q=', form.get('action'))
+                for key in ('language', 'time_range', 'safesearch', 'theme', 'timeout_limit'):
+                    if key in request_fields:
+                        self.assertEqual(request_fields[key], fields[key])
+                # Compare parsed categories with the authoritative source-refine form.
+                refine = doc.xpath('//form[contains(@class,"goreecloud-refine-source")]')[0]
+                refined = {e.get('name'): e.get('value') for e in refine.xpath('.//input')
+                           if e.get('name', '').startswith('category_')}
+                retried = {k: v for k, v in fields.items() if k.startswith('category_')}
+                self.assertEqual(refined, retried)
+                self.assertIn('no-store', response.headers['Cache-Control'])
+                self.assertEqual('no-referrer', response.headers['Referrer-Policy'])
+                self.assertNotIn('Location', response.headers)
+                response.close()
+
+                with patch('searx.search.SearchWithPlugins', OfflineSearch):
+                    replay = client.post('/search', data={**fields, 'format': 'json'},
+                                         headers=self.headers)
+                    self.assertEqual(200, replay.status_code)
+                    self.assertEqual(sorted(expected_sources.split(',')),
+                                     replay.json['goreecloud']['selected_engines'])
+                    self.assertEqual(expected_query, replay.json['query'])
+                    self.assertNotIn('Location', replay.headers)
+                    replay.close()
+
+    def test_partial_retry_absent_when_no_provider_error(self):
+        with smoke.app.test_client() as client, patch(
+            'searx.search.SearchWithPlugins', SyntheticTimedPopulatedSearch
+        ):
+            response = client.post('/search', data={
+                'q': 'synthetic healthy sources', 'engines': 'brave,startpage',
+            }, headers=self.headers)
+            self.assertEqual(200, response.status_code)
+            doc = html.fromstring(response.data)
+            self.assertFalse(doc.xpath('//form[contains(@class,"goreecloud-partial-retry")]'))
+            self.assertFalse(doc.xpath('//p[contains(@class,"goreecloud-partial-results")]'))
+            response.close()

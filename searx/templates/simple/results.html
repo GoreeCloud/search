@@ -65,6 +65,19 @@
   <strong>Some search sources reported an error.</strong> Displayed results may be incomplete.
   <a href="#engines_msg-title">Review source messages</a>. No replacement provider is selected automatically.
 </p>
+<form class="goreecloud-partial-retry goreecloud-empty-retry" method="post" action="{{ url_for('search') }}">
+  <input type="hidden" name="q" value="{{ source_switch_query }}">
+  <input type="hidden" name="engines" value="{{ selected_engine_post }}">
+  {% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}
+  <input type="hidden" name="pageno" value="{{ pageno }}">
+  <input type="hidden" name="language" value="{{ current_language }}">
+  <input type="hidden" name="time_range" value="{{ time_range }}">
+  <input type="hidden" name="safesearch" value="{{ safesearch }}">
+  <input type="hidden" name="theme" value="{{ theme }}">
+  {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}">{% endif %}
+  <button type="submit" aria-describedby="goreecloud-partial-retry-hint">Retry selected sources</button>
+</form>
+<p id="goreecloud-partial-retry-hint">Retrying sends these terms to the same selected providers again and replaces the displayed results.</p>
 {% endif %}
 
 {% if results and results|map(attribute='template')|unique|list|count == 1 %}
