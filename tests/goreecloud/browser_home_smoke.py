@@ -21,6 +21,7 @@ os.environ["SEARXNG_SETTINGS_PATH"] = str(ROOT / "configs/goreecloud/settings.ym
 os.environ["SEARXNG_SECRET"] = secrets.token_hex(32)
 
 from searx.webapp import app  # noqa: E402
+from searx.result_types import LegacyResult  # noqa: E402
 
 from selenium import webdriver  # noqa: E402
 from selenium.webdriver.chrome.options import Options  # noqa: E402
@@ -51,6 +52,20 @@ class SyntheticBrowserFailedSearch(SyntheticBrowserSearch):
         response.unresponsive_engines = [
             SimpleNamespace(engine='startpage', error_type='TimeoutException', suspended=False)
         ]
+        return response
+
+class SyntheticBrowserPartialSearch(SyntheticBrowserFailedSearch):
+    """Show an offline fixture result plus one synthetic provider error."""
+
+    def search(self):
+        response = super().search()
+        result = LegacyResult(
+            url='https://example.org/synthetic-browser-partial',
+            title='Synthetic browser result',
+            content='Offline-only browser fixture; no provider contacted.',
+        )
+        result.normalize_result_fields()
+        response.get_ordered_results = lambda: [result]
         return response
 
 
@@ -275,6 +290,82 @@ def main() -> None:
             assert not driver.execute_script('return location.search'), 'Retry leaked search terms into URL'
             assert driver.find_element(By.CSS_SELECTOR, 'form#search input[name="engines"]').get_attribute('value') == 'startpage'
         print('PASS mobile explicit same-source retry, no fallback, and POST URL privacy')
+
+        # A partial provider failure offers a deliberate POST retry on a
+        # populated results page, without switching to an unselected source.
+        with patch('searx.search.SearchWithPlugins', side_effect=SyntheticBrowserPartialSearch) as partial:
+            driver.set_window_size(1440, 900)
+            driver.get(url)
+            driver.find_element(By.ID, 'q').send_keys('synthetic browser partial failure')
+            driver.find_element(By.ID, 'send_search').click()
+            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
+                lambda page: page.current_url.endswith('/search') and
+                bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-partial-retry button'))
+            )
+            warning = driver.find_element(By.CSS_SELECTOR, '.goreecloud-partial-results[role="status"]')
+            assert warning.is_displayed(), 'Partial provider warning not displayed'
+            assert driver.find_element(By.ID, 'engines_msg').find_element(
+                By.CSS_SELECTOR, 'details'
+            ).get_attribute('open') is not None, 'Provider error details were collapsed'
+            assert driver.find_element(By.CSS_SELECTOR, '#urls').is_displayed()
+            retry = driver.find_element(By.CSS_SELECTOR, '.goreecloud-partial-retry button')
+            assert retry.is_displayed(), 'Partial retry action hidden'
+            selected = driver.find_element(
+                By.CSS_SELECTOR, '.goreecloud-partial-retry input[name="engines"]'
+            ).get_attribute('value')
+            assert selected == 'brave,startpage', f'Partial retry selected unexpected sources: {selected}'
+            assert not driver.execute_script('return location.search'), 'Partial-result search leaked query'
+            driver.save_screenshot(str(artifacts / 'desktop-partial-retry.png'))
+            driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", retry)
+            retry.click()
+            WebDriverWait(driver, 12).until(lambda page: partial.call_count == 2)
+            assert driver.current_url.endswith('/search'), 'Partial retry left private results route'
+            assert not driver.execute_script('return location.search'), 'Partial retry leaked query into URL'
+            assert driver.find_element(
+                By.CSS_SELECTOR, '.goreecloud-partial-retry input[name="engines"]'
+            ).get_attribute('value') == selected
+        print('PASS desktop partial-provider warning and explicit same-source retry')
+
+        # The empty later-page recovery is a real browser form POST; it
+        # decrements the page without browser Back or URL query parameters.
+        with patch('searx.search.SearchWithPlugins', side_effect=SyntheticBrowserSearch) as pages:
+            driver.set_window_size(390, 844)
+            driver.get(url)
+            driver.find_element(By.ID, 'q').send_keys('synthetic browser previous page')
+            driver.execute_script("""
+                const form = document.querySelector('form#search');
+                const p = document.createElement('input');
+                p.type = 'hidden';
+                p.name = 'pageno';
+                p.value = '2';
+                form.appendChild(p);
+            """)
+            driver.find_element(By.CSS_SELECTOR, '.goreecloud-home-source[value="brave"]').click()
+            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
+                lambda page: page.current_url.endswith('/search') and
+                bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-previous-results button'))
+            )
+            previous = driver.find_element(By.CSS_SELECTOR, '.goreecloud-previous-results button')
+            assert previous.is_displayed() and previous.rect['height'] >= 44, 'Previous page touch action is too small'
+            assert driver.find_element(By.CSS_SELECTOR,
+                '.goreecloud-previous-results input[name="engines"]').get_attribute('value') == 'brave'
+            assert driver.find_element(By.CSS_SELECTOR,
+                '.goreecloud-previous-results input[name="pageno"]').get_attribute('value') == '1'
+            assert not driver.execute_script('return location.search'), 'Later-page query entered URL'
+            driver.save_screenshot(str(artifacts / 'phone-previous-results.png'))
+            driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", previous)
+            previous.click()
+            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
+                lambda page: pages.call_count == 2 and
+                'No results found' in page.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').text
+            )
+            assert driver.current_url.endswith('/search')
+            assert not driver.execute_script('return location.search'), 'Previous page leaked query into URL'
+            assert not driver.find_elements(By.CSS_SELECTOR, '.goreecloud-previous-results')
+            assert driver.find_element(By.CSS_SELECTOR,
+                'form#search input[name="engines"]').get_attribute('value') == 'brave'
+        print('PASS phone previous-page POST recovery and exact Brave provider continuity')
+
         # Exercise a synthetic denied URL without dispatching a search.
         driver.get(url + 'search?q=synthetic-private-smoke-fixture')
         assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-policy-error[role=alert]').is_displayed()
