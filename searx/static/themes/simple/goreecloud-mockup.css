@@ -211,6 +211,30 @@ html[data-glaze-consumer] .goreecloud-why .goreecloud-source-disclosure {
   font: inherit; font-size: inherit; line-height: inherit; color: var(--gc-muted);
 }
 
+/* Single-provider quick actions submit only the named, approved source.
+   Default Search still uses saved preferences; these never mutate them. */
+html[data-glaze-consumer] #main_index .goreecloud-home-source-choices {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+  gap: 8px; margin: 16px auto 0; color: var(--gc-muted);
+  font-size: 13px; line-height: 1.45;
+}
+html[data-glaze-consumer] #main_index .goreecloud-home-source {
+  display: inline-flex; justify-content: center; align-items: center;
+  box-sizing: border-box; min-height: 44px; min-width: 105px;
+  margin: 0; padding: 8px 12px; border: 1px solid var(--gc-outline);
+  border-radius: 11px; background: var(--gc-surface); color: var(--gc-accent-strong);
+  font: inherit; font-size: 13px; font-weight: 650; cursor: pointer;
+}
+html[data-glaze-consumer] #main_index .goreecloud-home-source:hover { border-color: var(--gc-accent-strong); }
+html[data-glaze-consumer] #main_index .goreecloud-home-source:focus-visible {
+  outline: 3px solid var(--gc-ring); outline-offset: 2px;
+}
+@media (forced-colors: active) {
+  html[data-glaze-consumer] #main_index .goreecloud-home-source {
+    border: 1px solid ButtonText; color: ButtonText; background: ButtonFace;
+  }
+}
+
 /* Retain the same restrained header and search affordance on results screens.
    There is only one General category; no redundant scrolling category rail. */
 html[data-glaze-consumer] body.results_endpoint #main_results {

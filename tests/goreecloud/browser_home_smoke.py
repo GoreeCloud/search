@@ -140,6 +140,21 @@ def main() -> None:
         assert q_field.get_attribute('value') == 'literal/segment', 'Slash was intercepted while typing'
         assert not driver.execute_script('return location.search'), 'Keyboard shortcut leaked query into URL'
         print('PASS slash focuses search and does not intercept typing inside search')
+        # Home quick actions carry their submitter engine field via native POST,
+        # despite inherited SearXNG form-submission interception.
+        with patch('searx.search.SearchWithPlugins', SyntheticBrowserSearch):
+            for source in ('brave', 'startpage'):
+                driver.get(url)
+                driver.find_element(By.ID, 'q').send_keys('synthetic quick provider')
+                driver.find_element(By.CSS_SELECTOR, f'.goreecloud-home-source[value="{source}"]').click()
+                WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
+                    lambda page: page.current_url.endswith('/search') and
+                    '1 source(s) selected' in page.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
+                )
+                selected = driver.find_element(By.CSS_SELECTOR, 'form#search input[name="engines"]')
+                assert selected.get_attribute('value') == source, f'{source}: quick provider selection lost'
+                assert not driver.execute_script('return location.search'), 'Provider shortcut leaked query in URL'
+        print('PASS homepage provider shortcuts retain POST-only single-source selection')
         # Preview selected providers first, then explicitly continue to the
         # synthetic search. The preview must never create a provider executor.
         with patch('searx.search.SearchWithPlugins', side_effect=SyntheticBrowserSearch) as preview_search:

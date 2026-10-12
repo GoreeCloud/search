@@ -84,15 +84,23 @@ def safe_primary_result_url(url: object) -> bool:
     it governs user-visible result links only.
     """
     from urllib.parse import urlsplit
+    from unicodedata import category
 
-    if not isinstance(url, str) or not url or any(ord(ch) <= 32 or ord(ch) == 127 for ch in url):
+    if not isinstance(url, str) or not url or any(
+        ord(ch) <= 32 or ord(ch) == 127 or category(ch) in ('Cc', 'Cf', 'Zl', 'Zp')
+        for ch in url
+    ):
         return False
     if '\\' in url:
         return False
     try:
         parsed = urlsplit(url)
+        # Accessing .port validates its numeric grammar and 0..65535 range.
+        # .hostname alone accepts malformed ports such as :abc or :99999.
+        port = parsed.port
         return (
-            parsed.scheme.lower() in ('http', 'https')
+            (port is None or port > 0)
+            and parsed.scheme.lower() in ('http', 'https')
             and bool(parsed.hostname)
             and parsed.username is None
             and parsed.password is None

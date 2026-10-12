@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch
 from lxml import html
 import test_runtime_smoke as smoke
+from test_search_preview import OfflineSearch
 
 
 class OfficialHomepageTests(unittest.TestCase):
@@ -49,6 +50,29 @@ class OfficialHomepageTests(unittest.TestCase):
             self.assertNotIn('q=',reply.get_data(as_text=True))
             self.assertIn('no-store',reply.headers['Cache-Control'])
             reply.close()
+
+    def test_home_one_provider_quick_actions_are_post_only(self):
+        with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins', OfflineSearch):
+            page = client.get('/', headers=self.headers)
+            root = html.fromstring(page.data)
+            buttons = root.xpath('//form[@id="search"]//button[contains(@class,"goreecloud-home-source")]')
+            self.assertEqual(['brave', 'startpage'], [button.get('value') for button in buttons])
+            self.assertEqual(['engines', 'engines'], [button.get('name') for button in buttons])
+            self.assertEqual(['submit', 'submit'], [button.get('type') for button in buttons])
+            self.assertEqual('post', root.xpath('//form[@id="search"]')[0].get('method'))
+            self.assertEqual(1, len(root.xpath('//script[contains(@src,"goreecloud-preview.js")]')))
+            page.close()
+
+            for source in ('brave', 'startpage'):
+                with self.subTest(source=source):
+                    response = client.post('/search', data={
+                        'q': 'offline single-source request', 'engines': source, 'format': 'json'
+                    }, headers=self.headers)
+                    self.assertEqual(200, response.status_code)
+                    self.assertEqual([source], response.json['goreecloud']['selected_engines'])
+                    self.assertIn('no-store', response.headers['Cache-Control'])
+                    self.assertNotIn('Location', response.headers)
+                    response.close()
 
     def test_private_assets_are_local_and_style_toggle_is_accessible(self):
         with smoke.app.test_client() as client:

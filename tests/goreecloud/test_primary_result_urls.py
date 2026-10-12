@@ -25,13 +25,18 @@ def synthetic_results():
 
 class PrivatePrimaryResultUrlTests(unittest.TestCase):
     def test_url_scheme_and_authority_guards(self):
-        for url in ('https://example.org/path', 'http://example.org', 'HTTPS://example.org/'):
+        for url in ('https://example.org/path', 'http://example.org', 'HTTPS://example.org/',
+                    'https://example.org:443/path', 'http://[2001:db8::1]:8443/result'):
             with self.subTest(valid=url):
                 self.assertTrue(safe_primary_result_url(url))
         for url in ('javascript:alert(42)', 'data:text/html,hello', 'file:///etc/passwd',
                     'ftp://example.org/', '//example.org/', 'https:///no-host',
                     'https://user:pass@example.org/', 'https://example.org\\@bad.test/',
-                    'https://example.org\nmalformed', 'https://example.org%40spoof.test/', '', None):
+                    'https://example.org\nmalformed', 'https://example.org%40spoof.test/',
+                    'https://example.org:invalid/path', 'https://example.org:65536/',
+                    'https://example.org:0/', 'https://example.org/path\u202e',
+                    'https://example.org/\u2066unclosed', 'https://example.org/\u200bhidden',
+                    '', None):
             with self.subTest(denied=url):
                 self.assertFalse(safe_primary_result_url(url))
 
