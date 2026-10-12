@@ -43,6 +43,17 @@ class SyntheticBrowserSearch:
         )
 
 
+class SyntheticBrowserFailedSearch(SyntheticBrowserSearch):
+    """Synthetic provider error without contacting an external provider."""
+
+    def search(self):
+        response = super().search()
+        response.unresponsive_engines = [
+            SimpleNamespace(engine='startpage', error_type='TimeoutException', suspended=False)
+        ]
+        return response
+
+
 def main() -> None:
     server = make_server("127.0.0.1", 0, app, threaded=True)
     thread = Thread(target=server.serve_forever, daemon=True)
@@ -237,6 +248,27 @@ def main() -> None:
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').is_displayed()
             assert not driver.execute_script('return location.search'), 'Keyboard search leaked terms into URL'
             print('PASS keyboard Enter submits normal private POST search')
+        # When a provider reports an error and results are empty, the user
+        # explicitly retries the SAME source through native POST (no fallback).
+        with patch('searx.search.SearchWithPlugins', side_effect=SyntheticBrowserFailedSearch) as failed:
+            driver.set_window_size(390, 844)
+            driver.get(url)
+            driver.find_element(By.ID, 'q').send_keys('synthetic recoverable source error')
+            driver.find_element(By.CSS_SELECTOR, '.goreecloud-home-source[value="startpage"]').click()
+            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
+                lambda page: page.current_url.endswith('/search') and
+                bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-empty-retry button'))
+            )
+            retry = driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry button')
+            assert retry.is_displayed() and retry.rect['height'] >= 44, 'Mobile error retry inaccessible'
+            assert 'reported an error' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').text
+            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry input[name="engines"]').get_attribute('value') == 'startpage'
+            retry.click()
+            WebDriverWait(driver, 12).until(lambda page: failed.call_count == 2)
+            assert driver.current_url.endswith('/search'), 'Retry left the private result route'
+            assert not driver.execute_script('return location.search'), 'Retry leaked search terms into URL'
+            assert driver.find_element(By.CSS_SELECTOR, 'form#search input[name="engines"]').get_attribute('value') == 'startpage'
+        print('PASS mobile explicit same-source retry, no fallback, and POST URL privacy')
         # Exercise a synthetic denied URL without dispatching a search.
         driver.get(url + 'search?q=synthetic-private-smoke-fixture')
         assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-policy-error[role=alert]').is_displayed()
