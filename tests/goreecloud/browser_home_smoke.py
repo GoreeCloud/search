@@ -263,6 +263,11 @@ def main() -> None:
             assert retry.is_displayed() and retry.rect['height'] >= 44, 'Mobile error retry inaccessible'
             assert 'reported an error' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').text
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry input[name="engines"]').get_attribute('value') == 'startpage'
+            driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", retry)
+            WebDriverWait(driver, 8).until(lambda page: page.execute_script(
+                "const r=arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;",
+                retry
+            ))
             retry.click()
             WebDriverWait(driver, 12).until(lambda page: failed.call_count == 2)
             assert driver.current_url.endswith('/search'), 'Retry left the private result route'
