@@ -136,6 +136,23 @@ html[data-glaze-consumer] .goreecloud-empty-state p { color: var(--gc-muted); }
   html[data-glaze-consumer] .goreecloud-empty-state { background: Canvas; color: CanvasText; border-color: CanvasText; box-shadow: none; }
 }
 
+/* Explicit POST-only error recovery: no URL query and no automatic provider fallback. */
+html[data-glaze-consumer] .goreecloud-empty-retry { margin: 1rem 0; }
+html[data-glaze-consumer] .goreecloud-empty-retry button {
+  min-height: 44px; padding: .6rem 1rem;
+  font: inherit; font-weight: 700; color: var(--gc-surface);
+  background: var(--gc-accent-strong); border: 1px solid var(--gc-accent-strong);
+  border-radius: 11px; cursor: pointer;
+}
+html[data-glaze-consumer] .goreecloud-empty-retry button:focus-visible {
+  outline: 3px solid var(--gc-ring); outline-offset: 3px;
+}
+@media (forced-colors: active) {
+  html[data-glaze-consumer] .goreecloud-empty-retry button {
+    background: ButtonFace; color: ButtonText; border-color: ButtonText;
+  }
+}
+
 /* Override SearXNG's image-logo and hidden-h1 homepage treatment. */
 html[data-glaze-consumer] #main_index { margin-top: clamp(3rem, 11vh, 7rem); }
 html[data-glaze-consumer] #main_index .index .title {

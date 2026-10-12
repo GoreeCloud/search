@@ -1,11 +1,34 @@
 <section class="goreecloud-empty-state" role="status" aria-labelledby="goreecloud-no-results-title">
   <h2 id="goreecloud-no-results-title">
-    {% if pageno == 1 %}{{ _('No results found') }}{% else %}{{ _('No more results') }}{% endif %}
+    {% if private_query_transport and pageno == 1 and unresponsive_engines %}Search results unavailable
+    {% elif pageno == 1 %}{{ _('No results found') }}{% else %}{{ _('No more results') }}{% endif %}
   </h2>
-  {% if pageno == 1 %}
-    <p>{{ _('This search did not return matches from the enabled providers. Try different words or choose another category.') }}</p>
-    <p><a href="{{ url_for('preferences') }}">{{ _('Review enabled search providers') }}</a></p>
+  {% if private_query_transport %}
+    {% if pageno == 1 and unresponsive_engines %}
+      <p>At least one selected search source reported an error, so results may be incomplete. Review the source messages for details. No replacement provider was selected automatically.</p>
+      <form class="goreecloud-empty-retry" method="post" action="{{ url_for('search') }}">
+        <input type="hidden" name="q" value="{{ source_switch_query }}">
+        <input type="hidden" name="engines" value="{{ selected_engine_post }}">
+        {% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}
+        <input type="hidden" name="language" value="{{ current_language }}">
+        <input type="hidden" name="time_range" value="{{ time_range }}">
+        <input type="hidden" name="safesearch" value="{{ safesearch }}">
+        <input type="hidden" name="theme" value="{{ theme }}">
+        {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}">{% endif %}
+        <button type="submit">Retry selected sources</button>
+      </form>
+      <p>Retrying sends the search terms to the same selected providers again. You can also change the query or select another approved source above.</p>
+    {% elif pageno == 1 %}
+      <p>No displayed web matches are available for this search. Try different search terms or explicitly switch between Brave Search and Startpage above.</p>
+    {% else %}
+      <p>Try different search terms or use your browser's Back button to return to earlier results.</p>
+    {% endif %}
   {% else %}
-    <p>{{ _('Try a different search or return to an earlier results page.') }}</p>
+    {% if pageno == 1 %}
+      <p>{{ _('This search did not return matches from the enabled providers. Try different words or choose another category.') }}</p>
+      <p><a href="{{ url_for('preferences') }}">{{ _('Review enabled search providers') }}</a></p>
+    {% else %}
+      <p>{{ _('Try a different search or return to an earlier results page.') }}</p>
+    {% endif %}
   {% endif %}
 </section>
