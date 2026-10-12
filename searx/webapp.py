@@ -918,6 +918,14 @@ def search():
 
     # 4.b HTML
 
+    # RawTextQuery.changeQuery() below is stateful. Capture the original
+    # parsed terms BEFORE suggestions/corrections replace its query content;
+    # every private source switch, retry and recovery must retain the
+    # user's actual search, never the final provider suggestion.
+    private_search_terms = (
+        raw_text_query.getQuery() if raw_text_query else sxng_request.form['q']
+    ) if settings['goreecloud']['private_search'] else ''
+
     # suggestions: use RawTextQuery to get the suggestion URLs with the same bang
     suggestion_urls = list(
         map(
@@ -953,8 +961,7 @@ def search():
             results, (ref.name for ref in search_query.engineref_list)
         ) if settings['goreecloud']['private_search'] else {},
         results = results,
-        source_switch_query = (raw_text_query.getQuery() if raw_text_query else sxng_request.form['q'])
-        if settings['goreecloud']['private_search'] else '',
+        source_switch_query = private_search_terms,
         q=sxng_request.form['q'],
         selected_categories = search_query.categories,
         pageno = search_query.pageno,
