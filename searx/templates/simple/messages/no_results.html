@@ -21,7 +21,20 @@
     {% elif pageno == 1 %}
       <p>No displayed web matches are available for this search. Try different search terms or explicitly switch between Brave Search and Startpage above.</p>
     {% else %}
-      <p>Try different search terms or use your browser's Back button to return to earlier results.</p>
+      <p>No more displayed web matches on this page. You can request the previous results page from the same selected sources.</p>
+      <form class="goreecloud-previous-results goreecloud-empty-retry" method="post" action="{{ url_for('search') }}">
+        <input type="hidden" name="q" value="{{ source_switch_query }}">
+        <input type="hidden" name="engines" value="{{ selected_engine_post }}">
+        {% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}
+        <input type="hidden" name="pageno" value="{{ pageno - 1 }}">
+        <input type="hidden" name="language" value="{{ current_language }}">
+        <input type="hidden" name="time_range" value="{{ time_range }}">
+        <input type="hidden" name="safesearch" value="{{ safesearch }}">
+        <input type="hidden" name="theme" value="{{ theme }}">
+        {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}">{% endif %}
+        <button type="submit">Previous results page</button>
+      </form>
+      <p>Returning to an earlier page makes another search request to the same selected providers.</p>
     {% endif %}
   {% else %}
     {% if pageno == 1 %}

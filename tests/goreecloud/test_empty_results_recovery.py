@@ -82,3 +82,72 @@ class PrivateEmptyResultsTests(unittest.TestCase):
             self.assertEqual('brave,startpage', retry[0].xpath('.//input[@name="engines"]/@value')[0])
             self.assertNotIn('q=', retry[0].get('action'))
             result.close()
+
+    def test_later_empty_page_offers_private_post_to_previous_page(self):
+        scenarios = (
+            (
+                {'q': 'synthetic <offline> & "query"', 'engines': 'brave,startpage',
+                 'pageno': '3', 'category_general': '1', 'language': 'en',
+                 'safesearch': '2', 'time_range': 'week', 'theme': 'simple',
+                 'timeout_limit': '2.75'},
+                'brave,startpage', 'synthetic <offline> & "query"', '2',
+            ),
+            (
+                {'q': '!sp synthetic previous query', 'pageno': '2'},
+                'startpage', 'synthetic previous query', '1',
+            ),
+        )
+        for request_fields, providers, query, previous_page in scenarios:
+            with self.subTest(providers=providers, page=previous_page), smoke.app.test_client() as client, patch(
+                'searx.search.SearchWithPlugins', OfflineSearch
+            ):
+                response = client.post('/search', data=request_fields, headers=self.headers)
+                self.assertEqual(200, response.status_code)
+                doc = html.fromstring(response.data)
+                sections = doc.xpath('//section[contains(@class,"goreecloud-empty-state")]')
+                self.assertEqual(1, len(sections))
+                self.assertIn('No more results', sections[0].text_content())
+                self.assertFalse(doc.xpath('//form[contains(@class,"goreecloud-empty-retry") and not(contains(@class,"goreecloud-previous-results"))]'))
+                previous = sections[0].xpath('./form[contains(@class,"goreecloud-previous-results")]')
+                self.assertEqual(1, len(previous))
+                form = previous[0]
+                self.assertEqual('post', form.get('method').lower())
+                self.assertEqual('/search', form.get('action'))
+                self.assertEqual('Previous results page', form.xpath('./button')[0].text_content().strip())
+                fields = {e.get('name'): e.get('value') for e in form.xpath('.//input')}
+                self.assertEqual(query, fields['q'])
+                self.assertEqual(providers, fields['engines'])
+                self.assertEqual(previous_page, fields['pageno'])
+                self.assertNotIn('q=', form.get('action'))
+                self.assertNotIn('format', fields)
+                self.assertIn('no-store', response.headers['Cache-Control'])
+                self.assertEqual('no-referrer', response.headers['Referrer-Policy'])
+                self.assertNotIn('Location', response.headers)
+                for key in ('language', 'safesearch', 'time_range', 'theme', 'timeout_limit'):
+                    if key in request_fields:
+                        self.assertEqual(request_fields[key], fields[key])
+                source_form = doc.xpath('//form[contains(@class,"goreecloud-refine-source")]')[0]
+                expected_categories = {e.get('name'): e.get('value')
+                                       for e in source_form.xpath('.//input')
+                                       if e.get('name', '').startswith('category_')}
+                actual_categories = {k: v for k, v in fields.items() if k.startswith('category_')}
+                self.assertEqual(expected_categories, actual_categories)
+                response.close()
+
+                repeated = client.post('/search', data={**fields, 'format': 'json'},
+                                       headers=self.headers)
+                self.assertEqual(200, repeated.status_code)
+                self.assertEqual(sorted(providers.split(',')),
+                                 repeated.json['goreecloud']['selected_engines'])
+                self.assertEqual(query, repeated.json['query'])
+                self.assertNotIn('Location', repeated.headers)
+                repeated.close()
+
+    def test_first_empty_page_does_not_offer_previous_page(self):
+        with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins', OfflineSearch):
+            result = client.post('/search', data={'q': 'first page', 'engines': 'brave', 'pageno': '1'},
+                                 headers=self.headers)
+            self.assertEqual(200, result.status_code)
+            doc = html.fromstring(result.data)
+            self.assertFalse(doc.xpath('//form[contains(@class,"goreecloud-previous-results")]'))
+            result.close()
