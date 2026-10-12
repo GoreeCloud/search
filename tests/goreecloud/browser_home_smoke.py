@@ -27,7 +27,7 @@ from selenium.webdriver.chrome.options import Options  # noqa: E402
 from selenium.webdriver.common.by import By  # noqa: E402
 from selenium.webdriver.common.keys import Keys  # noqa: E402
 from selenium.webdriver.support.ui import WebDriverWait  # noqa: E402
-from selenium.common.exceptions import StaleElementReferenceException  # noqa: E402
+from selenium.common.exceptions import StaleElementReferenceException, WebDriverException  # noqa: E402
 
 
 class SyntheticBrowserSearch:
@@ -211,7 +211,11 @@ def main() -> None:
             driver.save_screenshot(str(artifacts / 'phone-synthetic-results.png'))
             driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary details summary').click()
             driver.find_element(By.CSS_SELECTOR, '.goreecloud-refine-source button').click()
-            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: '1 source(s) selected' in page.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text)
+            # A just-replaced results document can briefly invalidate Selenium's
+            # DevTools node ID before the settled page can be read.
+            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException, WebDriverException)).until(
+                lambda page: '1 source(s) selected' in page.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
+            )
             assert driver.current_url.endswith('/search'), driver.current_url
             assert not driver.execute_script('return location.search'), 'one-source query entered URL'
             assert '1 source(s) selected' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text

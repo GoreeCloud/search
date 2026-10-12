@@ -19,6 +19,10 @@ This implementation is the *live source-connected local Development application*
 
 Trust claims shown in the official mockup describe the project's privacy goals, **not independent certification**. Search terms may be sent to Brave Search or Startpage. The homepage's lower explanation and local privacy disclosure state this explicitly. There is no guarantee of anonymity, third-party non-tracking, or completed privacy/security and release acceptance; Startpage's upstream proof-of-work challenge remains a qualification gate. Private no-network source preview now shows a specific Startpage availability disclaimer only when Startpage is selected, and confirms that no alternate provider will be substituted.
 
+## One-provider homepage actions
+
+The private homepage now offers **Search only Brave Search** and **Search only Startpage** alongside the default Search action and the no-network provider preview. Each quick action submits the query and the chosen built-in provider via POST without a query-bearing URL; it does not change the stored provider preferences. The layout provides 44px-minimum keyboard-focusable targets and native vertical scrolling when content extends below short mobile viewports. The synthetic browser suite exercises both options and source persistence; no live provider availability is implied.
+
 ## Validation
 
 Run `python -m unittest discover -s tests/goreecloud -q` and the focused upstream regressions. Chrome synthetic browser CI checks both 1440 × 900 and 390 × 844, including header, visible logo and search, principle links, local theme toggle, no horizontal overflow, POST-only preview, and provider switching. Browser screenshots are CI evidence, not independent visual-conformance or assistive-technology certification. Keep Draft PR and review/release gates open until formally accepted.
