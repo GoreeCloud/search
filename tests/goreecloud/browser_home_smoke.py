@@ -85,6 +85,7 @@ def main() -> None:
             ) == 'none', f"{label}: inherited upstream image logo is still visible"
             search = driver.find_element(By.CSS_SELECTOR, "form#search")
             assert search.get_attribute("method").lower() == "post"
+            assert driver.find_element(By.CSS_SELECTOR, 'form#search input#q').get_attribute('maxLength') == '512', 'Private query limit missing from browser input'
             assert driver.find_element(By.CSS_SELECTOR, "[role=note].goreecloud-source-disclosure").is_displayed()
             assert driver.find_element(By.CSS_SELECTOR, "label[for=q]").text.strip() == "Search query"
             assert driver.execute_script(

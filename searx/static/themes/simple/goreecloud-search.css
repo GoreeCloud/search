@@ -121,6 +121,27 @@ html[data-glaze-consumer] .goreecloud-source-summary ul {
   html[data-glaze-consumer] .goreecloud-source-summary { background: Canvas; color: CanvasText; border-color: CanvasText; }
 }
 
+/* Partial provider failures are visible even when another source returned results.
+   Source-error presence is not independent proof of provider health or reachability. */
+html[data-glaze-consumer] .goreecloud-partial-results {
+  margin: .8rem 0 1rem; padding: .8rem 1rem;
+  color: var(--gc-ink); background: var(--gc-surface);
+  border: 1px solid var(--gc-outline); border-inline-start: 4px solid var(--gc-accent-strong);
+  border-radius: 10px; line-height: 1.55;
+}
+html[data-glaze-consumer] .goreecloud-partial-results a {
+  color: var(--gc-accent-strong); font-weight: 650; text-underline-offset: 3px;
+}
+html[data-glaze-consumer] .goreecloud-partial-results a:focus-visible {
+  outline: 3px solid var(--gc-ring); outline-offset: 3px;
+}
+@media (forced-colors: active) {
+  html[data-glaze-consumer] .goreecloud-partial-results {
+    background: Canvas; color: CanvasText;
+    border-color: CanvasText; border-inline-start-color: Highlight;
+  }
+}
+
 /* Quiet, actionable empty results—not an alert or external-instance redirect. */
 html[data-glaze-consumer] .goreecloud-empty-state {
   background: var(--gc-surface); color: var(--gc-ink);

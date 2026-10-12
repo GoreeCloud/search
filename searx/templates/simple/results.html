@@ -54,6 +54,13 @@
 </aside>
 {% endif %}
 
+{% if private_query_transport and unresponsive_engines and (results or answers) %}
+<p class="goreecloud-partial-results" role="status">
+  <strong>Some search sources reported an error.</strong> Displayed results may be incomplete.
+  <a href="#engines_msg-title">Review source messages</a>. No replacement provider is selected automatically.
+</p>
+{% endif %}
+
 {% if results and results|map(attribute='template')|unique|list|count == 1 %}
   {% set only_template = 'only_template_' + results[0]['template']|default('default')|replace('.html', '') %}
 {% else %}

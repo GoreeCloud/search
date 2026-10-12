@@ -6,7 +6,8 @@
     <div id="search_view">
       <div class="search_box">
         <label class="goreecloud-visually-hidden" for="q">Search query</label>
-        <input id="q" name="q" type="search" aria-keyshortcuts="/" title="Press / to focus search" placeholder="{{ _('Search for...') }}" autocomplete="off" autocapitalize="none" spellcheck="false" autocorrect="off" dir="auto" value="{{ q or '' }}">
+        {% if private_query_transport and get_setting('goreecloud.max_query_chars') %}<span class="goreecloud-visually-hidden" id="goreecloud-query-length-hint">Search terms are limited to {{ get_setting('goreecloud.max_query_chars') }} characters.</span>{% endif %}
+        <input id="q" name="q" type="search"{% if private_query_transport and get_setting('goreecloud.max_query_chars') %} maxlength="{{ get_setting('goreecloud.max_query_chars') }}" aria-describedby="goreecloud-query-length-hint"{% endif %} aria-keyshortcuts="/" title="Press / to focus search" placeholder="{{ _('Search for...') }}" autocomplete="off" autocapitalize="none" spellcheck="false" autocorrect="off" dir="auto" value="{{ q or '' }}">
         <button id="clear_search" type="reset" aria-label="{{ _('clear') }}" class="hide_if_nojs"><span>{{ icon_big('close') }}</span></button>
         <button id="send_search" type="submit" {%- if search_on_category_select -%}name="category_{{ selected_categories[0]|replace(' ', '_') }}"{%- endif -%} aria-label="{{ _('search') }}"><span class="hide_if_nojs">{{ icon_big('search') }}</span><span class="show_if_nojs">{{ _('search') }}</span></button>
         <div class="autocomplete hide_if_nojs"><ul></ul></div>
