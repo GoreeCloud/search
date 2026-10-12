@@ -46,6 +46,14 @@ class PrivateFollowupTests(unittest.TestCase):
                     self.assertEqual('no-referrer', response.headers['Referrer-Policy'])
                     self.assertNotIn('Set-Cookie', response.headers)
                     document = html.fromstring(response.data)
+                    # Engine bangs can change the effective category. Determine it
+                    # from selected controls, not the original request's categories.
+                    selected_controls = document.xpath(
+                        '//form[@id="search"]//input[starts-with(@name, "category_")][@checked]'
+                        ' | //form[@id="search"]//button[starts-with(@name, "category_")]'
+                        '[contains(concat(" ", normalize-space(@class), " "), " selected ")]'
+                    )
+                    effective_categories = {item.get('name'): '1' for item in selected_controls}
                     for kind, form in self._forms(document):
                         with self.subTest(kind=kind):
                             values = {node.get('name'): node.get('value') for node in form.xpath('.//input[@type="hidden"]')}
@@ -54,7 +62,12 @@ class PrivateFollowupTests(unittest.TestCase):
                             self.assertEqual('suggested <offline> & "phrase"' if kind == 'suggestion' else 'corrected "offline" phrase', values['q'])
                             self.assertEqual(selection, values['engines'])
                             self.assertNotIn('!sp', values['q'])
-                            for key in ('category_general', 'language', 'safesearch', 'time_range', 'theme', 'timeout_limit'):
+                            followup_categories = {
+                                key: value for key, value in values.items()
+                                if key.startswith('category_')
+                            }
+                            self.assertEqual(effective_categories, followup_categories)
+                            for key in ('language', 'safesearch', 'time_range', 'theme', 'timeout_limit'):
                                 self.assertEqual(data[key], values[key])
                             self.assertNotIn('q=', form.get('action'))
                             repeat = client.post('/search', data={**values, 'format':'json'}, headers=self.headers)
