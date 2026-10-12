@@ -161,7 +161,13 @@ def main() -> None:
             driver.set_window_size(390, 844)
             driver.get(url)
             driver.find_element(By.ID, 'q').send_keys('synthetic private preflight')
-            driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-trigger').click()
+            preview_action = driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-trigger')
+            driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", preview_action)
+            WebDriverWait(driver, 8).until(lambda page: page.execute_script(
+                "const r=arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;",
+                preview_action
+            ))
+            preview_action.click()
             WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: page.current_url != url)
             assert driver.current_url.endswith('/preview'), driver.current_url
             assert not driver.execute_script('return location.search'), 'preview query entered URL'

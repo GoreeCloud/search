@@ -235,6 +235,23 @@ html[data-glaze-consumer] #main_index .goreecloud-home-source:focus-visible {
   }
 }
 
+/* Homepage actions extend below short mobile viewports. Preserve native
+   vertical scrolling rather than trapping preview under the viewport edge. */
+html[data-glaze-consumer]:has(> body.index_endpoint) {
+  overflow-y: auto !important;
+  height: auto !important;
+}
+html[data-glaze-consumer] body.index_endpoint,
+html[data-glaze-consumer] body.index_endpoint #main_index {
+  overflow: visible !important;
+  height: auto !important;
+  min-height: 0;
+}
+html[data-glaze-consumer] #main_index .goreecloud-preview-trigger,
+html[data-glaze-consumer] #main_index .goreecloud-home-source {
+  scroll-margin-block: 6rem;
+}
+
 /* Retain the same restrained header and search affordance on results screens.
    There is only one General category; no redundant scrolling category rail. */
 html[data-glaze-consumer] body.results_endpoint #main_results {
