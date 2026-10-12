@@ -4,7 +4,8 @@
     <ul class="wrapper">
       {%- for suggestion in suggestions -%}
       <li><form method="{{ method }}" action="{{ url_for('search') }}">
-          <input type="hidden" name="q" value="{{ suggestion.url }}">
+          <input type="hidden" name="q" value="{{ suggestion.title if private_query_transport else suggestion.url }}">
+          {% if private_query_transport and selected_engine_post %}<input type="hidden" name="engines" value="{{ selected_engine_post }}">{% endif %}
           {%- for category in selected_categories -%}
             <input type="hidden" name="category_{{ category }}" value="1">
           {%- endfor -%}
