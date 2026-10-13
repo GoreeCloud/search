@@ -47,7 +47,7 @@ class SearchBoundaryTypeTests(unittest.TestCase):
                 with self.assertRaises(violation) as caught:
                     validate(query, ["Brave"], max_query_chars=200, max_providers=2)
                 self.assertEqual(caught.exception.http_status, 422)
-        for sources in ("Brave", b"Brave", None):
+        for sources in ("Brave", b"Brave", None, 2, object()):
             with self.subTest(sources_type=type(sources).__name__):
                 with self.assertRaises(violation):
                     validate("private", sources, max_query_chars=200, max_providers=2)
