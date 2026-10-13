@@ -75,7 +75,7 @@ def distinct_selected_sources(provider_names: Iterable[str]) -> list[str]:
     for name in provider_names:
         # Reject malformed labels before scheduling provider network disclosure.
         if (not isinstance(name, str) or not name or len(name) > 128
-                or name != name.strip() or any(category(c) in ('Cc', 'Cf', 'Zl', 'Zp') for c in name)):
+                or name != name.strip() or any(category(c) in ('Cc', 'Cf', 'Cs', 'Zl', 'Zp') for c in name)):
             raise SearchPolicyViolation('Invalid search source selection.', 422)
         first_labels.setdefault(name.casefold(), name)
     return sorted(first_labels.values(), key=lambda label: (label.casefold(), label))
@@ -92,7 +92,7 @@ def safe_primary_result_url(url: object) -> bool:
     from unicodedata import category
 
     if not isinstance(url, str) or not url or any(
-        ord(ch) <= 32 or ord(ch) == 127 or category(ch) in ('Cc', 'Cf', 'Zl', 'Zp')
+        ord(ch) <= 32 or ord(ch) == 127 or category(ch) in ('Cc', 'Cf', 'Cs', 'Zl', 'Zp')
         for ch in url
     ):
         return False
