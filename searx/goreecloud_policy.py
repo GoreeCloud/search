@@ -70,8 +70,12 @@ def distinct_selected_sources(provider_names: Iterable[str], *, max_providers: i
     """
     if isinstance(provider_names, (str, bytes)) or provider_names is None:
         raise SearchPolicyViolation('Invalid search source selection.', 422)
+    try:
+        names = iter(provider_names)
+    except TypeError:
+        raise SearchPolicyViolation('Invalid search source selection.', 422) from None
     first_labels: dict[str, str] = {}
-    for name in provider_names:
+    for name in names:
         # Reject malformed labels before scheduling provider network disclosure.
         if (not isinstance(name, str) or not name or len(name) > 128
                 or name != name.strip() or any(category(c) in ('Cc', 'Cf', 'Cs', 'Zl', 'Zp') for c in name)):
