@@ -45,12 +45,7 @@ def validate_disclosure(
         raise SearchPolicyViolation("Invalid search query encoding.", 422)
     if max_query_chars and len(query) > max_query_chars:
         raise SearchPolicyViolation("Search query exceeds the configured length limit.", 413)
-    unique = distinct_selected_sources(provider_names)
-    if max_providers and len(unique) > max_providers:
-        raise SearchPolicyViolation(
-            "Too many sources for this search. Select fewer categories or engines.", 422
-        )
-    return len(unique)
+    return len(distinct_selected_sources(provider_names, max_providers=max_providers))
 
 
 def validate_no_external_redirects(*, external_bang: str | None, lucky_redirect: bool) -> None:
@@ -67,7 +62,7 @@ def validate_no_external_redirects(*, external_bang: str | None, lucky_redirect:
         )
 
 
-def distinct_selected_sources(provider_names: Iterable[str]) -> list[str]:
+def distinct_selected_sources(provider_names: Iterable[str], *, max_providers: int = 0) -> list[str]:
     """Canonical display/count for provider choices, matching fanout policy.
 
     Retains the first label for case-insensitive duplicates, and sorts the
@@ -82,6 +77,10 @@ def distinct_selected_sources(provider_names: Iterable[str]) -> list[str]:
                 or name != name.strip() or any(category(c) in ('Cc', 'Cf', 'Cs', 'Zl', 'Zp') for c in name)):
             raise SearchPolicyViolation('Invalid search source selection.', 422)
         first_labels.setdefault(name.casefold(), name)
+        if max_providers and len(first_labels) > max_providers:
+            raise SearchPolicyViolation(
+                "Too many sources for this search. Select fewer categories or engines.", 422
+            )
     return sorted(first_labels.values(), key=lambda label: (label.casefold(), label))
 
 

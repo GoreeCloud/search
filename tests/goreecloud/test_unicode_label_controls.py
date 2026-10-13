@@ -58,3 +58,28 @@ class SearchBoundaryTypeTests(unittest.TestCase):
             with self.subTest(separator=repr(separator)):
                 self.assertFalse(safe("https://example.invalid/path" + separator + "term"))
         self.assertTrue(safe("https://example.invalid/path%20term"))
+
+
+class ProviderFanoutBoundTests(unittest.TestCase):
+    def test_rejects_before_reading_extra_provider_labels(self):
+        def names():
+            yield "brave"
+            yield "startpage"
+            raise AssertionError("source iterator was consumed past the limit")
+        with self.assertRaises(policy["SearchPolicyViolation"]) as caught:
+            policy["validate_disclosure"](
+                "synthetic", names(), max_query_chars=100, max_providers=1)
+        self.assertEqual(422, caught.exception.http_status)
+
+    def test_casefold_duplicates_do_not_count_as_extra_sources(self):
+        def names():
+            yield "Brave"
+            yield "brave"
+            yield "Startpage"
+        self.assertEqual(2, policy["validate_disclosure"](
+            "synthetic", names(), max_query_chars=100, max_providers=2))
+
+    def test_unlimited_provider_cap_preserves_previous_behavior(self):
+        self.assertEqual(3, policy["validate_disclosure"](
+            "synthetic", ["Brave", "Startpage", "other"],
+            max_query_chars=100, max_providers=0))
