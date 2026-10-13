@@ -39,7 +39,7 @@ def canonical_result_url(raw: str) -> str | None:
     """Return a display-safe HTTP(S) URL stripped of common tracking fields."""
     if not isinstance(raw, str) or not raw or len(raw) > MAX_URL_CHARS:
         return None
-    if any(ord(ch) < 32 or ord(ch) == 127 or ch.isspace() for ch in raw):
+    if any(ord(ch) < 32 or ord(ch) == 127 or ch.isspace() or ch == "\\" for ch in raw):
         return None
     try:
         parsed = urlsplit(raw)
@@ -83,6 +83,8 @@ def fuse_results(
     """
     if not isinstance(sources, Mapping) or len(sources) > MAX_ENGINES:
         raise ValueError("invalid_search_sources")
+    if any(not isinstance(engine, str) or not ENGINE_ID.fullmatch(engine) for engine in sources):
+        raise ValueError("invalid_search_engine_id")
     if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 50:
         raise ValueError("invalid_search_result_limit")
 
