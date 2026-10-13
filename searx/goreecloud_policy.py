@@ -41,6 +41,8 @@ def validate_disclosure(
     """
     if max_query_chars < 0 or max_providers < 0:
         raise ValueError("Privacy limits must be non-negative")
+    if not isinstance(query, str) or any(category(ch) == 'Cs' for ch in query):
+        raise SearchPolicyViolation("Invalid search query encoding.", 422)
     if max_query_chars and len(query) > max_query_chars:
         raise SearchPolicyViolation("Search query exceeds the configured length limit.", 413)
     unique = distinct_selected_sources(provider_names)
@@ -71,6 +73,8 @@ def distinct_selected_sources(provider_names: Iterable[str]) -> list[str]:
     Retains the first label for case-insensitive duplicates, and sorts the
     resulting labels predictably. It does not imply a successful provider call.
     """
+    if isinstance(provider_names, (str, bytes)) or provider_names is None:
+        raise SearchPolicyViolation('Invalid search source selection.', 422)
     first_labels: dict[str, str] = {}
     for name in provider_names:
         # Reject malformed labels before scheduling provider network disclosure.
@@ -92,7 +96,7 @@ def safe_primary_result_url(url: object) -> bool:
     from unicodedata import category
 
     if not isinstance(url, str) or not url or any(
-        ord(ch) <= 32 or ord(ch) == 127 or category(ch) in ('Cc', 'Cf', 'Cs', 'Zl', 'Zp')
+        ch.isspace() or ord(ch) <= 32 or ord(ch) == 127 or category(ch) in ('Cc', 'Cf', 'Cs', 'Zl', 'Zp')
         for ch in url
     ):
         return False

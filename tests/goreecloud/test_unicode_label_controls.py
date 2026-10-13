@@ -37,3 +37,24 @@ class UnicodeLabelControlTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class SearchBoundaryTypeTests(unittest.TestCase):
+    def test_malformed_query_and_source_container_fail_before_disclosure(self):
+        validate = policy["validate_disclosure"]
+        violation = policy["SearchPolicyViolation"]
+        for query in (None, b"private", "private" + chr(0xD800)):
+            with self.subTest(query_type=type(query).__name__):
+                with self.assertRaises(violation) as caught:
+                    validate(query, ["Brave"], max_query_chars=200, max_providers=2)
+                self.assertEqual(caught.exception.http_status, 422)
+        for sources in ("Brave", b"Brave", None):
+            with self.subTest(sources_type=type(sources).__name__):
+                with self.assertRaises(violation):
+                    validate("private", sources, max_query_chars=200, max_providers=2)
+
+    def test_result_links_reject_unicode_whitespace(self):
+        safe = policy["safe_primary_result_url"]
+        for separator in ("\u00a0", "\u2003", "\u202f"):
+            with self.subTest(separator=repr(separator)):
+                self.assertFalse(safe("https://example.invalid/path" + separator + "term"))
+        self.assertTrue(safe("https://example.invalid/path%20term"))
