@@ -72,6 +72,10 @@ def distinct_selected_sources(provider_names: Iterable[str]) -> list[str]:
     """
     first_labels: dict[str, str] = {}
     for name in provider_names:
+        # Reject malformed labels before scheduling provider network disclosure.
+        if (not isinstance(name, str) or not name or len(name) > 128
+                or name != name.strip() or any(ord(c) < 32 or ord(c) == 127 for c in name)):
+            raise SearchPolicyViolation('Invalid search source selection.', 422)
         first_labels.setdefault(name.casefold(), name)
     return sorted(first_labels.values(), key=lambda label: (label.casefold(), label))
 
