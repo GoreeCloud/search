@@ -26,8 +26,9 @@ class SearchPreviewTests(unittest.TestCase):
         with smoke.app.test_client() as client:
             response = client.get('/', headers=self.headers)
             page = html.fromstring(response.data)
-            buttons = page.xpath('//form[@id="search"]//div[@id="search_view"]//button[@formaction="/preview"]')
+            buttons = page.xpath('//form[@id="search"]//div[@id="search_view"]//button[@formaction="/preview"][not(ancestor::noscript)]')
             self.assertEqual(1, len(buttons))
+            self.assertEqual('button', buttons[0].get('type'))
             self.assertEqual('post', buttons[0].get('formmethod'))
             self.assertIsNotNone(buttons[0].get('formnovalidate'))
             self.assertEqual(1, len(page.xpath('//script[contains(@src,"goreecloud-preview.js")]')))

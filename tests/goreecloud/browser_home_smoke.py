@@ -217,6 +217,8 @@ def main() -> None:
             driver.set_window_size(390, 844)
             driver.get(url)
             empty_preview = driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-trigger')
+            assert empty_preview.get_attribute('type') == 'button', 'Preview is still treated as search submit'
+            assert empty_preview.is_enabled(), 'Upstream disabled query-free preview'
             driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", empty_preview)
             WebDriverWait(driver, 8).until(lambda page: page.execute_script(
                 "const r=arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;",
