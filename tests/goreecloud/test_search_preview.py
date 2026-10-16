@@ -29,6 +29,7 @@ class SearchPreviewTests(unittest.TestCase):
             buttons = page.xpath('//form[@id="search"]//div[@id="search_view"]//button[@formaction="/preview"]')
             self.assertEqual(1, len(buttons))
             self.assertEqual('post', buttons[0].get('formmethod'))
+            self.assertIsNotNone(buttons[0].get('formnovalidate'))
             self.assertEqual(1, len(page.xpath('//script[contains(@src,"goreecloud-preview.js")]')))
             response.close()
             asset = client.get('/static/themes/simple/goreecloud-preview.js', headers=self.headers)

@@ -230,7 +230,11 @@ def main() -> None:
                       'path=', driver.execute_script('return location.pathname'),
                       'title=', driver.title,
                       'page_start=', driver.find_element(By.TAG_NAME, 'body').text[:250],
-                      'request_count=', len(request_meta), flush=True)
+                      'request_count=', len(request_meta),
+                      'form_valid=', driver.execute_script('return document.querySelector("form#search").checkValidity()'),
+                      'invalid_names=', driver.execute_script('return [...document.querySelectorAll("form#search :invalid")].map(e=>e.name||e.id).slice(0,8)'),
+                      'formnovalidate=', driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-trigger').get_attribute('formnovalidate'),
+                      flush=True)
                 raise
             assert 'No search terms have been entered' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview').text
             assert not driver.execute_script('return location.search'), 'Blank preview leaked query URL data'

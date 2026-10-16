@@ -28,7 +28,7 @@
     <span class="goreecloud-link-dot" aria-hidden="true">·</span>
     <a href="https://github.com/GoreeCloud/search" rel="noopener noreferrer">View the project <span aria-hidden="true">↗</span></a>
   </div>
-  {% if private_query_transport %}<button type="submit" class="goreecloud-preview-trigger" formaction="{{ url_for('goreecloud_preview') }}" formmethod="post">Preview sources without searching</button>{% endif %}
+  {% if private_query_transport %}<button type="submit" class="goreecloud-preview-trigger" formaction="{{ url_for('goreecloud_preview') }}" formmethod="post" formnovalidate>Preview sources without searching</button>{% endif %}
     </div>
   </div>
   {% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}
