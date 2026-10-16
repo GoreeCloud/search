@@ -218,8 +218,20 @@ def main() -> None:
             driver.get(url)
             empty_preview = driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-trigger')
             driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", empty_preview)
+            WebDriverWait(driver, 8).until(lambda page: page.execute_script(
+                "const r=arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;",
+                empty_preview
+            ))
             empty_preview.click()
-            WebDriverWait(driver, 12).until(lambda page: page.current_url.endswith('/preview'))
+            try:
+                WebDriverWait(driver, 12).until(lambda page: page.current_url.endswith('/preview'))
+            except Exception:
+                print('EMPTY PREVIEW BROWSER DIAGNOSTIC:',
+                      'path=', driver.execute_script('return location.pathname'),
+                      'title=', driver.title,
+                      'page_start=', driver.find_element(By.TAG_NAME, 'body').text[:250],
+                      'request_count=', len(request_meta), flush=True)
+                raise
             assert 'No search terms have been entered' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview').text
             assert not driver.execute_script('return location.search'), 'Blank preview leaked query URL data'
             preview_terms = driver.find_element(By.CSS_SELECTOR, '#goreecloud-preview-query')
