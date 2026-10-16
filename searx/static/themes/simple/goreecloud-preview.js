@@ -1,9 +1,22 @@
-// GoreeCloud private Search: preserve a submit button's native POST destination.
-// Upstream SearXNG search.ts intercepts all form submits and calls form.submit(),
-// which discards submitter.formAction and submitter name/value. The bridge
-// handles only private preview and homepage single-provider submitters.
+// GoreeCloud private Search: native, POST-only submitter destinations.
+//
+// Upstream SearXNG's search handler can suppress an empty search field and,
+// for nonempty forms, replace native submitter actions with form.submit().
+// Keep preview and single-provider actions independent of that interception.
 const searchForm = document.getElementById('search');
 if (searchForm) {
+  document.addEventListener('click', (event) => {
+    const preview = event.target.closest?.('.goreecloud-preview-trigger');
+    if (!preview || preview.form !== searchForm || typeof searchForm.requestSubmit !== 'function') {
+      return;
+    }
+    // Previewing with a blank query is allowed; this submits to the private
+    // no-egress /preview endpoint, never directly to a search provider.
+    event.preventDefault();
+    event.stopPropagation();
+    searchForm.requestSubmit(preview);
+  }, {capture: true});
+
   document.addEventListener('submit', (event) => {
     const submitter = event.submitter;
     if (event.target !== searchForm || !submitter ||
@@ -17,8 +30,7 @@ if (searchForm) {
         .map(button => button.name.replace(/^category_/, ''))
         .join(',');
     }
-    // Do not preventDefault: let the browser honor formaction and formmethod.
-    // Capture runs before SearXNG's form-level submit listener.
+    // Preserve native formaction/formmethod, blocking upstream submit routing.
     event.stopPropagation();
   }, {capture: true});
 }
