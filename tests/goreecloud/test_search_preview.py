@@ -35,6 +35,9 @@ class SearchPreviewTests(unittest.TestCase):
             asset = client.get('/static/themes/simple/goreecloud-preview.js', headers=self.headers)
             self.assertEqual(200, asset.status_code)
             self.assertIn(b'goreecloud-preview-trigger', asset.data)
+            self.assertIn(b'destination.origin !== location.origin', asset.data)
+            self.assertIn(b'new FormData(searchForm)', asset.data)
+            self.assertIn(b'HTMLFormElement.prototype.submit.call(submission)', asset.data)
             asset.close()
 
     def test_preview_preserves_search_selection_without_network_execution(self):
