@@ -14,6 +14,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from werkzeug.serving import make_server
+from flask import request
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))  # direct-script CI launch from nested tests directory
@@ -70,6 +71,19 @@ class SyntheticBrowserPartialSearch(SyntheticBrowserFailedSearch):
 
 
 def main() -> None:
+    # Record only request-boundary metadata from this synthetic browser fixture.
+    # Never collect query text or request bodies in CI diagnostics.
+    request_meta = []
+
+    def note_boundary_context():
+        if request.method == 'POST':
+            request_meta.append((
+                request.path, request.host, request.scheme,
+                request.headers.get('Origin'), request.headers.get('Sec-Fetch-Site'),
+                request.content_length,
+            ))
+
+    app.before_request_funcs.setdefault(None, []).insert(0, note_boundary_context)
     server = make_server("127.0.0.1", 0, app, threaded=True)
     thread = Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -174,10 +188,18 @@ def main() -> None:
                 driver.get(url)
                 driver.find_element(By.ID, 'q').send_keys('synthetic quick provider')
                 driver.find_element(By.CSS_SELECTOR, f'.goreecloud-home-source[value="{source}"]').click()
-                WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
-                    lambda page: page.current_url.endswith('/search') and
-                    '1 source(s) selected' in page.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
-                )
+                try:
+                    WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
+                        lambda page: page.current_url.endswith('/search') and
+                        '1 source(s) selected' in page.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
+                    )
+                except Exception:
+                    print('BROWSER BOUNDARY DIAGNOSTIC:', source,
+                          'url=', driver.current_url,
+                          'title=', driver.title,
+                          'page_head=', driver.find_element(By.TAG_NAME, 'body').text[:220],
+                          'requests=', request_meta[-5:], flush=True)
+                    raise
                 selected = driver.find_element(By.CSS_SELECTOR, 'form#search input[name="engines"]')
                 assert selected.get_attribute('value') == source, f'{source}: quick provider selection lost'
                 assert not driver.execute_script('return location.search'), 'Provider shortcut leaked query in URL'

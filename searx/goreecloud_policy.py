@@ -8,6 +8,7 @@ It never stores, emits or normalizes the user's raw search terms.
 from __future__ import annotations
 
 from collections.abc import Iterable
+from unicodedata import category
 
 
 class SearchPolicyViolation(ValueError):
@@ -16,6 +17,56 @@ class SearchPolicyViolation(ValueError):
     def __init__(self, message: str, http_status: int):
         super().__init__(message)
         self.http_status = http_status
+
+
+def validate_private_request_context(
+    *, host: str, scheme: str, method: str,
+    origin: str | None, fetch_site: str | None,
+) -> None:
+    """Reject DNS-rebinding hosts and browser cross-site POSTs in the loopback profile.
+
+    Host checks apply to every app route; origin checks apply to state-changing
+    requests. Non-browser local clients may omit Origin and Sec-Fetch-Site.
+    """
+    from urllib.parse import urlsplit
+
+    try:
+        target = urlsplit('http://' + host)
+        valid_host = (
+            target.netloc == host
+            and target.hostname in ('127.0.0.1', 'localhost', '::1')
+            and target.username is None and target.password is None
+            and not target.path and not target.query and not target.fragment
+            and target.port != 0
+        )
+    except (TypeError, ValueError):
+        valid_host = False
+    if not valid_host:
+        raise SearchPolicyViolation('Private Search accepts only local Host headers.', 403)
+
+    if method.upper() not in ('POST', 'PUT', 'PATCH', 'DELETE'):
+        return
+    if fetch_site is not None and fetch_site.lower() not in ('same-origin', 'none'):
+        raise SearchPolicyViolation('Cross-site private Search requests are disabled.', 403)
+    # Chromium can emit an opaque Origin during a genuine local form submit.
+    # Accept only when its browser-controlled Fetch Metadata explicitly confirms
+    # same-origin; a bare Origin:null or cross-site submission stays blocked.
+    if origin == 'null' and fetch_site is not None and fetch_site.lower() == 'same-origin':
+        return
+    if origin is not None:
+        try:
+            source = urlsplit(origin)
+            same_origin = (
+                source.scheme.lower() == scheme.lower()
+                and source.netloc.lower() == host.lower()
+                and source.hostname in ('127.0.0.1', 'localhost', '::1')
+                and source.username is None and source.password is None
+                and not source.path and not source.query and not source.fragment
+            )
+        except (TypeError, ValueError):
+            same_origin = False
+        if not same_origin:
+            raise SearchPolicyViolation('Cross-origin private Search requests are disabled.', 403)
 
 
 def validate_transport(*, method: str, query_in_url: bool, private: bool) -> None:
@@ -40,14 +91,11 @@ def validate_disclosure(
     """
     if max_query_chars < 0 or max_providers < 0:
         raise ValueError("Privacy limits must be non-negative")
+    if not isinstance(query, str) or any(category(ch) == 'Cs' for ch in query):
+        raise SearchPolicyViolation("Invalid search query encoding.", 422)
     if max_query_chars and len(query) > max_query_chars:
         raise SearchPolicyViolation("Search query exceeds the configured length limit.", 413)
-    unique = distinct_selected_sources(provider_names)
-    if max_providers and len(unique) > max_providers:
-        raise SearchPolicyViolation(
-            "Too many sources for this search. Select fewer categories or engines.", 422
-        )
-    return len(unique)
+    return len(distinct_selected_sources(provider_names, max_providers=max_providers))
 
 
 def validate_no_external_redirects(*, external_bang: str | None, lucky_redirect: bool) -> None:
@@ -64,19 +112,29 @@ def validate_no_external_redirects(*, external_bang: str | None, lucky_redirect:
         )
 
 
-def distinct_selected_sources(provider_names: Iterable[str]) -> list[str]:
+def distinct_selected_sources(provider_names: Iterable[str], *, max_providers: int = 0) -> list[str]:
     """Canonical display/count for provider choices, matching fanout policy.
 
     Retains the first label for case-insensitive duplicates, and sorts the
     resulting labels predictably. It does not imply a successful provider call.
     """
+    if isinstance(provider_names, (str, bytes)) or provider_names is None:
+        raise SearchPolicyViolation('Invalid search source selection.', 422)
+    try:
+        names = iter(provider_names)
+    except TypeError:
+        raise SearchPolicyViolation('Invalid search source selection.', 422) from None
     first_labels: dict[str, str] = {}
-    for name in provider_names:
+    for name in names:
         # Reject malformed labels before scheduling provider network disclosure.
         if (not isinstance(name, str) or not name or len(name) > 128
-                or name != name.strip() or any(ord(c) < 32 or ord(c) == 127 for c in name)):
+                or name != name.strip() or any(category(c) in ('Cc', 'Cf', 'Cs', 'Zl', 'Zp') for c in name)):
             raise SearchPolicyViolation('Invalid search source selection.', 422)
         first_labels.setdefault(name.casefold(), name)
+        if max_providers and len(first_labels) > max_providers:
+            raise SearchPolicyViolation(
+                "Too many sources for this search. Select fewer categories or engines.", 422
+            )
     return sorted(first_labels.values(), key=lambda label: (label.casefold(), label))
 
 
@@ -91,7 +149,7 @@ def safe_primary_result_url(url: object) -> bool:
     from unicodedata import category
 
     if not isinstance(url, str) or not url or any(
-        ord(ch) <= 32 or ord(ch) == 127 or category(ch) in ('Cc', 'Cf', 'Zl', 'Zp')
+        ch.isspace() or ord(ch) <= 32 or ord(ch) == 127 or category(ch) in ('Cc', 'Cf', 'Cs', 'Zl', 'Zp')
         for ch in url
     ):
         return False
