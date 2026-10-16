@@ -104,12 +104,47 @@ class SearchPreviewTests(unittest.TestCase):
             network.assert_not_called()
             response.close()
 
+    def test_empty_query_previews_selected_sources_without_provider_egress(self):
+        with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins') as network:
+            for payload in ({}, {'q': ''}, {'q': '   '}, {'q': '', 'engines': 'brave'}):
+                with self.subTest(payload=payload):
+                    response = client.post('/preview', data=payload, headers=self.headers)
+                    self.assertEqual(200, response.status_code)
+                    self.assertIn('no-store', response.headers['Cache-Control'])
+                    self.assertEqual('no-referrer', response.headers['Referrer-Policy'])
+                    self.assertNotIn('Location', response.headers)
+                    page = html.fromstring(response.data)
+                    self.assertIn('No search-provider requests have been sent.', page.text_content())
+                    self.assertIn('No search terms have been entered', page.text_content())
+                    items = page.xpath('//section[contains(@class,"goreecloud-preview")]//li')
+                    self.assertGreaterEqual(len(items), 1)
+                    text_inputs = page.xpath('//form[@action="/search"]//input[@name="q"][@type="search"][@required]')
+                    self.assertEqual(2 if len(items) > 1 else 1, len(text_inputs))
+                    self.assertFalse(page.xpath('//form[@action="/search"]//input[@name="q"][@type="hidden"]'))
+                    self.assertNotIn(b'goreecloud source selection preview', response.data)
+                    network.assert_not_called()
+                    response.close()
+
+    def test_empty_query_json_preflight_does_not_emit_or_send_internal_marker(self):
+        with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins') as network:
+            response = client.post('/preview', data={'q': '', 'format': 'json'}, headers=self.headers)
+            self.assertEqual(200, response.status_code)
+            info = response.json['goreecloud']
+            self.assertEqual(0, info['query_length'])
+            self.assertIs(False, info['query_provided'])
+            self.assertIs(False, info['will_contact_providers_on_continue'])
+            self.assertIs(False, info['network_requests_made'])
+            self.assertGreaterEqual(info['selected_engine_count'], 1)
+            self.assertNotIn('goreecloud source selection preview', response.get_data(as_text=True))
+            self.assertIn('no-store', response.headers['Cache-Control'])
+            network.assert_not_called()
+            response.close()
+
     def test_invalid_preview_requests_fail_before_execution(self):
         with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins') as network:
             for method, url, data, status in (
                 ('GET', '/preview?q=private-marker', None, 405),
                 ('POST', '/preview?q=private-marker', {'q':'ok'}, 405),
-                ('POST', '/preview', {'q':''}, 400),
                 ('POST', '/preview', {'q':'x'*513}, 413),
                 ('POST', '/preview', {'q':'!!ddg sample', 'format':'json'}, 422),
                 ('POST', '/preview', {'q':'!! sample'}, 422),

@@ -210,6 +210,33 @@ def main() -> None:
                 assert selected.get_attribute('value') == source, f'{source}: quick provider selection lost'
                 assert not driver.execute_script('return location.search'), 'Provider shortcut leaked query in URL'
         print('PASS homepage provider shortcuts retain POST-only single-source selection')
+        # The home-page preview must also work without typing a query first.
+        # Opening the preview must not dispatch, and the browser must require
+        # new terms before a later, separately consented POST to the providers.
+        with patch('searx.search.SearchWithPlugins', side_effect=SyntheticBrowserSearch) as no_terms_search:
+            driver.set_window_size(390, 844)
+            driver.get(url)
+            empty_preview = driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-trigger')
+            driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", empty_preview)
+            empty_preview.click()
+            WebDriverWait(driver, 12).until(lambda page: page.current_url.endswith('/preview'))
+            assert 'No search terms have been entered' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview').text
+            assert not driver.execute_script('return location.search'), 'Blank preview leaked query URL data'
+            preview_terms = driver.find_element(By.CSS_SELECTOR, '#goreecloud-preview-query')
+            assert preview_terms.get_attribute('required'), 'Blank preflight may continue without terms'
+            assert preview_terms.rect['height'] >= 44, 'Blank preflight query input too small'
+            no_terms_search.assert_not_called()
+            preview_continue = driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-continue')
+            driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", preview_continue)
+            preview_continue.click()
+            assert driver.current_url.endswith('/preview'), 'Browser permitted empty provider search'
+            no_terms_search.assert_not_called()
+            preview_terms.send_keys('synthetic query from source preview')
+            preview_continue.click()
+            WebDriverWait(driver, 12).until(lambda page: page.current_url.endswith('/search'))
+            assert not driver.execute_script('return location.search'), 'Preview continuation terms leaked into URL'
+            no_terms_search.assert_called_once()
+            print('PASS blank source preflight has no egress, requires explicit terms, and uses POST')
         # Preview selected providers first, then explicitly continue to the
         # synthetic search. The preview must never create a provider executor.
         with patch('searx.search.SearchWithPlugins', side_effect=SyntheticBrowserSearch) as preview_search:

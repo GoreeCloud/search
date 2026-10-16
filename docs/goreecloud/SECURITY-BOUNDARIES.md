@@ -22,3 +22,5 @@
 
 18. Startpage explicit blocking at https://cdn.startpage.com/sp/cdn/error-pages/blocked.html is classified as provider access denied rather than a successful empty response. This does not bypass its block or authorize an alternate engine. Synthetic offline adapter tests cover known and spoofed locations.
 19. A real pinned Granian 2.8.4 listener is tested on an ephemeral 127.0.0.1-only socket with no provider traffic and a clean process-group shutdown; GitHub Actions runs the same check independently. This verifies the listener interface for the tested profile, not reverse-proxy, public network, or full managed-wrapper deployment acceptance.
+
+20. An empty-field private source preview is permitted and remains POST-only. It uses an internal fixed local parser marker but does not echo that marker, create a search executor, initiate a provider request or allow a continuation search with blank terms. The preflight page requires explicit term entry before a new search POST and never puts terms in a URL.

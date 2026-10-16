@@ -218,6 +218,16 @@ html[data-glaze-consumer] .goreecloud-preview {
 html[data-glaze-consumer] .goreecloud-preview h1 { font-size: clamp(1.6rem, 4vw, 2.4rem); line-height: 1.2; }
 html[data-glaze-consumer] .goreecloud-preview p { line-height: 1.55; }
 html[data-glaze-consumer] .goreecloud-preview li { padding: .16rem 0; overflow-wrap: anywhere; }
+html[data-glaze-consumer] .goreecloud-preview-query {
+  display: block; box-sizing: border-box; width: min(100%, 38rem);
+  min-height: 44px; padding: .7rem .85rem; margin: .45rem 0 .9rem;
+  border: 1px solid var(--gc-outline); border-radius: 11px;
+  background: var(--gc-surface); color: var(--gc-ink);
+  font: inherit;
+}
+html[data-glaze-consumer] .goreecloud-preview-query:focus-visible {
+  outline: 2px solid var(--gc-ring); outline-offset: 2px;
+}
 html[data-glaze-consumer] .goreecloud-preview-continue {
   background: var(--gc-accent-strong); color: var(--gc-surface);
   border: 1px solid var(--gc-outline); border-radius: 12px;
