@@ -13,7 +13,9 @@
 {% include 'simple/search.html' %}
 {% if private_query_transport %}
 <aside class="goreecloud-source-summary" aria-label="Selected search sources">
-  <p><strong>{{ selected_source_names|length }} source(s) selected</strong> for this query. Providers may receive your search terms.</p>
+  <p class="goreecloud-source-intro"><strong>{{ selected_source_names|length }} source(s) selected</strong> <span>— Only approved providers receive terms when searched.</span></p>
+  <details class="goreecloud-source-audit">
+    <summary>Source selection and result attribution</summary>
   {% if selected_source_names %}
   <details><summary>View selected sources</summary>
     <ul>{% for source in selected_source_names %}
@@ -39,6 +41,7 @@
     <ul>{% for source, count in represented_source_counts.items() %}<li>{{ 'Brave Search' if source == 'brave' else 'Startpage' }} — {{ count }} displayed result(s)</li>{% endfor %}</ul>
   </details>
   {% endif %}
+  </details>
   <section class="goreecloud-source-switch" aria-label="Switch search provider">
     <p>Search these terms with:</p>
     <div class="goreecloud-source-switch-actions">
@@ -61,6 +64,7 @@
 {% endif %}
 
 {% if private_query_transport and unresponsive_engines and (results or answers) %}
+<div class="goreecloud-partial-recovery">
 <p class="goreecloud-partial-results" role="status">
   <strong>Some search sources reported an error.</strong> Displayed results may be incomplete.
   <a href="#engines_msg-title">Review source messages</a>. No replacement provider is selected automatically.
@@ -78,6 +82,7 @@
   <button type="submit" aria-describedby="goreecloud-partial-retry-hint">Retry selected sources</button>
 </form>
 <p id="goreecloud-partial-retry-hint">Retrying sends these terms to the same selected providers again and replaces the displayed results.</p>
+</div>
 {% endif %}
 
 {% if results and results|map(attribute='template')|unique|list|count == 1 %}
@@ -127,6 +132,12 @@
     {%- endif -%}
 
     <div id="urls" aria-label="Search results">
+      {% if results %}
+      <div class="goreecloud-results-heading">
+        <h2>Web results</h2>
+        <span>{{ results|length }} displayed on this page</span>
+      </div>
+      {% endif %}
     {% for result in results %}
         {% if result.open_group and not only_template %}<div class="template_group_{{ result['template']|replace('.html', '') }}">{% endif %}
         {% set index = loop.index %}
