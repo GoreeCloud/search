@@ -51,16 +51,18 @@ def get_git_url_and_branch():
 
     try:
         ref = subprocess_run("git rev-parse --abbrev-ref @{upstream}")
-    except subprocess.CalledProcessError:
-        ref = subprocess_run("git rev-parse --abbrev-ref master@{upstream}")
-    origin, git_branch = ref.split("/", 1)
+        origin, git_branch = ref.split("/", 1)
+    except (subprocess.CalledProcessError, ValueError):
+        # Local topic branches often have no upstream; do not assume master exists.
+        origin = "origin"
+        git_branch = subprocess_run("git branch --show-current") or "unknown"
     git_url = subprocess_run(["git", "remote", "get-url", origin])
 
     # get https:// url from git@ url
     if git_url.startswith("git@"):
         git_url = git_url.replace(":", "/", 2).replace("git@", "https://", 1)
     if git_url.endswith(".git"):
-        git_url = git_url.replace(".git", "", 1)
+        git_url = git_url[:-4]
 
     return git_url, git_branch
 
