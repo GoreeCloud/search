@@ -19,6 +19,51 @@ class SearchPolicyViolation(ValueError):
         self.http_status = http_status
 
 
+def validate_private_request_context(
+    *, host: str, scheme: str, method: str,
+    origin: str | None, fetch_site: str | None,
+) -> None:
+    """Reject DNS-rebinding hosts and browser cross-site POSTs in the loopback profile.
+
+    Host checks apply to every app route; origin checks apply to state-changing
+    requests. Non-browser local clients may omit Origin and Sec-Fetch-Site.
+    """
+    from urllib.parse import urlsplit
+
+    try:
+        target = urlsplit('http://' + host)
+        valid_host = (
+            target.netloc == host
+            and target.hostname in ('127.0.0.1', 'localhost', '::1')
+            and target.username is None and target.password is None
+            and not target.path and not target.query and not target.fragment
+            and target.port != 0
+        )
+    except (TypeError, ValueError):
+        valid_host = False
+    if not valid_host:
+        raise SearchPolicyViolation('Private Search accepts only local Host headers.', 403)
+
+    if method.upper() not in ('POST', 'PUT', 'PATCH', 'DELETE'):
+        return
+    if fetch_site is not None and fetch_site.lower() not in ('same-origin', 'none'):
+        raise SearchPolicyViolation('Cross-site private Search requests are disabled.', 403)
+    if origin is not None:
+        try:
+            source = urlsplit(origin)
+            same_origin = (
+                source.scheme.lower() == scheme.lower()
+                and source.netloc.lower() == host.lower()
+                and source.hostname in ('127.0.0.1', 'localhost', '::1')
+                and source.username is None and source.password is None
+                and not source.path and not source.query and not source.fragment
+            )
+        except (TypeError, ValueError):
+            same_origin = False
+        if not same_origin:
+            raise SearchPolicyViolation('Cross-origin private Search requests are disabled.', 403)
+
+
 def validate_transport(*, method: str, query_in_url: bool, private: bool) -> None:
     """Reject query-bearing GET requests and all URL query parameters in private mode."""
     if private and (query_in_url or method.upper() != "POST"):

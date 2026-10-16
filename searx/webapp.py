@@ -66,7 +66,7 @@ from searx.exceptions import SearxParameterException
 from searx.goreecloud_policy import (
     SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
     distinct_selected_sources, safe_primary_result_url, represented_result_sources, validate_builtin_sources,
-    validate_builtin_search_bangs, restrict_explicit_private_engines,
+    validate_builtin_search_bangs, restrict_explicit_private_engines, validate_private_request_context,
 )
 from searx.engines import (
     DEFAULT_CATEGORY,
@@ -491,6 +491,21 @@ def pre_request():
     sxng_request.timings = []  # pylint: disable=assigning-non-slot
     sxng_request.errors = []  # pylint: disable=assigning-non-slot
 
+    if settings['goreecloud']['private_search']:
+        # The development listener is intended only for loopback. Disallow
+        # DNS rebinding and external-site forms before reading POST parameters.
+        validate_private_request_context(
+            host=sxng_request.host, scheme=sxng_request.scheme,
+            method=sxng_request.method, origin=sxng_request.headers.get('Origin'),
+            fetch_site=sxng_request.headers.get('Sec-Fetch-Site'),
+        )
+        if sxng_request.method == 'POST' and sxng_request.path in ('/', '/search', '/preview'):
+            # The user query is capped at 512 characters; other form fields
+            # must not enable an unbounded request-body memory allocation.
+            sxng_request.max_content_length = 65536
+            if sxng_request.content_length is not None and sxng_request.content_length > 65536:
+                raise SearchPolicyViolation('Private Search form exceeds the size limit.', 413)
+
     client_pref = ClientPref.from_http_request(sxng_request)
     # pylint: disable=redefined-outer-name
     preferences = Preferences(themes, list(categories.keys()), engines, searx.plugins.STORAGE, client_pref)
@@ -569,7 +584,7 @@ def add_default_headers(response: flask.Response):
         sxng_request.endpoint in ('index', 'search', 'goreecloud_preview', 'autocompleter', 'opensearch', 'preferences')
         or sxng_request.path == '/preview'
         or 'preferences' in sxng_request.args
-        or 'preferences' in sxng_request.form
+        or 'preferences' in sxng_request.__dict__.get('form', ())
     ):
         response.headers['Cache-Control'] = 'private, no-store, max-age=0'
         response.headers['Pragma'] = 'no-cache'
@@ -657,6 +672,13 @@ def index():
 
 @app.errorhandler(SearchPolicyViolation)
 def goreecloud_policy_error(error):
+    # Very early request refusals run before preferences have been initialized.
+    # Rendering the normal page there would itself raise a 500.
+    if not hasattr(sxng_request, 'preferences'):
+        return Response(
+            'Private Search request blocked.', status=error.http_status,
+            mimetype='text/plain', headers={'Cache-Control': 'private, no-store, max-age=0'},
+        )
     # Do not reflect user-provided search terms or destinations in error pages.
     if sxng_request.form.get('format') == 'json':
         return Response(
