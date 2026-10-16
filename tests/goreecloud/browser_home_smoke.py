@@ -222,6 +222,10 @@ def main() -> None:
                 "const r=arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;",
                 empty_preview
             ))
+            driver.execute_script(
+                "window.__goreecloudTestPreviewClicks=0;"
+                "window.addEventListener('click', e => {if(e.target.closest?.('.goreecloud-preview-trigger')) window.__goreecloudTestPreviewClicks++}, true);"
+            )
             empty_preview.click()
             try:
                 WebDriverWait(driver, 12).until(lambda page: page.current_url.endswith('/preview'))
@@ -234,6 +238,9 @@ def main() -> None:
                       'form_valid=', driver.execute_script('return document.querySelector("form#search").checkValidity()'),
                       'invalid_names=', driver.execute_script('return [...document.querySelectorAll("form#search :invalid")].map(e=>e.name||e.id).slice(0,8)'),
                       'formnovalidate=', driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-trigger').get_attribute('formnovalidate'),
+                      'test_clicks=', driver.execute_script('return window.__goreecloudTestPreviewClicks'),
+                      'app_click_seen=', driver.execute_script('return document.documentElement.dataset.goreecloudPreviewClickSeen||"no"'),
+                      'preview_asset=', driver.execute_script('return performance.getEntriesByType("resource").some(e=>e.name.includes("goreecloud-preview.js"))'),
                       flush=True)
                 raise
             assert 'No search terms have been entered' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview').text

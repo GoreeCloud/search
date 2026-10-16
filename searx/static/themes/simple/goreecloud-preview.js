@@ -14,9 +14,10 @@ if (searchForm) {
     }
   };
 
-  document.addEventListener('click', (event) => {
+  window.addEventListener('click', (event) => {
     const preview = event.target.closest?.('.goreecloud-preview-trigger');
     if (!preview || preview.form !== searchForm) return;
+    document.documentElement.dataset.goreecloudPreviewClickSeen = 'true';
 
     event.preventDefault();
     event.stopImmediatePropagation();
