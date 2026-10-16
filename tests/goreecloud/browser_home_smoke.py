@@ -123,6 +123,11 @@ def main() -> None:
             site_header = driver.find_element(By.CSS_SELECTOR, '.goreecloud-site-header')
             site_footer = driver.find_element(By.CSS_SELECTOR, '.goreecloud-site-footer')
             hero_mark = driver.find_element(By.CSS_SELECTOR, '.goreecloud-mark-hero')
+            artwork = hero_mark.find_element(By.CSS_SELECTOR, 'img')
+            header_artwork = driver.find_element(By.CSS_SELECTOR, '.goreecloud-mark-small img')
+            favicon = driver.find_element(By.CSS_SELECTOR, 'link[rel=icon]')
+            assert int(artwork.get_attribute('naturalWidth')) > 0, 'Brand artwork failed to load'
+            assert artwork.get_attribute('src') == header_artwork.get_attribute('src') == favicon.get_attribute('href'), 'Search brand assets disagree'
             why = driver.find_element(By.CSS_SELECTOR, '#why-goreecloud-search')
             search_box = driver.find_element(By.CSS_SELECTOR, '.goreecloud-hero .search_box')
             assert all(part.is_displayed() for part in (site_header, site_footer, hero_mark, why, search_box))

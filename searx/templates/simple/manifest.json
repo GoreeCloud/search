@@ -3,17 +3,17 @@
   "short_name": "{{ instance_name }}",
   "icons": [
     {
-      "src": "{{ url_for('static', filename='img/favicon.svg', _external=True) }}",
+      "src": "{{ url_for('static', filename='img/favicon.svg', _external=True) }}?v=search-identity-3",
       "sizes": "any",
       "type": "image/svg+xml"
     },
     {
-      "src": "{{ url_for('static', filename='img/192.png', _external=True) }}",
+      "src": "{{ url_for('static', filename='img/192.png', _external=True) }}?v=search-identity-3",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "{{ url_for('static', filename='img/512.png', _external=True) }}",
+      "src": "{{ url_for('static', filename='img/512.png', _external=True) }}?v=search-identity-3",
       "sizes": "512x512",
       "type": "image/png"
     }

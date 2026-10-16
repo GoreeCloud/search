@@ -18,7 +18,7 @@ class OfficialHomepageTests(unittest.TestCase):
             self.assertEqual(1,len(root.xpath('//a[contains(@class,"goreecloud-site-brand")][@href="/"]')))
             self.assertEqual('GoreeCloud Search',' '.join(root.xpath('//h1[@id="goreecloud-home-title"]')[0].text_content().split()))
             self.assertIn('Explore the web. Not your personal data.',root.text_content())
-            self.assertEqual(1,len(root.xpath('//div[contains(@class,"goreecloud-mark-hero")]/svg')))
+            self.assertEqual(1,len(root.xpath('//div[contains(@class,"goreecloud-mark-hero")]/img[@alt=""]')))
             self.assertEqual(4,len(root.xpath('//ul[contains(@class,"goreecloud-home-benefits")]/li')))
             self.assertEqual(1,len(root.xpath('//section[@id="why-goreecloud-search"]')))
             self.assertIn('Find more. Give away less.',root.text_content())
