@@ -731,17 +731,25 @@ def goreecloud_preview():
         flask.abort(404)
     validate_transport(method=sxng_request.method, query_in_url=bool(sxng_request.args), private=True)
     raw_query = sxng_request.form.get('q', '')
-    if not raw_query:
-        raise SearchPolicyViolation('Enter a query to preview its selected sources.', 400)
+    query_provided = bool(raw_query.strip())
     validate_disclosure(
         raw_query, (),
         max_query_chars=settings['goreecloud']['max_query_chars'],
         max_providers=settings['goreecloud']['max_provider_fanout'],
     )
-    validate_builtin_search_bangs(raw_query)
+    if query_provided:
+        validate_builtin_search_bangs(raw_query)
+    # The source-preview action must also work before terms are entered.
+    # The ordinary upstream query parser requires q to be nonempty. Give it
+    # an internal, fixed marker solely to calculate local engine selection;
+    # never replay it into the page, JSON, or a provider request.
+    selection_form = sxng_request.form
+    if not query_provided:
+        selection_form = sxng_request.form.copy()
+        selection_form['q'] = 'goreecloud source selection preview'
     try:
         query, _, _, _, selected_locale = get_search_query_from_webapp(
-            sxng_request.preferences, sxng_request.form
+            sxng_request.preferences, selection_form
         )
     except SearxParameterException:
         raise SearchPolicyViolation('Search settings could not be previewed. Review your filters.', 422) from None
@@ -754,7 +762,7 @@ def goreecloud_preview():
     )
     sources = distinct_selected_sources(ref.name for ref in query.engineref_list)
     validate_disclosure(
-        query.query, sources,
+        query.query if query_provided else '', sources,
         max_query_chars=settings['goreecloud']['max_query_chars'],
         max_providers=settings['goreecloud']['max_provider_fanout'],
     )
@@ -763,7 +771,8 @@ def goreecloud_preview():
         return flask.jsonify({
             'goreecloud': {
                 'mode': 'private_search_preview', 'network_requests_made': False,
-                'will_contact_providers_on_continue': bool(sources),
+                'will_contact_providers_on_continue': bool(sources and query_provided),
+                'query_provided': query_provided,
                 'selected_engines': sources, 'selected_engine_count': len(sources),
                 'selected_categories': categories, 'language': selected_locale,
                 'safesearch': query.safesearch, 'time_range': query.time_range or '',
@@ -782,7 +791,9 @@ def goreecloud_preview():
     for category in categories:
         replay[f'category_{category}'] = '1'
     return render(
-        'goreecloud_preview.html', query_text=raw_query,
+        'goreecloud_preview.html', query_text=raw_query if query_provided else '',
+        query_provided=query_provided,
+        query_limit=settings['goreecloud']['max_query_chars'],
         selected_sources=sources, selected_categories_preview=categories,
         selected_locale_preview=selected_locale, selected_safesearch=query.safesearch,
         replay_fields=replay,

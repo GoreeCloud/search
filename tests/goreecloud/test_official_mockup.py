@@ -45,7 +45,7 @@ class OfficialHomepageTests(unittest.TestCase):
             self.assertEqual('/search',form.get('action'))
             self.assertEqual(1,len(form.xpath('.//input[@name="q"][@type="search"][@aria-keyshortcuts="/"]')))
             self.assertEqual(1,len(form.xpath('.//button[@id="send_search"][@type="submit"]')))
-            self.assertEqual(1,len(form.xpath('.//button[@formaction="/preview"][@formmethod="post"]')))
+            self.assertEqual(1,len(form.xpath('.//button[@type="button"][@formaction="/preview"][@formmethod="post"]')))
             self.assertEqual(1,len(root.xpath('//a[@href="#why-goreecloud-search"]')))
             self.assertNotIn('q=',reply.get_data(as_text=True))
             self.assertIn('no-store',reply.headers['Cache-Control'])
