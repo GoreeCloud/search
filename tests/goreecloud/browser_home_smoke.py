@@ -163,6 +163,7 @@ def main() -> None:
         driver.set_window_size(390, 844)
         driver.get(url)
         theme_button = driver.find_element(By.CSS_SELECTOR, '.goreecloud-theme-toggle')
+        assert theme_button.rect['width'] >= 44 and theme_button.rect['height'] >= 44, 'Theme touch target too small'
         theme_button.send_keys(Keys.SPACE)
         assert driver.execute_script("return document.documentElement.classList.contains('theme-dark')"), 'Dark toggle failed'
         assert theme_button.get_attribute('aria-label') == 'Switch to light mode'
@@ -211,6 +212,7 @@ def main() -> None:
             driver.get(url)
             driver.find_element(By.ID, 'q').send_keys('synthetic private preflight')
             preview_action = driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-trigger')
+            assert preview_action.rect['height'] >= 44, 'Preview touch target too small'
             driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", preview_action)
             WebDriverWait(driver, 8).until(lambda page: page.execute_script(
                 "const r=arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;",

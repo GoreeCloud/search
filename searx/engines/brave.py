@@ -209,7 +209,7 @@ def request(query: str, params: dict[str, t.Any]) -> None:
 
     params["headers"]["Accept-Encoding"] = "gzip, deflate"
     params["url"] = f"{base_url}{brave_category}?{urlencode(args)}"
-    logger.debug("url %s", params["url"])
+    logger.debug("Brave Search request URL prepared")
 
     # set properties in the cookies
 
@@ -223,7 +223,7 @@ def request(query: str, params: dict[str, t.Any]) -> None:
 
     ui_lang = locales.get_engine_locale(params["searxng_locale"], traits.custom["ui_lang"], "en-us")
     params["cookies"]["ui_lang"] = ui_lang
-    logger.debug("cookies %s", params["cookies"])
+    logger.debug("Brave Search request cookies prepared")
 
 
 def _extract_published_date(published_date_raw: str | None):

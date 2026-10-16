@@ -234,14 +234,14 @@ def get_sc_code(params):
 
     sc_code = CACHE.get("SC_CODE")
     if sc_code:
-        logger.debug("get_sc_code: using cached value: %s", sc_code)
+        logger.debug("get_sc_code: reusing cached code")
         return sc_code
 
     get_sc_url = base_url + "/"
     logger.debug("get_sc_code: querying new sc timestamp @ %s", get_sc_url)
 
     headers = {**params["headers"]}
-    logger.debug("get_sc_code: request headers: %s", headers)
+    logger.debug("get_sc_code: requesting provider search form")
     resp = get(get_sc_url, headers=headers)
 
     if 'id="anubis_challenge"' in resp.text:
@@ -267,7 +267,7 @@ def get_sc_code(params):
         ) from exc
 
     sc_code = str(sc_code)
-    logger.debug("get_sc_code: new value is: %s", sc_code)
+    logger.debug("get_sc_code: refreshed provider code")
     CACHE.set(key="SC_CODE", value=sc_code, expire=sc_code_cache_sec)
     return sc_code
 
@@ -337,9 +337,9 @@ def request(query, params):
     params["cookies"]["preferences"] = "N1N".join(["%sEEE%s" % x for x in cookie.items()])
     if auth := CACHE.get("SPCHAL_AUTH"):
         params["cookies"]["spchal-auth"] = auth
-    logger.debug("cookie preferences: %s", params["cookies"]["preferences"])
+    logger.debug("Startpage request preferences prepared")
 
-    logger.debug("data: %s", args)
+    logger.debug("Startpage POST request prepared")
     params["data"] = args
     params["method"] = "POST"
     params["url"] = search_url
