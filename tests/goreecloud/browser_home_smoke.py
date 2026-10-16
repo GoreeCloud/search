@@ -228,7 +228,18 @@ def main() -> None:
                 "window.__goreecloudTestPreviewClicks=0;"
                 "window.addEventListener('click', e => {if(e.target.closest?.('.goreecloud-preview-trigger')) window.__goreecloudTestPreviewClicks++}, true);"
             )
-            empty_preview.click()
+            preview_hit_target = driver.execute_script(
+                "const r=arguments[0].getBoundingClientRect();"
+                "const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);"
+                "return {ok:hit===arguments[0]||arguments[0].contains(hit),"
+                "tag:hit?.tagName||'none',classes:hit?.className||'',"
+                "pointer:getComputedStyle(arguments[0]).pointerEvents};",
+                empty_preview
+            )
+            assert preview_hit_target['ok'], f'Blank preview pointer target is covered: {preview_hit_target}'
+            # Synthetic click tests DOM activation and local POST. Physical
+            # Android testing separately verifies a real finger tap.
+            driver.execute_script("arguments[0].click()", empty_preview)
             try:
                 WebDriverWait(driver, 12).until(lambda page: page.current_url.endswith('/preview'))
             except Exception:
