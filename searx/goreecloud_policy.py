@@ -48,6 +48,11 @@ def validate_private_request_context(
         return
     if fetch_site is not None and fetch_site.lower() not in ('same-origin', 'none'):
         raise SearchPolicyViolation('Cross-site private Search requests are disabled.', 403)
+    # Chromium can emit an opaque Origin during a genuine local form submit.
+    # Accept only when its browser-controlled Fetch Metadata explicitly confirms
+    # same-origin; a bare Origin:null or cross-site submission stays blocked.
+    if origin == 'null' and fetch_site is not None and fetch_site.lower() == 'same-origin':
+        return
     if origin is not None:
         try:
             source = urlsplit(origin)

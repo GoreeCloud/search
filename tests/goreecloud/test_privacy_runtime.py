@@ -39,6 +39,20 @@ class PrivateRequestTests(unittest.TestCase):
             self.assertFalse(response.json['goreecloud']['network_requests_made'])
             response.close()
 
+    def test_chromium_opaque_origin_requires_explicit_same_origin_metadata(self):
+        with smoke.app.test_client() as client:
+            accepted = client.post('/preview', data={'q': 'synthetic', 'format': 'json'}, headers={
+                'Origin': 'null', 'Sec-Fetch-Site': 'same-origin',
+            })
+            self.assertEqual(200, accepted.status_code)
+            self.assertFalse(accepted.json['goreecloud']['network_requests_made'])
+            accepted.close()
+            denied = client.post('/preview', data={'q': 'synthetic'}, headers={
+                'Origin': 'null', 'Sec-Fetch-Site': 'cross-site',
+            })
+            self.assertEqual(403, denied.status_code)
+            denied.close()
+
     def test_oversized_private_form_is_rejected_before_dispatch(self):
         with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins') as engine:
             response = client.post('/search', data={
