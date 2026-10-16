@@ -14,15 +14,20 @@ SVG_NS = "{http://www.w3.org/2000/svg}"
 class SearchIdentityTests(unittest.TestCase):
     headers = {"X-Real-IP": "127.0.0.1"}
 
-    def test_canonical_svg_is_safe_and_distinct_from_generic_lens(self):
+    def test_canonical_svg_is_safe_and_minimal_at_small_sizes(self):
         raw = SVG_FILE.read_text(encoding="utf-8")
         graphic = ET.fromstring(raw)
         self.assertEqual(SVG_NS + "svg", graphic.tag)
         self.assertEqual("0 0 64 64", graphic.attrib["viewBox"])
         self.assertEqual("GoreeCloud Search", graphic.find(SVG_NS + "title").text)
         self.assertEqual(1, len(graphic.findall(SVG_NS + "rect")))
-        self.assertGreaterEqual(len(graphic.findall(SVG_NS + "path")), 3)
-        self.assertIn("linearGradient", raw)
+        self.assertEqual(1, len(graphic.findall(SVG_NS + "circle")))
+        self.assertEqual(1, len(graphic.findall(SVG_NS + "path")))
+        self.assertNotIn("linearGradient", raw)
+        self.assertNotIn("<filter", raw)
+        self.assertNotIn("<text", raw)
+        self.assertIn("#13BFD4", raw)
+        self.assertIn('stroke="#FFFFFF"', raw)
         for forbidden in ("<script", "<image", "javascript:", "https://", "foreignObject"):
             self.assertNotIn(forbidden, raw)
 
@@ -30,7 +35,7 @@ class SearchIdentityTests(unittest.TestCase):
         import struct
 
         template = (ROOT / "searx/templates/simple/manifest.json").read_text()
-        self.assertEqual(3, template.count("?v=search-identity-2"))
+        self.assertEqual(3, template.count("?v=search-identity-3"))
         self.assertIn("img/favicon.svg", template)
         for size in (192, 512):
             with self.subTest(size=size):
@@ -55,7 +60,7 @@ class SearchIdentityTests(unittest.TestCase):
             self.assertEqual("", header[0].get("alt"))
             self.assertEqual("true", hero[0].getparent().get("aria-hidden"))
             self.assertEqual("true", header[0].getparent().get("aria-hidden"))
-            self.assertIn("search-identity-2", fav[0])
+            self.assertIn("search-identity-3", fav[0])
             self.assertEqual("GoreeCloud Search home", root.xpath(
                 '//a[contains(@class,"goreecloud-site-brand")]')[0].get("aria-label"))
             asset = client.get(fav[0], headers=self.headers)

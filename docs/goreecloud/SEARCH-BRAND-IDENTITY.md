@@ -1,24 +1,19 @@
-# GoreeCloud Search identity — Development candidate
+# GoreeCloud Search brand artwork — Development candidate, revision 3
 
-**Status:** Development artwork, awaiting owner visual approval and official Glaze consumer review.
+**Status:** Design revision for owner review. Replaces the rejected gradient G/search lens and sparkle of revision 2. This is a source-level SVG change, not a generated chat image or approved Glaze identity.
 
-## Design
+## Visual treatment
 
-The product mark combines a white, open **G**-shaped search lens, a cyan discovery sparkle, and a short light-blue search handle on a rounded cyan-to-cobalt gradient tile. It replaces the previous generic magnifying glass and unifies the light/dark interface treatment.
+The mark is a single bold search lens and short 45° handle in white, centered on a solid GoreeCloud cyan (#13BFD4) rounded square. It has no letters, gradients, stars, shadows inside the source, embossed surfaces or tiny details that compete at 16–34px. Visual simplicity and alignment with the adjacent GoreeCloud wordmark take priority over decorative symbolism.
 
-The identity remains recognizable at browser-tab scale and in the 34px header mark, and it scales to the 72–80px homepage hero.
+## Consistency and maintenance
 
-## Authoritative assets
+- The canonical local, script-free vector lives at `searx/static/themes/simple/img/favicon.svg`.
+- The homepage hero, header and browser tab load the same asset with cache key `search-identity-3`.
+- The 192px and 512px installable web-app icon PNGs are generated directly from this exact SVG using an isolated development rasterizer.
+- Adjacent accessible text identifies the product, while repeated decorative images have empty alt text and `aria-hidden`.
+- The SVG shape remains color-independent of light/dark theme and compatible with the existing rounded layout. Forced-colors remains under the Glaze visual acceptance gate.
 
-- `searx/static/themes/simple/img/favicon.svg` is the canonical, local, script-free vector artwork.
-- `searx/static/themes/simple/img/192.png` and `512.png` are corresponding deterministic raster exports from that SVG, kept for web-app manifest compatibility.
-- The site header, homepage hero, browser favicon, and web-app manifest all point to these local resources using the `search-identity-2` cache key.
-- Branding imagery is decorative within the page (`aria-hidden`, empty image alt); the adjacent product name and accessible home-link label identify GoreeCloud Search.
+The v2 revision was rejected by the owner after inspecting the actual laptop screenshot; no approval is implied for v3. The icon is now a restrained working proposal rather than a claim of unique trademark identity. Any formal visual identity change needs owner approval, Glaze design review, accessibility checks at favicon and app-icon sizes, and eventual trademark differentiation review if required.
 
-## Change and validation constraints
-
-The new artwork is scoped to the Search product. Its colors reference the current GoreeCloud cyan/cobalt palette; it does not establish formal Glaze approval. No new remote assets, scripts, tracking, or provider connections are introduced.
-
-On any future design revision, update all three exported files together, increment the cache key on the shared SVG and manifest icons, and rerun the asset, responsiveness, and browser checks. Do not substitute a mismatched PNG fallback.
-
-**No production promotion, repository merge, or device acceptance is implied by this document.**
+No production deployment, PR merge, alternate provider, tracking mechanism or external asset is introduced.
