@@ -1,0 +1,52 @@
+# Separate loopback-only development profile for GoreeCloud Image Search.
+# The existing GoreeCloud Search private web profile is intentionally unchanged.
+# Public deployment requires HTTPS, CORS origin controls, a real rate limiter,
+# a protected secret, and confirmed upstream engine terms/availability.
+use_default_settings:
+  engines:
+    keep_only:
+      - brave.images
+      - bing images
+      - duckduckgo images
+engines:
+  - name: brave.images
+    disabled: false
+    inactive: false
+  - name: bing images
+    disabled: false
+    inactive: false
+  - name: duckduckgo images
+    disabled: false
+    inactive: false
+categories_as_tabs:
+  images:
+goreecloud:
+  private_search: false
+general:
+  instance_name: "GoreeCloud Search · Images"
+  enable_metrics: false
+  open_metrics: ""
+search:
+  safe_search: 1
+  autocomplete: ""
+  favicon_resolver: ""
+  formats:
+    - html
+    - json
+server:
+  bind_address: "127.0.0.1"
+  public_instance: false
+  limiter: false
+  image_proxy: true
+  method: "POST"
+  default_http_headers:
+    X-Content-Type-Options: nosniff
+    X-Frame-Options: DENY
+    Referrer-Policy: no-referrer
+    X-Robots-Tag: noindex, nofollow
+preferences:
+  lock:
+    - method
+    - autocomplete
+    - favicon_resolver
+    - image_proxy
