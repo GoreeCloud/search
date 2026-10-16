@@ -150,13 +150,13 @@ webapp.run() {
         sleep 3
         xdg-open http://127.0.0.1:8888/
     ) &
-    SEARXNG_DEBUG=1 \
-        GRANIAN_RELOAD="true" \
+    SEARXNG_DEBUG="${SEARXNG_DEBUG:-1}" \
+        GRANIAN_RELOAD="${GRANIAN_RELOAD:-true}" \
         GRANIAN_RELOAD_IGNORE_WORKER_FAILURE="true" \
         GRANIAN_RELOAD_PATHS="./searx" \
         GRANIAN_PROCESS_NAME="searxng" \
         GRANIAN_INTERFACE="wsgi" \
-        GRANIAN_HOST="::" \
+        GRANIAN_HOST="${SEARXNG_BIND_ADDRESS:-::}" \
         GRANIAN_PORT="8888" \
         GRANIAN_WEBSOCKETS="false" \
         GRANIAN_BLOCKING_THREADS="4" \

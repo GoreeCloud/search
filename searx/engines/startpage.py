@@ -94,6 +94,7 @@ import typing as t
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from json import loads
+from urllib.parse import urlsplit
 from unicodedata import combining, normalize
 
 import babel.localedata
@@ -101,7 +102,7 @@ import dateutil.parser
 
 from searx.enginelib import EngineCache
 from searx.enginelib.traits import EngineTraits
-from searx.exceptions import SearxEngineCaptchaException
+from searx.exceptions import SearxEngineCaptchaException, SearxEngineAccessDeniedException
 from searx.locales import region_tag
 from searx.network import get, post  # see https://github.com/searxng/searxng/issues/762
 from searx.utils import (
@@ -177,6 +178,25 @@ def setup(_: dict[str, t.Any]) -> bool | None:
     CACHE = EngineCache("startpage")
 
 
+def is_startpage_blocked_response(resp) -> bool:
+    """Recognize explicit Startpage access-denied destinations, not empty result pages.
+
+    The remote endpoint can return a 302 to its static CDN blocked page.
+    A blocked response must not be reported as a successful empty search.
+    """
+    for target in (str(resp.url), resp.headers.get("Location", "")):
+        parsed = urlsplit(target)
+        if parsed.scheme != "https":
+            continue
+        if (parsed.hostname in ("www.startpage.com", "startpage.com")
+                and parsed.path.startswith("/sp/captcha")):
+            return True
+        if (parsed.hostname == "cdn.startpage.com"
+                and parsed.path == "/sp/cdn/error-pages/blocked.html"):
+            return True
+    return False
+
+
 sc_code_cache_sec = 3600
 """Time in seconds the sc-code is cached in memory :py:obj:`get_sc_code`."""
 
@@ -234,18 +254,22 @@ def get_sc_code(params):
 
     sc_code = CACHE.get("SC_CODE")
     if sc_code:
-        logger.debug("get_sc_code: using cached value: %s", sc_code)
+        logger.debug("get_sc_code: reusing cached code")
         return sc_code
 
     get_sc_url = base_url + "/"
     logger.debug("get_sc_code: querying new sc timestamp @ %s", get_sc_url)
 
     headers = {**params["headers"]}
-    logger.debug("get_sc_code: request headers: %s", headers)
+    logger.debug("get_sc_code: requesting provider search form")
     resp = get(get_sc_url, headers=headers)
+    if is_startpage_blocked_response(resp):
+        raise SearxEngineAccessDeniedException(message="Startpage blocked this request")
 
     if 'id="anubis_challenge"' in resp.text:
         resp = get(get_sc_url, headers=headers, cookies={"spchal-auth": _solve_anubis(resp)})
+        if is_startpage_blocked_response(resp):
+            raise SearxEngineAccessDeniedException(message="Startpage blocked this request")
 
     # ?? x = network.get('https://www.startpage.com/sp/cdn/images/filter-chevron.svg', headers=headers)
     # ?? https://www.startpage.com/sp/cdn/images/filter-chevron.svg
@@ -263,11 +287,11 @@ def get_sc_code(params):
     except IndexError as exc:
         logger.debug("suspend startpage API --> https://github.com/searxng/searxng/pull/695")
         raise SearxEngineCaptchaException(
-            message="get_sc_code: [PR-695] querying new sc timestamp failed! (%s)" % resp.url,
+            message="get_sc_code: querying provider search-form token failed.",
         ) from exc
 
     sc_code = str(sc_code)
-    logger.debug("get_sc_code: new value is: %s", sc_code)
+    logger.debug("get_sc_code: refreshed provider code")
     CACHE.set(key="SC_CODE", value=sc_code, expire=sc_code_cache_sec)
     return sc_code
 
@@ -337,9 +361,9 @@ def request(query, params):
     params["cookies"]["preferences"] = "N1N".join(["%sEEE%s" % x for x in cookie.items()])
     if auth := CACHE.get("SPCHAL_AUTH"):
         params["cookies"]["spchal-auth"] = auth
-    logger.debug("cookie preferences: %s", params["cookies"]["preferences"])
+    logger.debug("Startpage request preferences prepared")
 
-    logger.debug("data: %s", args)
+    logger.debug("Startpage POST request prepared")
     params["data"] = args
     params["method"] = "POST"
     params["url"] = search_url
@@ -448,6 +472,8 @@ def _get_image_result(result) -> dict[str, t.Any] | None:
 
 
 def response(resp):
+    if is_startpage_blocked_response(resp):
+        raise SearxEngineAccessDeniedException(message="Startpage blocked this request")
     if 'id="anubis_challenge"' in resp.text:
         params = resp.search_params
         params["cookies"]["spchal-auth"] = _solve_anubis(resp)
@@ -457,6 +483,8 @@ def response(resp):
             headers=params["headers"],
             cookies=params["cookies"],
         )
+        if is_startpage_blocked_response(resp):
+            raise SearxEngineAccessDeniedException(message="Startpage blocked this request")
         if 'id="anubis_challenge"' in resp.text:
             raise SearxEngineCaptchaException()
 
