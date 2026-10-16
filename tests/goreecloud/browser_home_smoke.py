@@ -70,6 +70,28 @@ class SyntheticBrowserPartialSearch(SyntheticBrowserFailedSearch):
         return response
 
 
+class SyntheticBrowserResultsCollection(SyntheticBrowserSearch):
+    """Several deterministic synthetic results; never uses a provider."""
+    def search(self):
+        response = super().search()
+        rows = []
+        for i in range(1, 9):
+            item = LegacyResult(
+                url=f'https://example.org/goreecloud-test-{i}',
+                title=f'Offline fixture result {i} — readable search result headline',
+                content=(
+                    'Synthetic result description with enough words to verify '
+                    'the responsive column, line-height, and comfortable text '
+                    'measure at desktop and phone widths. No external request.'
+                ),
+            )
+            item.normalize_result_fields()
+            rows.append(item)
+        response.get_ordered_results = lambda: rows
+        response.paging = True
+        return response
+
+
 def main() -> None:
     # Record only request-boundary metadata from this synthetic browser fixture.
     # Never collect query text or request bodies in CI diagnostics.
@@ -259,14 +281,15 @@ def main() -> None:
             assert not driver.execute_script('return location.search'), 'search terms leaked into URL'
             summary = driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary')
             assert summary.is_displayed()
+            summary.find_element(By.CSS_SELECTOR, '.goreecloud-source-audit > summary').click()
             assert '0 selected source(s) represented' in summary.text, summary.text
             assert not driver.find_element(By.ID, 'search_logo').is_displayed(), 'Duplicate app logo in results header'
             assert driver.find_element(By.CSS_SELECTOR, '#main_results .search_box').rect['width'] >= 300
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').is_displayed()
             assert 'synthetic no-network test' not in driver.title, 'private query leaked into page title'
             driver.save_screenshot(str(artifacts / 'phone-synthetic-results.png'))
-            driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary details summary').click()
-            driver.find_element(By.CSS_SELECTOR, '.goreecloud-refine-source button').click()
+            driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-audit details summary').click()
+            driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary .goreecloud-refine-source button').click()
             # A just-replaced results document can briefly invalidate Selenium's
             # DevTools node ID before the settled page can be read.
             WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException, WebDriverException)).until(
@@ -319,6 +342,69 @@ def main() -> None:
             assert not driver.execute_script('return location.search'), 'Retry leaked search terms into URL'
             assert driver.find_element(By.CSS_SELECTOR, 'form#search input[name="engines"]').get_attribute('value') == 'startpage'
         print('PASS mobile explicit same-source retry, no fallback, and POST URL privacy')
+
+        # Layout contract with eight real template cards but NO provider
+        # traffic. Check measured column geometry, typography and mobile
+        # overflow; screenshots are disposable CI artifacts, not Glaze approval.
+        with patch('searx.search.SearchWithPlugins', side_effect=SyntheticBrowserResultsCollection) as rich:
+            driver.set_window_size(1440, 900)
+            driver.get(url)
+            driver.find_element(By.ID, 'q').send_keys('offline results layout fixture')
+            driver.find_element(By.ID, 'send_search').click()
+            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
+                lambda page: page.current_url.endswith('/search') and
+                len(page.find_elements(By.CSS_SELECTOR, '#urls article.result')) == 8
+            )
+            desktop_geometry = driver.execute_script("""
+              const main=document.querySelector('#urls').getBoundingClientRect();
+              const side=document.querySelector('#sidebar').getBoundingClientRect();
+              const card=document.querySelector('#urls article.result').getBoundingClientRect();
+              return { main:main.width, side:side.width, card:card.width,
+                separate:main.right + 10 <= side.left,
+                headline:parseFloat(getComputedStyle(document.querySelector('#urls article.result h3')).fontSize),
+                heading:!!document.querySelector('.goreecloud-results-heading'),
+                audit:!!document.querySelector('.goreecloud-source-audit') };
+            """)
+            assert desktop_geometry['separate'], f'Results/sidebar overlap: {desktop_geometry}'
+            assert desktop_geometry['main'] >= 590, f'Results too narrow: {desktop_geometry}'
+            assert 230 <= desktop_geometry['side'] <= 330, desktop_geometry
+            assert desktop_geometry['card'] >= 585, desktop_geometry
+            assert desktop_geometry['headline'] >= 18, desktop_geometry
+            assert desktop_geometry['heading'] and desktop_geometry['audit'], desktop_geometry
+            assert not driver.execute_script('return location.search'), 'Query leaked into browser URL'
+            driver.save_screenshot(str(artifacts / 'desktop-eight-result-layout.png'))
+
+            driver.set_window_size(390, 844)
+            WebDriverWait(driver, 5).until(
+                lambda page: page.execute_script('return innerWidth <= 400')
+            )
+            mobile_geometry = driver.execute_script("""
+              const main=document.querySelector('#urls').getBoundingClientRect();
+              const side=document.querySelector('#sidebar').getBoundingClientRect();
+              const card=document.querySelector('#urls article.result').getBoundingClientRect();
+              return { viewport:innerWidth, client:document.documentElement.clientWidth,
+                scroll:document.documentElement.scrollWidth, bodyScroll:document.body.scrollWidth,
+                main:main.width, side:side.width, card:card.width,
+                offending:[...document.querySelectorAll('body *')]
+                  .filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.right>document.documentElement.clientWidth+1&&getComputedStyle(e).position!=='fixed'})
+                  .slice(0,10).map(e=>({tag:e.tagName,id:e.id,cls:typeof e.className==='string'?e.className.slice(0,75):'',right:Math.round(e.getBoundingClientRect().right)})),
+                sidebarBelow:side.top >= main.top + main.height - 4,
+                choices:[...document.querySelectorAll('.goreecloud-source-switch-actions button')]
+                  .map(e=>({y:Math.round(e.getBoundingClientRect().top),
+                            h:e.getBoundingClientRect().height,
+                            w:e.getBoundingClientRect().width})) };
+            """)
+            print('MOBILE RESULTS WIDTH:', mobile_geometry, flush=True)
+            assert mobile_geometry['scroll'] <= mobile_geometry['client'] + 1, mobile_geometry
+            assert mobile_geometry['main'] >= 310, mobile_geometry
+            assert mobile_geometry['card'] >= 305, mobile_geometry
+            assert mobile_geometry['sidebarBelow'], mobile_geometry
+            assert len(mobile_geometry['choices']) == 3, mobile_geometry
+            assert len({item['y'] for item in mobile_geometry['choices']}) == 1, mobile_geometry
+            assert all(item['h'] >= 44 and item['w'] >= 85 for item in mobile_geometry['choices']), mobile_geometry
+            driver.save_screenshot(str(artifacts / 'phone-eight-result-layout.png'))
+            rich.assert_called_once()
+        print('PASS desktop 2-column results and mobile stacked cards, 8 synthetic results, no provider traffic')
 
         # A partial provider failure offers a deliberate POST retry on a
         # populated results page, without switching to an unselected source.

@@ -1,0 +1,415 @@
+/* GoreeCloud Search results composition — development-only Glaze consumer.
+ * Scopes to the private Search results endpoint; no changes to providers,
+ * request transport, search ordering, result security filters, or tracking.
+ * Imported last to override narrow inherited SearXNG result widths.
+ */
+html[data-glaze-consumer="goreecloud-search"] body.results_endpoint #main_results {
+  max-width: 1380px;
+  padding-inline: clamp(16px, 3.3vw, 48px);
+}
+html[data-glaze-consumer] body.results_endpoint #main_results > #results {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 285px);
+  column-gap: clamp(18px, 2.6vw, 36px);
+  row-gap: 18px;
+  align-items: start;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 20px 0 0;
+  padding: 0;
+}
+html[data-glaze-consumer] body.results_endpoint #results > #urls {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  float: none;
+}
+html[data-glaze-consumer] body.results_endpoint #results > #sidebar {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  float: none;
+  position: static;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+html[data-glaze-consumer] body.results_endpoint #results > #pagination {
+  grid-column: 1;
+  grid-row: 2;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 14px 0 28px;
+  padding: 0;
+  box-sizing: border-box;
+}
+html[data-glaze-consumer] body.results_endpoint #results > #backToTop {
+  display: none;
+}
+/* Default links: readable hierarchy without oversized boxed mini-cards. */
+html[data-glaze-consumer] body.results_endpoint #urls .result {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  float: none;
+  margin: 0;
+  padding: clamp(17px, 2vw, 23px) clamp(18px, 2vw, 26px);
+  background: var(--gc-surface);
+  color: var(--gc-ink);
+  border: 1px solid var(--gc-outline);
+  border-radius: 17px;
+  box-shadow: 0 3px 13px rgba(24, 55, 98, .035);
+  transition: border-color .18s ease, box-shadow .18s ease;
+  overflow-wrap: anywhere;
+}
+html[data-glaze-consumer] body.results_endpoint #urls .result:hover {
+  border-color: color-mix(in srgb, var(--gc-accent-strong) 37%, var(--gc-outline));
+  box-shadow: 0 7px 20px rgba(24, 55, 98, .085);
+}
+html[data-glaze-consumer] body.results_endpoint #urls .result .result_inner {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+html[data-glaze-consumer] body.results_endpoint #urls .result .url_header {
+  display: block;
+  max-width: 100%;
+  margin-bottom: 9px;
+  color: var(--gc-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+html[data-glaze-consumer] body.results_endpoint #urls .result .url_wrapper {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+html[data-glaze-consumer] body.results_endpoint #urls .result h3 {
+  margin: 0 0 9px;
+  color: var(--gc-accent-strong);
+  font-size: clamp(18px, 1.65vw, 21px);
+  font-weight: 650;
+  letter-spacing: -.018em;
+  line-height: 1.35;
+}
+html[data-glaze-consumer] body.results_endpoint #urls .result h3 a {
+  color: var(--gc-accent-strong);
+  text-decoration: none;
+}
+html[data-glaze-consumer] body.results_endpoint #urls .result h3 a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+html[data-glaze-consumer] body.results_endpoint #urls .result .content {
+  margin: 0;
+  color: var(--gc-ink);
+  opacity: .9;
+  font-size: 15px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+html[data-glaze-consumer] body.results_endpoint #urls .result .published_date {
+  color: var(--gc-muted);
+  font-size: 13px;
+  margin-block: 4px 8px;
+}
+html[data-glaze-consumer] body.results_endpoint #urls .result .engines {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--gc-outline);
+  color: var(--gc-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+html[data-glaze-consumer] body.results_endpoint #urls .result .engines > span {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gc-accent-strong) 7%, var(--gc-surface));
+  color: var(--gc-muted);
+}
+html[data-glaze-consumer] body.results_endpoint #results #sidebar details {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border-radius: 14px;
+  box-shadow: none;
+  background: var(--gc-surface);
+}
+html[data-glaze-consumer] body.results_endpoint #results #sidebar details summary {
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 650;
+  color: var(--gc-ink);
+}
+html[data-glaze-consumer] body.results_endpoint #results #sidebar :is(a, p, li) {
+  overflow-wrap: anywhere;
+}
+html[data-glaze-consumer] body.results_endpoint #results #sidebar #engines_msg {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-source-summary {
+  margin-block: 12px;
+  padding: 13px 17px;
+  border-radius: 14px;
+  box-shadow: none;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-source-summary p {
+  font-size: 13px;
+  line-height: 1.55;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-source-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-source-switch p {
+  margin: 0;
+  font-size: 13px;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-source-switch-actions {
+  gap: 7px;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-source-switch button {
+  min-height: 40px;
+  padding: 8px 13px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+html[data-glaze-consumer] body.results_endpoint :is(.goreecloud-partial-results, .goreecloud-partial-retry) {
+  max-width: 100%;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-partial-results {
+  margin-block: 9px;
+  padding: 11px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-partial-retry {
+  display: inline-flex;
+  margin: 0 0 2px;
+}
+html[data-glaze-consumer] body.results_endpoint #goreecloud-partial-retry-hint {
+  margin: 0 0 13px;
+  color: var(--gc-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+html[data-glaze-consumer] body.results_endpoint #pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+html[data-glaze-consumer] body.results_endpoint #pagination :is(button, input[type="submit"], input[type="button"]) {
+  min-height: 40px;
+  border-radius: 10px;
+}
+@media (max-width: 900px) {
+  html[data-glaze-consumer] body.results_endpoint #main_results > #results {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  html[data-glaze-consumer] body.results_endpoint #results > #urls { order: 1; }
+  html[data-glaze-consumer] body.results_endpoint #results > #pagination { order: 2; margin: 7px 0; }
+  html[data-glaze-consumer] body.results_endpoint #results > #sidebar { order: 3; }
+  html[data-glaze-consumer] body.results_endpoint #results > :is(#urls,#sidebar,#pagination) {
+    width: 100%; max-width: none; min-width: 0;
+  }
+}
+@media (max-width: 600px) {
+  html[data-glaze-consumer] body.results_endpoint #main_results {
+    padding-inline: 12px;
+  }
+  html[data-glaze-consumer] body.results_endpoint #main_results > #results {
+    margin-top: 13px;
+  }
+  html[data-glaze-consumer] body.results_endpoint #urls .result {
+    padding: 16px;
+    border-radius: 13px;
+  }
+  html[data-glaze-consumer] body.results_endpoint #urls .result h3 { font-size: 18px; }
+  html[data-glaze-consumer] body.results_endpoint #urls .result .content { font-size: 14px; }
+  html[data-glaze-consumer] body.results_endpoint #urls .result .engines { justify-content: flex-start; }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-source-summary { padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-glaze-consumer] body.results_endpoint #urls .result { transition: none; }
+}
+@media (forced-colors: active) {
+  html[data-glaze-consumer] body.results_endpoint #urls .result,
+  html[data-glaze-consumer] body.results_endpoint #results #sidebar details {
+    background: Canvas; color: CanvasText; box-shadow: none;
+    border: 1px solid CanvasText;
+  }
+  html[data-glaze-consumer] body.results_endpoint #urls .result :is(h3,h3 a) {
+    color: LinkText;
+  }
+}
+
+/* A clear content heading rather than more controls above the results. */
+html[data-glaze-consumer] body.results_endpoint .goreecloud-results-heading {
+  display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline;
+  margin: 0 0 4px; padding: 0 2px;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-results-heading h2 {
+  color: var(--gc-ink); font-size: 22px; font-weight: 720;
+  letter-spacing: -.035em; line-height: 1.35; margin: 0;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-results-heading span {
+  color: var(--gc-muted); font-size: 13px;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-source-audit {
+  margin: 0; border: 0; background: transparent; box-shadow: none;
+  padding: 0; border-radius: 0;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-source-audit > summary {
+  color: var(--gc-accent-strong); cursor: pointer; font-size: 13px;
+  font-weight: 600; line-height: 1.6; padding-block: 3px;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-source-audit[open] {
+  padding-bottom: 8px;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-source-audit > p {
+  margin-block: 8px;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-source-intro {
+  margin: 0 0 2px; display: flex; flex-wrap: wrap; gap: 3px;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-partial-recovery {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 14px; align-items: center;
+  margin: 10px 0 16px; padding: 10px 14px;
+  border: 1px solid var(--gc-outline);
+  border-inline-start: 4px solid var(--gc-accent-strong);
+  border-radius: 12px; background: var(--gc-surface);
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-partial-recovery .goreecloud-partial-results {
+  border: 0; border-radius: 0; background: transparent;
+  padding: 0; margin: 0; line-height: 1.45;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-partial-recovery .goreecloud-partial-retry {
+  grid-column: 2; grid-row: 1; margin: 0;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-partial-recovery .goreecloud-partial-retry button {
+  min-height: 40px; font-size: 13px; padding: 7px 12px;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-partial-recovery #goreecloud-partial-retry-hint {
+  grid-column: 1 / -1; grid-row: 2; margin: 0;
+}
+@media (max-width: 600px) {
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-partial-recovery {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-partial-recovery .goreecloud-partial-retry {
+    grid-column: 1; grid-row: 2; justify-self: start;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-partial-recovery #goreecloud-partial-retry-hint {
+    grid-column: 1; grid-row: 3;
+  }
+}
+@media (forced-colors: active) {
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-partial-recovery {
+    background: Canvas; color: CanvasText; border-color: CanvasText;
+  }
+}
+
+/* On phones, keep provider choice a single compact, accessible row so the
+ * first web match is not pushed out of sight. Disclosures remain accessible. */
+@media (max-width: 600px) {
+  html[data-glaze-consumer] body.results_endpoint #main_results .goreecloud-source-disclosure {
+    box-sizing: border-box; margin: 10px 0 12px; padding: 9px 11px;
+    max-width: 100%; line-height: 1.4; font-size: 12px;
+  }
+  html[data-glaze-consumer] body.results_endpoint #main_results .search_filters {
+    margin-block: 7px; gap: 7px 12px;
+    font-size: 12px; line-height: 1.4;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-source-summary {
+    margin: 8px 0 11px; padding: 10px 12px;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-source-summary .goreecloud-source-intro {
+    font-size: 12px; line-height: 1.4;
+    display: block;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-source-audit > summary {
+    font-size: 12px; min-height: 32px; display: list-item;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-source-switch {
+    display: block; margin-top: 4px; padding-top: 8px;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-source-switch p {
+    margin-bottom: 6px; font-size: 12px;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-source-switch-actions {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%; gap: 6px;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-source-switch-actions form {
+    display: block; width: 100%; min-width: 0; margin: 0;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-source-switch-actions button {
+    box-sizing: border-box; width: 100%; min-width: 0;
+    min-height: 44px; padding: 6px 4px;
+    font-size: 12px; line-height: 1.25; white-space: normal;
+    overflow-wrap: normal; text-align: center;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-results-heading h2 {
+    font-size: 21px;
+  }
+}
+
+@media (max-width: 600px) {
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-site-header {
+    box-sizing: border-box; max-width: 100%; min-width: 0;
+    padding-inline: 12px; gap: 6px;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-site-nav {
+    gap: 5px; min-width: 0; flex: 0 0 auto;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-open-source-text {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-site-nav a[href*="github.com/GoreeCloud/search"] {
+    display: inline-grid; place-items: center; box-sizing: border-box;
+    min-height: 44px; min-width: 44px; font-size: 20px;
+  }
+  html[data-glaze-consumer] body.results_endpoint #results > #pagination {
+    box-sizing: border-box;
+    width: calc(100% - 8px); max-width: calc(100% - 8px); min-width: 0;
+    margin-inline: 0; padding-inline: 0;
+  }
+}
