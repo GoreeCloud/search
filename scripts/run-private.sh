@@ -19,6 +19,8 @@ if [[ "${SEARXNG_BIND_ADDRESS:-127.0.0.1}" != "127.0.0.1" ||
   exit 64
 fi
 export SEARXNG_BIND_ADDRESS="127.0.0.1"
+export SEARXNG_DEBUG="false"
+export GRANIAN_RELOAD="false"
 export SEARXNG_PUBLIC_INSTANCE="false"
 export SEARXNG_METHOD="POST"
 export SEARXNG_IMAGE_PROXY="true"
