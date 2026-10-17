@@ -74,6 +74,11 @@ def new_client(
     impersonate: str = DEFAULT_IMPERSONATE,
     curl_options: dict[int, t.Any] | None = None,
 ) -> AsyncClient:
+    # Never create a direct outbound client in GoreeCloud private mode.
+    from searx import settings as current_settings  # pylint: disable=import-outside-toplevel
+    if current_settings.get("goreecloud", {}).get("require_anonymous_egress", False):
+        from searx.goreecloud_anonymity import require_tor_route  # pylint: disable=import-outside-toplevel
+        require_tor_route(proxies, using_tor_proxy=True)
     extra_curl = dict(curl_options or {})
     if not enable_http:
         extra_curl.setdefault(CurlOpt.PROTOCOLS_STR, "https")
