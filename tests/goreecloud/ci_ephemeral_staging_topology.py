@@ -50,6 +50,24 @@ while True:
  finally:
   c.close()
 """
+OUTAGE_CLIENT = """
+import os,socket
+provider=os.environ['PROVIDER_IP']
+try:
+ with socket.create_connection((provider,18443),timeout=1):
+  raise AssertionError('unexpected direct provider connection')
+except OSError as err:
+ assert err.errno in (101,113,100,1,13),err.errno
+try:
+ with socket.create_connection(('fixture-gateway',19050),timeout=2) as sock:
+  sock.sendall(b'gc-synthetic-topology-v1')
+  reply=sock.recv(512)
+  assert b'accepted' not in reply, 'gateway incorrectly delivered after losing egress'
+except OSError:
+ pass
+print('GATEWAY_EGRESS_LOSS_FAIL_CLOSED_PASS')
+"""
+
 CLIENT = """
 import json,os,socket,sys,time
 provider=os.environ['PROVIDER_IP'];visitor=socket.gethostbyname(socket.gethostname())
@@ -138,6 +156,16 @@ def run() -> None:
                          "-e", "GATEWAY_EGRESS_IP=" + gateway_egress_ip,
                          IMAGE, "python", "-u", "-c", CLIENT)
         print(outcome, flush=True)
+        # Simulate a disconnected gateway: the internal-only visitor must
+        # still be unable to reach the provider directly or obtain a reply.
+        docker("network", "disconnect", egress_network, gateway)
+        failed_open_check = docker(
+            "run", "--rm", "--name", visitor + "-outage",
+            "--network", private_network, *common,
+            "-e", "PROVIDER_IP=" + provider_ip,
+            IMAGE, "python", "-u", "-c", OUTAGE_CLIENT,
+        )
+        print(failed_open_check, flush=True)
         print("EPHEMERAL_NETWORK_TOPOLOGY_PASS", flush=True)
         print("NOT_QUALIFIED: public provider IP, production firewall, hosted Search, DNS rebinding", flush=True)
     finally:

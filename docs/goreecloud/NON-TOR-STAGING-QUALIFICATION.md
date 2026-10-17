@@ -166,7 +166,10 @@ connection. A minimal deliberately synthetic gateway relays exactly one fixed
 marker to a minimal synthetic provider fixture. The provider replies with
 the actual connection peer's private bridge address; the test confirms this
 is the gateway's egress-bridge address rather than the visitor's internal
-address. All fixture processes and Docker bridges are removed automatically
+address. It then disconnects the gateway's egress bridge and verifies the
+visitor cannot fail open by connecting directly to the provider or obtain
+a successful provider reply through the disconnected gateway. All fixture
+processes and Docker bridges are removed automatically
 and verified absent at the end of the CI job.
 
 **The synthetic CI gateway is NOT the product's DNS-pinned SOCKS5H gateway.**
