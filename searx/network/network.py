@@ -181,7 +181,7 @@ class Network:
         if not proxies or not all(url.startswith('socks5h://') for _, url in proxies):
             return False
         try:
-            response = await client.get("https://check.torproject.org/api/ip", timeout=8)
+            response = await client.get("https://check.torproject.org/api/ip", timeout=8, allow_redirects=False)
             if response.status_code != 200:
                 return False
             payload = response.json()
@@ -233,7 +233,7 @@ class Network:
         if self.privacy_proxy_required:
             if not self.valid_private_proxy(proxies):
                 raise ProxyError('Private Search egress blocked: approved local SOCKS5H proxy required')
-            if verify is False or self.enable_http or curl_options:
+            if verify is not True or self.enable_http or curl_options:
                 raise ProxyError('Private Search egress blocked: insecure transport override')
         curl_key = tuple(sorted((int(k), v) for k, v in (curl_options or {}).items()))
         key = (verify, max_redirects, local_address, proxies, impersonate, curl_key, enable_http3)
