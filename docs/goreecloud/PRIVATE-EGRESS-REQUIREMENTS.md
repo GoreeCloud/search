@@ -77,6 +77,29 @@ privacy modes require **no Tor**, no Tor exit check and no Tor installation.
 Tor-related historical regression cases are retained as opt-in compatibility
 tests, not a product requirement.
 
+## Private provider redirect and destination safeguards
+
+All GoreeCloud-guarded outbound provider requests now reuse the same strict
+HTTPS URL/authority validator used for image-proxy targets. The policy rejects
+IP literals (including private, loopback and metadata addresses), local and
+special-use DNS suffixes, nonstandard ports, embedded credentials, backslashes,
+control characters and malformed hosts **before opening an HTTP client**.
+
+Every private upstream request forces `allow_redirects=False` regardless of
+what an engine adapter requests, including streaming requests. This prevents
+provider-controlled 301/302/307/308 responses from triggering a second
+unguarded HTTP request to another hostname or an internal endpoint. Provider
+anti-bot challenge redirects may therefore appear as unavailable sources rather
+than silently following potentially unsafe destinations or substituting other
+providers. Generic, non-GoreeCloud SearXNG networks retain their original
+behavior.
+
+Offline synthetic regression coverage confirms the rejected target classes,
+redirect refusal, gateway/server-masked parity and unguarded upstream
+compatibility. It does **not** establish DNS answer integrity, hosted visitor
+IP masking or isolation of outbound clients outside SearXNG's guarded network.
+Those remain strict staging/firewall release gates.
+
 ## Untrusted media URLs and SSRF boundaries
 
 The image proxy fetches third-party result thumbnails **from the Search server**.

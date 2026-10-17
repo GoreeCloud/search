@@ -23,6 +23,7 @@ from curl_cffi.requests.exceptions import (
 )
 
 from searx import logger, sxng_debug
+from searx.goreecloud_policy import safe_external_media_url
 from searx.extended_types import SXNG_Response
 from .client import DEFAULT_IMPERSONATE, AsyncClient, new_client, get_loop
 from .raise_for_httperror import raise_for_httperror
@@ -331,8 +332,12 @@ class Network:
         if self.privacy_proxy_required:
             if any(key in kwargs for key in ('proxy', 'proxies', 'interface', 'curl_options')):
                 raise ProxyError('Private Search egress blocked: per-request proxy override')
-            if urlsplit(url).scheme != 'https':
-                raise ProxyError('Private Search egress blocked: HTTPS required')
+            # Reuse the strict HTTPS hostname/authority policy used for image
+            # fetches. DNS rebinding still requires a staging egress firewall.
+            if not safe_external_media_url(url):
+                raise ProxyError('Private Search egress blocked: unsafe HTTPS destination')
+            # Private upstream redirects are never followed.
+            kwargs['allow_redirects'] = False
             # Do not forward upstream cookies or client-identifying headers.
             # Provider challenges might need cookies; privacy takes precedence.
             kwargs.pop('cookies', None)

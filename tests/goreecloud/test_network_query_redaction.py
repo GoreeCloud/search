@@ -26,7 +26,7 @@ class SearchNetworkLoggingRedactionTests(unittest.TestCase):
 
     def test_failure_and_debug_logs_never_include_query_url(self):
         needle = "sensitive-synthetic-query-needle"
-        url = "https://search.example/search?q=" + needle
+        url = "https://search.example.org/search?q=" + needle
         response = SimpleNamespace(
             request=SimpleNamespace(method="GET", url=url),
             url=url, status_code=429, reason="Too Many Requests",

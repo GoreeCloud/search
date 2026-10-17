@@ -110,7 +110,7 @@ class NonTorEgressTests(unittest.TestCase):
         with patch.dict(os.environ, {'GOREECLOUD_SERVER_MASKED_EGRESS': '1'}):
             with patch('searx.network.network.new_client', return_value=client) as make:
                 result = asyncio.run(self.server_network.request(
-                    'GET', 'https://search.example/?q=public-synthetic',
+                    'GET', 'https://search.example.org/?q=public-synthetic',
                     headers=headers, cookies={'session': 'tracking'},
                     raise_for_httperror=False))
         self.assertEqual(200, result.status_code)
@@ -124,11 +124,11 @@ class NonTorEgressTests(unittest.TestCase):
         with patch.dict(os.environ, {'GOREECLOUD_SERVER_MASKED_EGRESS': '1'}):
             with patch('searx.network.network.new_client') as make:
                 for url, kwargs in (
-                    ('http://search.example/', {}),
-                    ('https://search.example/', {'proxy': 'http://bad.example'}),
-                    ('https://search.example/', {'verify': False}),
-                    ('https://search.example/', {'enable_http3': True}),
-                    ('https://search.example/', {'curl_options': {1: 'unsafe'}}),
+                    ('http://search.example.org/', {}),
+                    ('https://search.example.org/', {'proxy': 'http://bad.example'}),
+                    ('https://search.example.org/', {'verify': False}),
+                    ('https://search.example.org/', {'enable_http3': True}),
+                    ('https://search.example.org/', {'curl_options': {1: 'unsafe'}}),
                 ):
                     with self.subTest(url=url, kwargs=kwargs):
                         with self.assertRaises(ProxyError):

@@ -78,7 +78,7 @@ class AnonymousEgressTests(unittest.TestCase):
                 n = Network(proxies=proxy, privacy_proxy_required=True)
                 with patch('searx.network.network.new_client') as factory:
                     with self.assertRaises(ProxyError):
-                        asyncio.run(n.request('GET', 'https://search.example/?q=private'))
+                        asyncio.run(n.request('GET', 'https://search.example.org/?q=private'))
                     factory.assert_not_called()
 
     def test_approved_gateway_is_passed_to_client(self):
@@ -105,11 +105,11 @@ class AnonymousEgressTests(unittest.TestCase):
             privacy_proxy_required=True,
         )
         cases = [
-            ('http://search.example/', {}),
-            ('https://search.example/', {'proxy': 'http://direct.example:80'}),
-            ('https://search.example/', {'proxies': {'https': 'http://direct.example:80'}}),
-            ('https://search.example/', {'interface': '0.0.0.0'}),
-            ('https://search.example/', {'curl_options': {1: 'unsafe'}}),
+            ('http://search.example.org/', {}),
+            ('https://search.example.org/', {'proxy': 'http://direct.example:80'}),
+            ('https://search.example.org/', {'proxies': {'https': 'http://direct.example:80'}}),
+            ('https://search.example.org/', {'interface': '0.0.0.0'}),
+            ('https://search.example.org/', {'curl_options': {1: 'unsafe'}}),
         ]
         with patch('searx.network.network.new_client') as factory:
             for url, kwargs in cases:
@@ -144,7 +144,7 @@ class AnonymousEgressTests(unittest.TestCase):
         client.request = AsyncMock(return_value=SimpleNamespace(status_code=200))
         with patch('searx.network.network.new_client', return_value=client):
             asyncio.run(n.request(
-                'GET', 'https://search.example/?q=public',
+                'GET', 'https://search.example.org/?q=public',
                 headers={
                     'Cookie': 'persistent=user123',
                     'X-Forwarded-For': '192.0.2.44',
@@ -160,7 +160,7 @@ class AnonymousEgressTests(unittest.TestCase):
         self.assertEqual(
             {'Accept': 'application/json'}, forwarded['headers']
         )
-        self.assertEqual('https://search.example/?q=public',
+        self.assertEqual('https://search.example.org/?q=public',
                          client.request.call_args.args[1])
 
     def test_tor_attestation_rejects_untrusted_or_malformed_verdicts(self):
@@ -205,7 +205,7 @@ class AnonymousEgressTests(unittest.TestCase):
         client.request = AsyncMock()
         with patch('searx.network.network.new_client', return_value=client):
             with self.assertRaises(ProxyError):
-                asyncio.run(network.request('GET', 'https://search.example/?q=private'))
+                asyncio.run(network.request('GET', 'https://search.example.org/?q=private'))
         client.request.assert_not_awaited()
         client.aclose.assert_awaited_once()
         self.assertFalse(network._clients)
@@ -224,7 +224,7 @@ class AnonymousEgressTests(unittest.TestCase):
         with patch('searx.network.network.new_client', return_value=client) as factory:
             for _ in range(2):
                 asyncio.run(network.request(
-                    'GET', 'https://search.example/?q=public',
+                    'GET', 'https://search.example.org/?q=public',
                     raise_for_httperror=False))
         factory.assert_called_once()
         self.assertEqual(2, client.get.await_count)
@@ -247,11 +247,11 @@ class AnonymousEgressTests(unittest.TestCase):
         client.request = AsyncMock(return_value=SimpleNamespace(status_code=200))
         with patch('searx.network.network.new_client', return_value=client) as factory:
             asyncio.run(network.request(
-                'GET', 'https://search.example/?q=public',
+                'GET', 'https://search.example.org/?q=public',
                 raise_for_httperror=False))
             with self.assertRaises(ProxyError):
                 asyncio.run(network.request(
-                    'GET', 'https://search.example/?q=public',
+                    'GET', 'https://search.example.org/?q=public',
                     raise_for_httperror=False))
         factory.assert_called_once()
         self.assertEqual(2, client.get.await_count)
