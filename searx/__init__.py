@@ -30,6 +30,16 @@ logger = logging.getLogger('searx')
 _unset = object()
 
 
+def enforce_branded_private_transport(cfg: dict[str, t.Any]) -> None:
+    """Never serve a GoreeCloud-branded search with query-bearing GET transport."""
+    general = cfg.get('general', {})
+    if not isinstance(general, dict) or general.get('instance_name') != 'GoreeCloud Search':
+        return
+    goreecloud = cfg.get('goreecloud', {})
+    if not isinstance(goreecloud, dict) or goreecloud.get('private_search') is not True:
+        raise ValueError('GoreeCloud Search requires private POST-only browser transport')
+
+
 def init_settings():
     """Initialize global ``settings`` and ``sxng_debug`` variables and
     ``logger`` from ``SEARXNG_SETTINGS_PATH``.
@@ -44,6 +54,7 @@ def init_settings():
     cfg, msg = settings_loader.load_settings(load_user_settings=True)
     cfg = cfg or {}
     apply_schema(cfg, SCHEMA, [])
+    enforce_branded_private_transport(cfg)
 
     settings.clear()
     settings.update(cfg)
