@@ -3,8 +3,16 @@
 No test requires Tor or sends external provider requests.
 """
 import asyncio
+import os
+from pathlib import Path
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
+
+# unittest discovers this file first. Establish the private profile before
+# the first searx import so other app tests inherit the correct settings.
+ROOT = Path(__file__).resolve().parents[2]
+os.environ.setdefault('SEARXNG_SETTINGS_PATH', str(ROOT / 'configs/goreecloud/settings.yml'))
+os.environ.setdefault('SEARXNG_SECRET', 'goreecloud-private-egress-tests-only-000000000')
 
 from curl_cffi.requests.exceptions import ProxyError
 
