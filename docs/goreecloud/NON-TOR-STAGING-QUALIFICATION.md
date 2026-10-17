@@ -96,6 +96,33 @@ A separate scoped firewall must restrict all traffic — including IPv6,
 localhost, metadata, internal routing and bypass attempts — from the
 Search workload; a container or a loopback gateway alone is insufficient.
 
+### Additional gateway and isolation preflight controls
+
+The DNS-pinned staging gateway also denies selected IPv6 transition/translation
+networks (IPv4-mapped, NAT64 well-known/local-use, 6to4, and Teredo). Some
+translation/tunnel addresses may appear globally scoped while encapsulating
+an otherwise private IPv4 destination. Gateways are limited to 24 active
+connections; when all slots are occupied, new connections are closed
+immediately rather than queued indefinitely. Synthetic tests verify both
+over-capacity rejection and a real bidirectional SOCKS handshake over a
+**local** fixture socket without public network traffic.
+
+`utils/goreecloud_staging_isolation_check.py` is a **read-only preflight**
+for a future staging container named `goreecloud-search-private-staging`
+and custom bridge named `goreecloud-search-staging-egress`. It checks
+nonroot identity, no published ports, dropped capabilities, read-only root,
+new-privilege denial, resource limits, no host mounts, explicit custom
+network separation and an ephemeral teardown. Its Docker inspection stays
+in process memory and does not print image environments or credentials.
+
+An acceptable container configuration is **never** proof of actual egress
+firewall enforcement. Even with zero configuration violations, the check
+returns nonzero `NOT_QUALIFIED` until separate, controlled packet-level
+firewall/DNS/metadata and visitor-IP tests are completed. The inspector
+does not change the host, Docker bridge, nftables, VPS or running services.
+It can be run later in isolated staging with:
+`python -m utils.goreecloud_staging_isolation_check`.
+
 ### Required staging verification, prior to operation
 
 1. Provision a new isolated *remote* namespace and service account, no

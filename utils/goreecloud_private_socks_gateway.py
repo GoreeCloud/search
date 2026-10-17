@@ -20,6 +20,18 @@ CONNECT_TIMEOUT = 6
 SESSION_TIMEOUT = 90
 MAX_CLIENTS = 24
 PUBLIC_HTTPS_PORT = 443
+# IPv4-over-IPv6 translation/tunnel ranges may indirectly reach IPv4
+# destinations that the initial IPv6 address classification would allow.
+# Exclude them rather than relying on operator-specific NAT64 rules.
+IPV6_TRANSLATION_AND_TUNNELS = tuple(
+    ipaddress.ip_network(cidr) for cidr in (
+        '64:ff9b::/96',       # NAT64 well-known prefix (RFC 6052)
+        '64:ff9b:1::/48',     # NAT64 local-use translation prefix
+        '::ffff:0:0/96',      # IPv4-mapped
+        '2002::/16',         # 6to4
+        '2001::/32',         # Teredo
+    )
+)
 
 
 def external_hostname(host: str) -> bool:
@@ -58,6 +70,10 @@ async def pinned_public_address(host: str, port: int, resolve: Callable | None =
             raise ValueError("DNS family mismatch")
         if not address.is_global or address.is_multicast:
             raise ValueError("nonpublic DNS target")
+        if isinstance(address, ipaddress.IPv6Address) and any(
+            address in network for network in IPV6_TRANSLATION_AND_TUNNELS
+        ):
+            raise ValueError("IPv6 translation or tunnel destination")
         targets.append((family, str(address)))
     return targets[0]
 
@@ -150,14 +166,30 @@ async def handle_connection(reader: asyncio.StreamReader, writer: asyncio.Stream
             pass
 
 
+async def limited_connection(
+    limit: asyncio.Semaphore,
+    reader: asyncio.StreamReader,
+    writer: asyncio.StreamWriter,
+):
+    """Refuse excess connections without building an unbounded wait queue."""
+    if limit.locked():
+        writer.close()
+        try:
+            await writer.wait_closed()
+        except OSError:
+            pass
+        return
+    async with limit:
+        await handle_connection(reader, writer)
+
+
 async def serve(port: int):
     if not 1024 <= port <= 65535:
         raise ValueError("staging port must be unprivileged")
     limit = asyncio.Semaphore(MAX_CLIENTS)
 
     async def limited_client(reader, writer):
-        async with limit:
-            await handle_connection(reader, writer)
+        await limited_connection(limit, reader, writer)
 
     server = await asyncio.start_server(limited_client, host='127.0.0.1', port=port, backlog=32)
     async with server:

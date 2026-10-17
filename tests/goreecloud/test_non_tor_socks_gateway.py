@@ -86,6 +86,24 @@ class GatewayDnsSafetyTests(unittest.TestCase):
                     'search.example.org', 443, resolve=resolve,
                 ))
 
+    def test_ipv6_translation_and_tunnel_destinations_are_rejected(self):
+        # These globally scoped IPv6 addresses may translate/encapsulate
+        # disallowed IPv4 destinations, bypassing a simplistic is_global check.
+        blocked = (
+            '64:ff9b::a00:1',          # NAT64 -> 10.0.0.1
+            '64:ff9b:1::a00:1',        # Local-use NAT64 translation
+            '2002:0a00:0001::1',       # 6to4 -> 10.0.0.1
+            '2001:0000:0a00:0001::1',  # Teredo transition network
+            '::ffff:8.8.8.8',         # IPv4 mapped, disallowed by policy
+        )
+        for ip in blocked:
+            async def resolve(host, port, **kwargs):
+                return records('93.184.216.34', ip)
+            with self.subTest(address=ip), self.assertRaises(ValueError):
+                asyncio.run(gateway.pinned_public_address(
+                    'search.example.org', 443, resolve=resolve,
+                ))
+
     def test_refuse_non_https_ports_before_dns_lookup(self):
         resolver = AsyncMock()
         for port in (0, 80, 444, 8080, 65535):
@@ -177,6 +195,83 @@ class GatewayDnsSafetyTests(unittest.TestCase):
             peer_writer.close.assert_called_once()
             writer.close.assert_called_once()
         asyncio.run(run())
+
+    def test_gateway_rejects_excess_clients_without_queuing(self):
+        async def run():
+            limit = asyncio.Semaphore(1)
+            reader = asyncio.StreamReader()
+            writer = Mock()
+            writer.wait_closed = AsyncMock()
+            with patch.object(gateway, 'handle_connection', new_callable=AsyncMock) as handler:
+                async with limit:
+                    await gateway.limited_connection(limit, reader, writer)
+                handler.assert_not_awaited()
+            writer.close.assert_called_once()
+            writer.wait_closed.assert_awaited_once()
+        asyncio.run(run())
+
+    def test_available_gateway_slot_dispatches_one_client(self):
+        async def run():
+            limit = asyncio.Semaphore(1)
+            reader = asyncio.StreamReader()
+            writer = Mock()
+            with patch.object(gateway, 'handle_connection', new_callable=AsyncMock) as handler:
+                await gateway.limited_connection(limit, reader, writer)
+                handler.assert_awaited_once_with(reader, writer)
+            self.assertEqual(1, limit._value)
+        asyncio.run(run())
+
+    def test_real_loopback_socks_tunnel_exchanges_synthetic_bytes(self):
+        async def run():
+            async def synthetic_provider(reader, writer):
+                try:
+                    received = await reader.readexactly(8)
+                    self.assertEqual(b'onlytest', received)
+                    writer.write(b'onlyreply')
+                    await writer.drain()
+                finally:
+                    writer.close()
+                    await writer.wait_closed()
+
+            backend = await asyncio.start_server(synthetic_provider, '127.0.0.1', 0)
+            backend_port = backend.sockets[0].getsockname()[1]
+
+            async def open_fake_pinned(family, address, port):
+                self.assertEqual((socket.AF_INET, '93.184.216.34', 443), (family, address, port))
+                return await asyncio.open_connection('127.0.0.1', backend_port)
+
+            try:
+                with patch.object(gateway, 'pinned_public_address', new_callable=AsyncMock,
+                                  return_value=(socket.AF_INET, '93.184.216.34')) as resolver:
+                    with patch.object(gateway, 'open_pinned_target', side_effect=open_fake_pinned):
+                        relay = await asyncio.start_server(gateway.handle_connection, '127.0.0.1', 0)
+                        try:
+                            relay_port = relay.sockets[0].getsockname()[1]
+                            reader, writer = await asyncio.open_connection('127.0.0.1', relay_port)
+                            try:
+                                writer.write(b'\x05\x01\x00')
+                                await writer.drain()
+                                self.assertEqual(b'\x05\x00', await reader.readexactly(2))
+                                host = b'search.example.org'
+                                writer.write(b'\x05\x01\x00\x03'
+                                             + bytes([len(host)]) + host + struct.pack('!H', 443))
+                                await writer.drain()
+                                self.assertEqual(b'\x05\x00\x00\x01\x00\x00\x00\x00\x00\x00',
+                                                 await reader.readexactly(10))
+                                writer.write(b'onlytest')
+                                await writer.drain()
+                                self.assertEqual(b'onlyreply', await reader.readexactly(9))
+                                resolver.assert_awaited_once_with('search.example.org', 443)
+                            finally:
+                                writer.close()
+                                await writer.wait_closed()
+                        finally:
+                            relay.close()
+                            await relay.wait_closed()
+            finally:
+                backend.close()
+                await backend.wait_closed()
+        asyncio.run(asyncio.wait_for(run(), 4))
 
     def test_ip_literal_socks_request_never_resolves_or_dials(self):
         async def run():
