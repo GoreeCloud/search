@@ -23,6 +23,15 @@ class AnonymousSearchEgressTests(unittest.TestCase):
             require_tor_route(outgoing['proxies'], using_tor_proxy=outgoing['using_tor_proxy'])
         )
 
+    def test_privacy_page_discloses_relay_failure_and_provider_visibility(self):
+        with smoke.app.test_client() as client:
+            response = client.get('/static/themes/simple/goreecloud/privacy.html')
+            self.assertEqual(200, response.status_code)
+            self.assertIn(b'verified Tor SOCKS5h', response.data)
+            self.assertIn(b'provider still receives the query', response.data)
+            self.assertIn(b'never falls back', response.data)
+            response.close()
+
     def test_non_anonymous_routes_fail_closed(self):
         invalid = (
             ({}, True),
