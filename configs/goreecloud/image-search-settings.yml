@@ -22,6 +22,9 @@ categories_as_tabs:
   images:
 goreecloud:
   private_search: false
+  image_search: true
+  max_query_chars: 180
+  max_provider_fanout: 3
 general:
   instance_name: "GoreeCloud Search · Images"
   enable_metrics: false
