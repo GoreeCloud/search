@@ -289,6 +289,26 @@ html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results a
 html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results article.result-images a:focus-visible {
   outline: 3px solid var(--gc-accent-strong); outline-offset: 2px;
 }
+/* All four categories must fit a 320px phone without a visible scrollbar.
+   Disabled categories remain discoverable through aria-disabled and title. */
+@media (max-width: 410px) {
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tabs {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow: visible; gap: 0; padding-inline: 0;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-category-form {
+    width: 100%; min-width: 0;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tab {
+    box-sizing: border-box; width: 100%; min-width: 0;
+    min-height: 44px; padding: 8px 2px; font-size: 12px;
+    text-align: center; justify-content: center;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-tab-unavailable-note {
+    display: none;
+  }
+}
+
 @media (max-width: 410px) {
   html[data-glaze-consumer] body.results_endpoint #main_results #results > #urls.goreecloud-image-results {
     grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px;

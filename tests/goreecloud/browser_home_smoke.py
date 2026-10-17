@@ -464,6 +464,13 @@ def main() -> None:
                             let card=c.getBoundingClientRect();
                             return t.top >= i.bottom-1 && s.top >= t.bottom-1 && card.bottom >= s.bottom-1;
                         }),
+                        categoryTabsFit:(()=>{
+                            const tabNav=document.querySelector('.goreecloud-category-tabs');
+                            const r=tabNav.getBoundingClientRect();
+                            const tabRects=[...tabNav.querySelectorAll('.goreecloud-category-tab')].map(t=>t.getBoundingClientRect());
+                            return tabRects.length===4 && tabNav.scrollWidth<=tabNav.clientWidth+1 &&
+                                tabRects.every(x=>x.left>=r.left-1 && x.right<=r.right+1);
+                        })(),
                         badgesCompact:cards.every(c=>{
                             let b=c.querySelector('.image_resolution').getBoundingClientRect();
                             let i=c.querySelector('img.image_thumbnail').getBoundingClientRect();
@@ -480,6 +487,8 @@ def main() -> None:
                 )
                 assert geometry['tileTitles'], (label, geometry)
                 assert geometry['captionsBelow'] and geometry['badgesCompact'], (label, geometry)
+                if label != 'desktop':
+                    assert geometry['categoryTabsFit'], (label, geometry)
                 assert geometry['scroll'] <= geometry['viewport'] + 1, (label, geometry)
                 assert geometry['cardWidth'] >= 120 and geometry['imageWidth'] >= 100, (label, geometry)
                 if label == 'desktop':
