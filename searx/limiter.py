@@ -103,6 +103,7 @@ import searx.compat
 from searx import (
     logger,
     valkeydb,
+    settings,
 )
 from searx import botdetection
 from searx.extended_types import SXNG_Request, sxng_request
@@ -148,6 +149,7 @@ def filter_request(request: SXNG_Request) -> werkzeug.Response | None:
     # pylint: disable=too-many-return-statements
 
     cfg = get_cfg()
+    private_log = bool(settings.get('goreecloud', {}).get('private_search'))
     real_ip = ip_address(request.remote_addr)
     network = get_network(real_ip, cfg)
 
@@ -170,12 +172,18 @@ def filter_request(request: SXNG_Request) -> werkzeug.Response | None:
 
     match, msg = ip_lists.pass_ip(real_ip, cfg)
     if match:
-        logger.warning("PASS %s: matched PASSLIST - %s", network.compressed, msg)
+        if private_log:
+            logger.warning("Private Search limiter passlist match")
+        else:
+            logger.warning("PASS %s: matched PASSLIST - %s", network.compressed, msg)
         return None
 
     match, msg = ip_lists.block_ip(real_ip, cfg)
     if match:
-        logger.error("BLOCK %s: matched BLOCKLIST - %s", network.compressed, msg)
+        if private_log:
+            logger.error("Private Search limiter blocklist match")
+        else:
+            logger.error("BLOCK %s: matched BLOCKLIST - %s", network.compressed, msg)
         return flask.make_response(('IP is on BLOCKLIST - %s' % msg, 429))
 
     # methods applied on all requests
@@ -202,10 +210,16 @@ def filter_request(request: SXNG_Request) -> werkzeug.Response | None:
         ]:
             val = func.filter_request(network, request, cfg)
             if val is not None:
-                logger.debug(f"NOT OK ({func.__name__}): {network}: %s", dump_request(sxng_request))
+                if private_log:
+                    logger.debug("Private Search limiter rejected request")
+                else:
+                    logger.debug(f"NOT OK ({func.__name__}): {network}: %s", dump_request(sxng_request))
                 return val
 
-    logger.debug(f"OK {network}: %s", dump_request(sxng_request))
+    if private_log:
+        logger.debug("Private Search limiter accepted request")
+    else:
+        logger.debug(f"OK {network}: %s", dump_request(sxng_request))
     return None
 
 

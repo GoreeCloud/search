@@ -106,6 +106,24 @@ class PrivateReadinessEgressTests(unittest.TestCase):
                 self.assertFalse(NETWORKS[name].enable_http3)
                 self.assertTrue(NETWORKS[name].private_egress_configured())
 
+    def test_public_or_rate_limited_profile_requires_installed_limiter(self):
+        for flags in (
+            {'public_instance': True, 'limiter': False},
+            {'public_instance': False, 'limiter': True},
+        ):
+            with self.subTest(flags=flags), patch.dict(smoke.settings['server'], flags):
+                with patch('searx.webapp.limiter.is_installed', return_value=False):
+                    with smoke.app.test_client() as client:
+                        response = client.get('/readyz', headers=self.headers)
+                        self.assertEqual(503, response.status_code)
+                        self.assertEqual(b'NOT_READY', response.data)
+                        response.close()
+                with patch('searx.webapp.limiter.is_installed', return_value=True):
+                    with smoke.app.test_client() as client:
+                        response = client.get('/readyz', headers=self.headers)
+                        self.assertEqual(200, response.status_code)
+                        response.close()
+
     def test_absent_network_registry_fails_closed(self):
         self.assertEqual((503, b'NOT_READY'), self._ready({})[:2])
 

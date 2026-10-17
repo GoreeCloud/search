@@ -41,6 +41,31 @@ separate from the visitor, a provider is available, or network policy
 prevents DNS rebinding. No cached or live search-query evidence may be inferred.
 Only independently validated staging tests can confirm these capabilities.
 
+## Private limiter and privacy-safe rate accounting
+
+The Development/Staging profile intentionally leaves `server.limiter: false`
+while no isolated Valkey service, trusted ingress, and request-identity controls
+are approved. Its `configs/goreecloud/limiter.toml` is an explicit local-only
+botdetection configuration, **not** permission to enable a public limiter or
+publish the instance. Public or explicitly limiter-enabled readiness now requires
+the installed Valkey-backed limiter; `/readyz` returns HTTP 503 otherwise.
+
+Private GoreeCloud limiter logs are reduced to generic decision labels rather
+than serialized HTTP forms, search terms, client addresses or client token
+values. Its per-client rate counter names use an HMAC-SHA256 of the client
+network with the server secret, not a literal IP prefix. The existing link-token
+key is already hashed; related private-mode ping logs are also sanitized.
+Counter pseudonyms are linkable during the rate-limit period and **not**
+anonymity: ingress components and Valkey operators require separate controls.
+A strongly random per-instance server secret must be configured; rotating it
+resets counter identity. Do not enable unrestricted access from unknown
+forwarded-IP headers or allow requests from untrusted Caddy/edge addresses.
+
+Private limiters still need integration qualification with Valkey and
+trusted-forwarded-IP handling, expiry verification, provider failure behavior,
+legitimate-device traffic and abuse cases. A synthetic unit test cannot prove
+that the hosting reverse proxy, Valkey, logs or DNS have zero data retention.
+
 ## Acceptance tests (synthetic fixtures only)
 
 | Test | Required evidence |

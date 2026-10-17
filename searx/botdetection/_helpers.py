@@ -15,7 +15,7 @@ from ipaddress import (
 import flask
 import werkzeug
 
-from searx import logger
+from searx import logger, settings
 
 if t.TYPE_CHECKING:
     from . import config
@@ -49,7 +49,10 @@ def too_many_requests(network: IPv4Network | IPv6Network, log_msg: str) -> werkz
 
     """
 
-    logger.debug("BLOCK %s: %s", network.compressed, log_msg)
+    if settings.get('goreecloud', {}).get('private_search'):
+        logger.debug("Private Search bot protection rejected request")
+    else:
+        logger.debug("BLOCK %s: %s", network.compressed, log_msg)
     return flask.make_response(('Too Many Requests', 429))
 
 

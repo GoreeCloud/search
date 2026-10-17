@@ -733,6 +733,10 @@ def goreecloud_readiness():
     }
     if not configured.intersection(searx.search.processors.PROCESSORS):
         return Response('NOT_READY', status=503, mimetype='text/plain')
+    # A public or explicitly rate-limited instance may not signal readiness
+    # when its Valkey-backed limiter failed to install at startup.
+    if (settings['server']['public_instance'] or settings['server']['limiter']) and not limiter.is_installed():
+        return Response('NOT_READY', status=503, mimetype='text/plain')
     # Readiness must also fail when an engine-specific network can bypass
     # or cannot satisfy the selected private egress configuration. This is
     # offline config validation, not a claim that providers are reachable.

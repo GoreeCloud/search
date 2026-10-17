@@ -44,12 +44,15 @@ from ipaddress import (
 
 import flask
 import werkzeug
+import hashlib
+import hmac
 
 from searx.valkeylib import incr_sliding_window, drop_counter
 
 from . import link_token
 from . import config
 from . import valkeydb
+from searx import settings
 from ._helpers import (
     too_many_requests,
     logger,
@@ -88,6 +91,18 @@ SUSPICIOUS_IP_MAX = 3
 """Maximum requests from one suspicious IP in the :py:obj:`SUSPICIOUS_IP_WINDOW`."""
 
 
+def counter_network_key(network: IPv4Network | IPv6Network) -> str:
+    """Pseudonymous Valkey counter suffix for private Search rate limits.
+
+    HMAC avoids retaining literal client IP networks in rate-limit keys.
+    Counters remain stable across workers using the same server secret.
+    """
+    if not settings.get('goreecloud', {}).get('private_search'):
+        return network.compressed
+    secret = str(settings['server']['secret_key']).encode('utf-8')
+    return hmac.new(secret, network.compressed.encode('ascii'), hashlib.sha256).hexdigest()
+
+
 def filter_request(
     network: IPv4Network | IPv6Network,
     request: flask.Request,
@@ -96,13 +111,17 @@ def filter_request(
 
     # pylint: disable=too-many-return-statements
     valkey_client = valkeydb.get_valkey_client()
+    counter_key = counter_network_key(network)
 
     if network.is_link_local and not cfg['botdetection.ip_limit.filter_link_local']:
-        logger.debug("network %s is link-local -> not monitored by ip_limit method", network.compressed)
+        if settings.get('goreecloud', {}).get('private_search'):
+            logger.debug("Private Search link-local rate limitation bypass")
+        else:
+            logger.debug("network %s is link-local -> not monitored by ip_limit method", network.compressed)
         return None
 
     if request.args.get('format', 'html') != 'html':
-        c = incr_sliding_window(valkey_client, 'ip_limit.API_WINDOW:' + network.compressed, API_WINDOW)
+        c = incr_sliding_window(valkey_client, 'ip_limit.API_WINDOW:' + counter_key, API_WINDOW)
         if c > API_MAX:
             return too_many_requests(network, "too many request in API_WINDOW")
 
@@ -112,35 +131,38 @@ def filter_request(
 
         if not suspicious:
             # this IP is no longer suspicious: release ip again / delete the counter of this IP
-            drop_counter(valkey_client, 'ip_limit.SUSPICIOUS_IP_WINDOW' + network.compressed)
+            drop_counter(valkey_client, 'ip_limit.SUSPICIOUS_IP_WINDOW' + counter_key)
             return None
 
         # this IP is suspicious: count requests from this IP
         c = incr_sliding_window(
-            valkey_client, 'ip_limit.SUSPICIOUS_IP_WINDOW' + network.compressed, SUSPICIOUS_IP_WINDOW
+            valkey_client, 'ip_limit.SUSPICIOUS_IP_WINDOW' + counter_key, SUSPICIOUS_IP_WINDOW
         )
         if c > SUSPICIOUS_IP_MAX:
-            logger.error("BLOCK: too many request from %s in SUSPICIOUS_IP_WINDOW (redirect to /)", network)
+            if settings.get('goreecloud', {}).get('private_search'):
+                logger.error("Private Search suspicious rate threshold reached")
+            else:
+                logger.error("BLOCK: too many request from %s in SUSPICIOUS_IP_WINDOW (redirect to /)", network)
             response = flask.redirect(flask.url_for('index'), code=302)
             response.headers["Cache-Control"] = "no-store, max-age=0"
             return response
 
-        c = incr_sliding_window(valkey_client, 'ip_limit.BURST_WINDOW' + network.compressed, BURST_WINDOW)
+        c = incr_sliding_window(valkey_client, 'ip_limit.BURST_WINDOW' + counter_key, BURST_WINDOW)
         if c > BURST_MAX_SUSPICIOUS:
             return too_many_requests(network, "too many request in BURST_WINDOW (BURST_MAX_SUSPICIOUS)")
 
-        c = incr_sliding_window(valkey_client, 'ip_limit.LONG_WINDOW' + network.compressed, LONG_WINDOW)
+        c = incr_sliding_window(valkey_client, 'ip_limit.LONG_WINDOW' + counter_key, LONG_WINDOW)
         if c > LONG_MAX_SUSPICIOUS:
             return too_many_requests(network, "too many request in LONG_WINDOW (LONG_MAX_SUSPICIOUS)")
 
         return None
 
     # vanilla limiter without extensions counts BURST_MAX and LONG_MAX
-    c = incr_sliding_window(valkey_client, 'ip_limit.BURST_WINDOW' + network.compressed, BURST_WINDOW)
+    c = incr_sliding_window(valkey_client, 'ip_limit.BURST_WINDOW' + counter_key, BURST_WINDOW)
     if c > BURST_MAX:
         return too_many_requests(network, "too many request in BURST_WINDOW (BURST_MAX)")
 
-    c = incr_sliding_window(valkey_client, 'ip_limit.LONG_WINDOW' + network.compressed, LONG_WINDOW)
+    c = incr_sliding_window(valkey_client, 'ip_limit.LONG_WINDOW' + counter_key, LONG_WINDOW)
     if c > LONG_MAX:
         return too_many_requests(network, "too many request in LONG_WINDOW (LONG_MAX)")
 
