@@ -27,6 +27,24 @@ class NonTorEgressTests(unittest.TestCase):
             privacy_egress_mode='server_masked', server_masked_acknowledged=True,
         )
 
+    def test_development_profiles_do_not_require_tor(self):
+        import yaml
+        gateway = yaml.safe_load((ROOT / 'configs/goreecloud/settings.yml').read_text(encoding='utf-8'))
+        hosted = yaml.safe_load(
+            (ROOT / 'configs/goreecloud/server-masked-staging.yml').read_text(encoding='utf-8'))
+        self.assertEqual('gateway', gateway['goreecloud']['egress_mode'])
+        self.assertEqual('server_masked', hosted['goreecloud']['egress_mode'])
+        self.assertFalse(gateway['outgoing']['using_tor_proxy'])
+        self.assertFalse(hosted['outgoing']['using_tor_proxy'])
+        self.assertEqual({}, hosted['outgoing']['proxies'])
+        self.assertTrue(hosted['goreecloud']['server_masked_acknowledged'])
+        self.assertEqual('127.0.0.1', hosted['server']['bind_address'])
+        self.assertFalse(hosted['server']['public_instance'])
+        self.assertEqual(
+            set(gateway['use_default_settings']['engines']['keep_only']),
+            set(hosted['use_default_settings']['engines']['keep_only']),
+        )
+
     def test_server_masking_is_blocked_without_separate_host_ack(self):
         with patch.dict(os.environ, {'GOREECLOUD_SERVER_MASKED_EGRESS': '0'}):
             with patch('searx.network.network.new_client') as make:
