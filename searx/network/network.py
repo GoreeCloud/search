@@ -224,6 +224,33 @@ class Network:
             and '#' not in url and '?' not in url
         )
 
+    def private_egress_configured(self) -> bool:
+        """Offline transport preflight for readiness; does not make connections.
+
+        Valid settings are not proof of an active gateway, remote IP masking,
+        public DNS resolution, or service-scoped firewall isolation.
+        """
+        if not self.privacy_proxy_required:
+            return True
+        if self.verify is not True or self.enable_http or self.enable_http3:
+            return False
+        if self.privacy_egress_mode == 'server_masked':
+            return (
+                not self.proxies
+                and self.server_masked_acknowledged is True
+                and os.environ.get('GOREECLOUD_SERVER_MASKED_EGRESS') == '1'
+                and not self.using_tor_proxy
+            )
+        if self.privacy_egress_mode == 'gateway':
+            entries = list(self.iter_proxies())
+            if len(entries) != 1:
+                return False
+            pattern, urls = entries[0]
+            return bool(urls) and all(
+                self.valid_private_proxy(((pattern, url),)) for url in urls
+            )
+        return False
+
     async def get_client(
         self,
         verify: bool | None = None,
@@ -474,6 +501,11 @@ def initialize(
         result['privacy_proxy_required'] = default_params['privacy_proxy_required']
         result['privacy_egress_mode'] = default_params['privacy_egress_mode']
         result['server_masked_acknowledged'] = default_params['server_masked_acknowledged']
+        if result['privacy_proxy_required']:
+            # Brave adapters set enable_http3 at the engine level. Private
+            # Search forbids HTTP/3, so normalize this inherited upstream
+            # preference instead of making every Brave request fail closed.
+            result['enable_http3'] = False
         if logger_name:
             result['logger_name'] = logger_name
         return Network(**result)  # type: ignore

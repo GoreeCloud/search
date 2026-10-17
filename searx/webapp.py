@@ -610,7 +610,7 @@ def add_default_headers(response: flask.Response):
             continue
         response.headers[header] = value
     if settings['goreecloud']['private_search'] and (
-        sxng_request.endpoint in ('index', 'search', 'goreecloud_preview', 'autocompleter', 'opensearch', 'preferences')
+        sxng_request.endpoint in ('index', 'search', 'goreecloud_preview', 'goreecloud_readiness', 'autocompleter', 'opensearch', 'preferences')
         or sxng_request.path == '/preview'
         or 'preferences' in sxng_request.args
         or 'preferences' in sxng_request.__dict__.get('form', ())
@@ -732,6 +732,15 @@ def goreecloud_readiness():
         if not engine.get('inactive', False) and not engine.get('disabled', False)
     }
     if not configured.intersection(searx.search.processors.PROCESSORS):
+        return Response('NOT_READY', status=503, mimetype='text/plain')
+    # Readiness must also fail when an engine-specific network can bypass
+    # or cannot satisfy the selected private egress configuration. This is
+    # offline config validation, not a claim that providers are reachable.
+    from searx.network.network import NETWORKS  # pylint: disable=import-outside-toplevel
+    if not NETWORKS or any(
+        not network.privacy_proxy_required or not network.private_egress_configured()
+        for network in NETWORKS.values()
+    ):
         return Response('NOT_READY', status=503, mimetype='text/plain')
     return Response('READY', mimetype='text/plain')
 

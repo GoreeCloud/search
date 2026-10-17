@@ -20,6 +20,27 @@
 5. Before allowing outbound media requests, impose **service-specific egress denial** for loopback, RFC1918 and carrier-grade private IPv4, link-local, documentation/reserved ranges, cloud metadata, IPv6 unique-local/link-local and any internal host subnets. Account for IPv4/IPv6, DNS answers changing after lookup, and alternate address encodings. Do not enforce these rules globally on the shared VPS.
 6. Use a private resolver path with controlled logging and no visitor-query storage. Container runtime defaults and Docker bridge isolation **do not themselves prove** forbidden destinations are blocked.
 
+## Offline readiness semantics
+
+The private `/healthz` route is a process-liveness indicator, not evidence that
+a search can be executed. The `/readyz` route now fails with HTTP 503
+(`NOT_READY`) unless at least one selected provider processor is initialized
+**and all registered outbound networks** satisfy the private-egress
+configuration policy. This catches absent networks, insecure per-engine
+settings, invalid SOCKS5H gateways, and hosted modes lacking either opt-in
+without creating any network client or disclosing provider configuration.
+
+Brave's upstream engine defaults may request HTTP/3, which the private
+transport forbids. Initializing GoreeCloud private networks now explicitly
+disables inherited HTTP/3 preferences to prevent false provider failures.
+Ordinary upstream SearXNG networks are unchanged.
+
+HTTP 200 (`READY`) means **offline configuration is acceptable only**. It
+does not verify that a gateway listener is running, a remote host is
+separate from the visitor, a provider is available, or network policy
+prevents DNS rebinding. No cached or live search-query evidence may be inferred.
+Only independently validated staging tests can confirm these capabilities.
+
 ## Acceptance tests (synthetic fixtures only)
 
 | Test | Required evidence |
