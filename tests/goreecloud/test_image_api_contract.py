@@ -32,7 +32,7 @@ class OfflineImages:
         )
 
 headers = {'X-Real-IP': '127.0.0.1'}
-with app.test_client() as client, patch('searx.search.SearchWithPlugins', OfflineImages) as dispatcher:
+with app.test_client() as client, patch('searx.search.SearchWithPlugins', side_effect=OfflineImages) as dispatcher:
     valid = {'q': 'Samsung One UI', 'categories': 'images', 'format': 'json',
              'pageno': '1', 'safesearch': '1'}
     good = client.post('/search', data=valid, headers=headers)
