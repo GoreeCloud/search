@@ -77,6 +77,43 @@ privacy modes require **no Tor**, no Tor exit check and no Tor installation.
 Tor-related historical regression cases are retained as opt-in compatibility
 tests, not a product requirement.
 
+## Untrusted media URLs and SSRF boundaries
+
+The image proxy fetches third-party result thumbnails **from the Search server**.
+In the server-masked mode this carries a server-side request forgery (SSRF)
+risk distinct from tracking the user. The private search now refuses to sign
+or fetch media URLs unless they use HTTPS on the standard port with a valid
+multi-label public-looking DNS hostname. Credentials, literal IPv4/IPv6
+addresses, local/reserved hostnames, ambiguous numeric hostnames, malformed
+authorities, backslashes, whitespace and oversized URLs are denied.
+
+The server also refuses **all image-proxy HTTP redirects**, including HTTPS
+redirects, rather than allowing an upstream site to redirect a public-looking
+URL to a local service. Invalid signed requests are rejected before starting
+an outbound HTTP client. These defenses may suppress images on nonstandard
+origins; privacy and host safety take priority over rendering every thumbnail.
+
+**Crucial residual risk:** a permitted-looking public DNS hostname can resolve
+to an internal IP address or change its DNS answer between checks (DNS
+rebinding). URL parsing and redirect suppression do not eliminate this risk.
+Before exposing hosted Search to visitors, its **service-specific network
+namespace/firewall** must deny egress to loopback, RFC1918/private, link-local,
+IPv6 local, cloud-metadata and other sensitive infrastructure ranges, with
+approved public DNS resolution. This must be verified using isolated staging
+tests with locally controlled synthetic domains and no access to production
+metadata services. Do not apply blanket outbound rules to the shared VPS.
+Any outbound clients outside the guarded image-proxy path must be audited too.
+
+### Latest bounded image-proxy evidence
+
+A detached local Development checkout of commit
+`75bb54ef31e05b466e8b3018d10a8f5e588f2b35` ran **177 of 177**
+GoreeCloud regression tests successfully, including signing/fetch denial for
+private URLs and a synthetic 302 proving that the proxy never follows
+redirects. These offline tests **do not** establish protection from
+DNS rebinding, a staging egress firewall, live IP masking or release readiness.
+SQLite threading and limiter-configuration warnings still appeared.
+
 ## Remaining safeguards and risks
 
 - Query text still goes to the selected approved search providers; no claim
