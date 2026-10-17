@@ -176,14 +176,14 @@
     {% if private_query_transport %}
     <fieldset class="goreecloud-provider-preferences">
       <legend>Search engines</legend>
-      <p>Choose the sources used for regular searches. Both are selected by default. This preference is saved only in this browser.</p>
-      {% for source_value, source_label in [('both', 'Both sources'), ('brave', 'Brave Search only'), ('startpage', 'Startpage only')] %}
+      <p>Choose the sources used for regular searches. All three are selected by default. This preference is saved only in this browser.</p>
+      {% for source_value, source_label in [('both', 'All three providers'), ('brave', 'Brave Search only'), ('startpage', 'Startpage only'), ('qwant', 'Qwant only')] %}
       <label class="goreecloud-provider-option">
         <input type="radio" name="goreecloud_sources" value="{{ source_value }}" {% if goreecloud_source_choice == source_value %}checked{% endif %}>
         <span>{{ source_label }}</span>
       </label>
       {% endfor %}
-      <p class="goreecloud-preference-note">Search terms go only to the selected sources. Images and News support Brave and Startpage; Videos uses Brave only. If you select Startpage only, Videos is unavailable. Blocked providers are never replaced automatically.</p>
+      <p class="goreecloud-preference-note">Search terms go only to the selected sources. Web, Images and News support all three providers. Videos supports Brave and Qwant. Startpage-only disables Videos. Blocked providers are never replaced automatically.</p>
     </fieldset>
     {% endif %}
     {%- if 'categories' not in locked_preferences -%}

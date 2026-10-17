@@ -1,4 +1,4 @@
-# Private/local GoreeCloud Search profile: exactly two built-in providers.
+# Private/local GoreeCloud Search: exactly three approved provider families.
 # Brave Search is the search service (not the Brave Browser executable).
 # Startpage's upstream connector may be challenged by proof-of-work CAPTCHA.
 # Do not use this profile unchanged for an Internet-facing instance.
@@ -12,6 +12,10 @@ use_default_settings:
       - brave.news
       - startpage images
       - startpage news
+      - qwant
+      - qwant images
+      - qwant videos
+      - qwant news
 engines:
   - name: brave
     disabled: false
@@ -34,7 +38,19 @@ engines:
   - name: startpage news
     disabled: false
     inactive: false
-# Only categories backed by an approved Brave Search or Startpage adapter.
+  - name: qwant
+    disabled: false
+    inactive: false
+  - name: qwant images
+    disabled: false
+    inactive: false
+  - name: qwant videos
+    disabled: false
+    inactive: false
+  - name: qwant news
+    disabled: false
+    inactive: false
+# Only categories backed by approved Brave Search, Startpage or Qwant adapters.
 categories_as_tabs:
   general:
   images:
@@ -43,7 +59,19 @@ categories_as_tabs:
 goreecloud:
   private_search: true
   max_query_chars: 512
-  max_provider_fanout: 2
+  max_provider_fanout: 3
+  # This local developer profile cannot contact providers without a trusted
+  # local privacy gateway. The gateway can be a non-Tor VPN/forwarding relay.
+  # The proxy endpoint itself is not proof of anonymity or remote masking.
+  require_anonymous_egress: true
+  egress_mode: gateway
+outgoing:
+  # DNS is resolved by the SOCKS5H gateway, not by this application.
+  # Fail closed if no locally approved SOCKS5H gateway is listening.
+  proxies:
+    all://: socks5h://127.0.0.1:9050
+  using_tor_proxy: false
+  extra_proxy_timeout: 10
 general:
   instance_name: "GoreeCloud Search"
   enable_metrics: false
@@ -54,7 +82,7 @@ brand:
   issue_url: https://github.com/GoreeCloud/search/issues
   public_instances: ""
 search:
-  safe_search: 1
+  safe_search: 0
   autocomplete: ""
   favicon_resolver: ""
   formats:

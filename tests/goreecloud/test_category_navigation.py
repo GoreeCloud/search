@@ -19,10 +19,10 @@ class CategoryNavigationTests(unittest.TestCase):
 
     def test_family_routes_only_to_approved_variant_instances(self):
         expected = {
-            'general': 'brave,startpage',
-            'images': 'brave.images,startpage images',
-            'videos': 'brave.videos',
-            'news': 'brave.news,startpage news',
+            'general': 'brave,startpage,qwant',
+            'images': 'brave.images,startpage images,qwant images',
+            'videos': 'brave.videos,qwant videos',
+            'news': 'brave.news,startpage news,qwant news',
         }
         for category, mapping in expected.items():
             with self.subTest(category=category):
@@ -54,8 +54,8 @@ class CategoryNavigationTests(unittest.TestCase):
                 actual[category] = hidden['engines']
                 self.assertEqual('', form.get('action').split('?', 1)[-1] if '?' in form.get('action') else '')
             self.assertEqual({
-                'general': 'brave,startpage', 'images': 'brave.images,startpage images',
-                'videos': 'brave.videos', 'news': 'brave.news,startpage news',
+                'general': 'brave,startpage,qwant', 'images': 'brave.images,startpage images,qwant images',
+                'videos': 'brave.videos,qwant videos', 'news': 'brave.news,startpage news,qwant news',
             }, actual)
             response.close()
 
@@ -64,9 +64,9 @@ class CategoryNavigationTests(unittest.TestCase):
             'searx.search.SearchWithPlugins', OfflineSearch
         ):
             for category, selected in [
-                ('images', ['brave.images', 'startpage images']),
-                ('videos', ['brave.videos']),
-                ('news', ['brave.news', 'startpage news']),
+                ('images', ['brave.images', 'qwant images', 'startpage images']),
+                ('videos', ['brave.videos', 'qwant videos']),
+                ('news', ['brave.news', 'qwant news', 'startpage news']),
             ]:
                 with self.subTest(category=category):
                     response = client.post('/search', data={

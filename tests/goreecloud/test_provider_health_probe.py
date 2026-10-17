@@ -71,6 +71,34 @@ class ProviderProbeContractTests(unittest.TestCase):
         self.assertIsNone(factory.call_args.args[1].redirect_request(
             req, None, 302, 'Found', {}, 'https://example.org/'))
 
+    def test_qwant_only_probe_uses_post_and_validates_provenance(self):
+        seen = []
+        def fake_transport(request, timeout):
+            seen.append(request)
+            return BytesIO(json.dumps({
+                'goreecloud': {'selected_engines': ['qwant']},
+                'results': [{'url': 'https://example.org'}],
+                'unresponsive_engines': [],
+            }).encode())
+        output = mod.probe('qwant', 'http://127.0.0.1:8888', transport=fake_transport)
+        self.assertEqual('results_observed', output['state'])
+        self.assertEqual('POST', seen[0].get_method())
+        self.assertIn(b'engines=qwant', seen[0].data)
+
+    def test_all_and_legacy_both_are_opt_in_and_distinct(self):
+        with patch.object(mod, 'probe', side_effect=lambda name, origin: {
+            'provider': name, 'state': 'results_observed',
+        }) as network, patch('builtins.print'):
+            self.assertEqual(64, mod.main([]))
+            network.assert_not_called()
+            self.assertEqual(0, mod.main(['--provider', 'all', '--allow-provider-egress']))
+            self.assertEqual(['brave', 'startpage', 'qwant'],
+                             [call.args[0] for call in network.call_args_list])
+            network.reset_mock()
+            self.assertEqual(0, mod.main(['--provider', 'both', '--allow-provider-egress']))
+            self.assertEqual(['brave', 'startpage'],
+                             [call.args[0] for call in network.call_args_list])
+
     def test_default_does_not_send(self):
         with patch.object(mod, 'probe') as network, patch('builtins.print'):
             self.assertEqual(64, mod.main([]))

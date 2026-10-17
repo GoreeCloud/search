@@ -1,21 +1,43 @@
 <!doctype html>
-<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="referrer" content="no-referrer">
-<title>GoreeCloud Search — Privacy and sources</title>
+<title>Privacy and Sources — GoreeCloud Search</title>
+<link rel="icon" type="image/svg+xml" href="/static/themes/simple/img/favicon.svg">
 <style>
-:root {color-scheme:light dark; font: 1.05rem/1.65 system-ui,sans-serif}
-body {max-width:52rem; margin:3rem auto; padding:0 1.5rem}
-a {color:inherit; text-underline-offset:.2em}
-a:focus-visible {outline:3px solid currentColor;outline-offset:4px}
-</style>
-<main>
-<h1>Privacy and source disclosure</h1>
-<p>This Development build of GoreeCloud Search is based on SearXNG. Only two built-in search providers are selectable in this private profile: Brave Search (the service behind Brave Browser search) and Startpage. Searching forwards terms to one or both, depending on your selection. Connected providers receive requests from the search server and can retain or use request data under their own policies. The server operator may observe client IP addresses and searches unless separate infrastructure controls protect them. This service does not guarantee anonymity.</p>
-<p>In the included loopback-only development profile, search submission defaults to POST, remote autocomplete and metrics are disabled, and images are proxied. Operators may change these settings. An approved public deployment, complete security/privacy review, GoreeCloud Privacy Shield integration, and retention controls have not been established.</p>
-<p>This local profile rejects automatic redirects triggered by external search bangs or first-result shortcuts, so a private search does not automatically navigate to another website. Normal clickable search results still lead to external destinations, which may receive your visit information. You can select Brave Search, Startpage, or both, but no other search provider.</p>
-<p>The source preview action shows selected providers before any search-provider request is made. Continuing, choosing one provider, or using a result-page “Search only” action starts a new POST search that may send your terms to those providers. Preview is not evidence that a source is reachable or trustworthy. Startpage may require solving anti-bot proof-of-work challenges and has not been tested for live availability here.</p>
-<p>Preferences saved through the local settings form stay in browser settings for this instance. Importing serialized preferences from a shared URL is disabled, so third-party links cannot silently change selected providers. Primary search results are limited to well-formed HTTP and HTTPS destinations, but embedded media, provider behavior, and user-selected destination sites have not received a full security review.</p>
-<p>No independent GoreeCloud index, hosted AI model transmission, persistent user profile, or personal saved-search service is included in this source import.</p>
-<p>Source: <a href="https://github.com/GoreeCloud/search">GoreeCloud Search</a> and <a href="https://github.com/searxng/searxng">SearXNG</a>. The source is distributed under AGPL-3.0-or-later. Do not place secrets or search queries in logs or public reports.</p>
-<p><a href="/">Return to search</a></p>
-</main></html>
+:root{color-scheme:light dark;font:16px/1.65 system-ui,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:#f7faff;color:#1b2b46}
+a{color:#1e55ba;text-underline-offset:3px}
+a:focus-visible{outline:3px solid #1e55ba;outline-offset:3px}
+header{background:white;border-bottom:1px solid #dae5f3}
+nav{max-width:1100px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 22px}
+.brand{display:flex;align-items:center;gap:10px;color:#1b2b46;text-decoration:none;font-weight:750}
+.brand img{width:35px;height:35px}.brand strong{color:#2055b1}
+.links{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;font-weight:600}
+main{max-width:870px;margin:45px auto 70px;padding:28px clamp(22px,4vw,42px);border:1px solid #dae5f3;border-radius:18px;background:white}
+h1{font-size:clamp(29px,4vw,40px);letter-spacing:-.04em;line-height:1.2;margin:.2em 0 .35em}
+h2{font-size:19px;margin:30px 0 8px}p{margin:0 0 15px}
+.eyebrow{font-size:12px;color:#2055b1;text-transform:uppercase;letter-spacing:.06em;font-weight:750}
+.note{color:#536780}.detail{border-top:1px solid #dae5f3;padding-top:18px;margin-top:25px;font-size:14px;color:#536780}
+footer{text-align:center;color:#536780;font-size:12px;padding:25px}
+@media(max-width:600px){nav{padding:12px 14px}.links{gap:9px;font-size:12px}main{margin:18px 12px 35px;padding:20px}}
+@media(prefers-color-scheme:dark){body{background:#0e1729;color:#e8f0ff}header,main{background:#14213a;border-color:#324767}.brand{color:#e8f0ff}a,.eyebrow{color:#87b3ff}.note,.detail,footer{color:#adc0de}}
+</style></head>
+<body><header><nav aria-label="GoreeCloud Search navigation">
+<a class="brand" href="/"><img src="/static/themes/simple/img/favicon.svg" alt=""><span>Goree<strong>Cloud</strong> · Search</span></a>
+<div class="links"><a href="/info/en/about">About</a><a aria-current="page" href="/static/themes/simple/goreecloud/privacy.html">Privacy</a><a href="/preferences">Settings</a></div>
+</nav></header>
+<main><p class="eyebrow">GoreeCloud Search</p><h1>Privacy and sources</h1>
+<p class="note">Transparency about what this local Development build does and does not protect.</p>
+<h2>Which providers receive searches?</h2>
+<p>Brave Search, Startpage, and Qwant are the only approved provider families. The default sends search terms to all three, or you can choose one provider in Settings. Web, Images and News have adapters for all three; Videos uses Brave Search and Qwant. A blocked provider is never silently replaced by a different one.</p>
+<p>These external services may retain or process submitted searches and connection metadata under their own privacy policies. This local service does not promise anonymity. Search engines may rate-limit, challenge, or reject requests.</p>
+<h2>What stays on your device?</h2>
+<p>The chosen search-provider preference and other preferences are stored in your browser's cookies. There is no GoreeCloud personal profile, hosted AI transmission, or independent search index in this Development build.</p>
+<h2>Search transport and content</h2>
+<p>Search terms are submitted by POST instead of being put in the local address-bar URL. Remote autocomplete and anonymous metrics are disabled in this local profile, and images are proxied. Browser clicks on search results can still send you to third-party sites. Other privacy and security limitations remain.</p>
+<h2>Development limitations</h2>
+<p>The application is bound to loopback for local testing. A public service needs separate authentication, security, abuse protection, privacy review, logging and retention controls. The full public security/privacy audit has not been completed.</p>
+<div class="detail"><strong>Technology attribution.</strong> GoreeCloud Search builds upon SearXNG, an open-source metasearch project available under AGPL-3.0-or-later. <a href="https://github.com/GoreeCloud/search">Explore GoreeCloud Search source code</a>. The upstream contributors remain acknowledged; this is not an independent crawler or index.</div>
+</main><footer>© GoreeCloud · A privacy-first way to search</footer></body></html>

@@ -1,0 +1,12 @@
+# GoreeCloud local/private Development profile.
+# Loaded even while server.limiter=false to avoid silent missing-config warnings.
+# Enabling limiter requires isolated Valkey, trusted ingress and qualification.
+# Do not copy this unchanged into a public-facing deployment.
+[botdetection]
+trusted_proxies = ["127.0.0.0/8", "::1"]
+
+[botdetection.ip_limit]
+link_token = false
+
+[botdetection.ip_lists]
+pass_searxng_org = false

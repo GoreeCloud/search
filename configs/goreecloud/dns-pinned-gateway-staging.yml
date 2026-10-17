@@ -1,0 +1,115 @@
+# GoreeCloud Search — DNS-pinned gateway staging profile (NO TOR)
+# Remote, isolated Development/Staging ONLY. No public ingress.
+# Not production-ready without service-specific firewall and validated logs.
+# Providers see the remote staging server IP, queries remain visible to providers.
+use_default_settings:
+  engines:
+    keep_only:
+      - brave
+      - startpage
+      - brave.images
+      - brave.videos
+      - brave.news
+      - startpage images
+      - startpage news
+      - qwant
+      - qwant images
+      - qwant videos
+      - qwant news
+engines:
+  - name: brave
+    disabled: false
+    inactive: false
+  - name: startpage
+    disabled: false
+    inactive: false
+  - name: brave.images
+    disabled: false
+    inactive: false
+  - name: brave.videos
+    disabled: false
+    inactive: false
+  - name: brave.news
+    disabled: false
+    inactive: false
+  - name: startpage images
+    disabled: false
+    inactive: false
+  - name: startpage news
+    disabled: false
+    inactive: false
+  - name: qwant
+    disabled: false
+    inactive: false
+  - name: qwant images
+    disabled: false
+    inactive: false
+  - name: qwant videos
+    disabled: false
+    inactive: false
+  - name: qwant news
+    disabled: false
+    inactive: false
+# Only categories backed by approved Brave Search, Startpage or Qwant adapters.
+categories_as_tabs:
+  general:
+  images:
+  videos:
+  news:
+goreecloud:
+  private_search: true
+  max_query_chars: 512
+  max_provider_fanout: 3
+  # Local loopback SOCKS5H gateway inside an isolated REMOTE staging network.
+  # Client IP masking depends on the remote host topology, not the proxy label.
+  require_anonymous_egress: true
+  egress_mode: gateway
+  server_masked_acknowledged: false
+outgoing:
+  # Never point this at a user device, Tor, or an external uncontrolled proxy.
+  # Start utils/goreecloud_private_socks_gateway.py inside the same isolated
+  # network namespace at port 19050. Not safe on an unisolated shared host.
+  proxies:
+    all://: socks5h://127.0.0.1:19050
+  using_tor_proxy: false
+  extra_proxy_timeout: 10
+general:
+  instance_name: "GoreeCloud Search"
+  enable_metrics: false
+  open_metrics: ""
+brand:
+  docs_url: https://github.com/GoreeCloud/search
+  wiki_url: https://github.com/GoreeCloud/search
+  issue_url: https://github.com/GoreeCloud/search/issues
+  public_instances: ""
+search:
+  safe_search: 0
+  autocomplete: ""
+  favicon_resolver: ""
+  formats:
+    - html
+    - json
+server:
+  bind_address: "127.0.0.1"
+  public_instance: false
+  limiter: false
+  image_proxy: true
+  method: "POST"
+  default_http_headers:
+    X-Content-Type-Options: nosniff
+    X-Frame-Options: DENY
+    Referrer-Policy: no-referrer
+    X-Robots-Tag: noindex, nofollow
+    Permissions-Policy: "camera=(), microphone=(), geolocation=()"
+preferences:
+  lock:
+    - method
+    - query_in_title
+    - autocomplete
+    - favicon_resolver
+    - image_proxy
+ui:
+  default_theme: simple
+  query_in_title: false
+  theme_args:
+    simple_style: auto

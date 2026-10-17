@@ -65,7 +65,8 @@ from searx.settings_loader import DEFAULT_SETTINGS_FILE
 from searx.exceptions import SearxParameterException
 from searx.goreecloud_policy import (
     SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
-    distinct_selected_sources, safe_primary_result_url, represented_result_sources, validate_builtin_sources,
+    distinct_selected_sources, safe_primary_result_url, safe_external_media_url,
+    represented_result_sources, validate_builtin_sources,
     validate_builtin_search_bangs, restrict_explicit_private_engines, validate_private_request_context,
     SEARCH_SOURCE_COOKIE, SEARCH_SOURCE_OPTIONS, SEARCH_SOURCE_FAMILIES,
     stored_search_source, requested_search_source, selected_engines_for_category,
@@ -160,7 +161,8 @@ app.secret_key = settings['server']['secret_key']
 
 def get_locale():
     locale = localeselector()
-    logger.debug("%s uses locale `%s`", urllib.parse.quote(sxng_request.url), locale)
+    # Never log the request URL: searches and preference tokens may appear in it.
+    logger.debug("Locale selected: %s", locale)
     return locale
 
 
@@ -320,6 +322,10 @@ def image_proxify(url: str):
             and partial_base64[1].startswith('base64,')
         ):
             return url
+        return None
+
+    # Never sign an unsafe link for later server-side fetching.
+    if settings['goreecloud']['private_search'] and not safe_external_media_url(url):
         return None
 
     h = new_hmac(settings['server']['secret_key'], url.encode())
@@ -535,7 +541,10 @@ def pre_request():
         preferences.parse_dict(sxng_request.cookies)
 
     except Exception as e:  # pylint: disable=broad-except
-        logger.exception(e, exc_info=True)
+        if settings['goreecloud']['private_search']:
+            logger.warning("Private Search rejected malformed cookie preferences")
+        else:
+            logger.exception(e, exc_info=True)
         sxng_request.errors.append(gettext('Invalid settings, please edit your preferences'))
 
     # merge GET, POST vars
@@ -561,7 +570,10 @@ def pre_request():
         else:
             preferences.parse_dict(sxng_request.form)
     except Exception as e:  # pylint: disable=broad-except
-        logger.exception(e, exc_info=True)
+        if settings['goreecloud']['private_search']:
+            logger.warning("Private Search rejected malformed form preferences")
+        else:
+            logger.exception(e, exc_info=True)
         sxng_request.errors.append(gettext('Invalid settings'))
 
     # language is defined neither in settings nor in preferences
@@ -598,7 +610,7 @@ def add_default_headers(response: flask.Response):
             continue
         response.headers[header] = value
     if settings['goreecloud']['private_search'] and (
-        sxng_request.endpoint in ('index', 'search', 'goreecloud_preview', 'autocompleter', 'opensearch', 'preferences')
+        sxng_request.endpoint in ('index', 'search', 'goreecloud_preview', 'goreecloud_readiness', 'autocompleter', 'opensearch', 'preferences')
         or sxng_request.path == '/preview'
         or 'preferences' in sxng_request.args
         or 'preferences' in sxng_request.__dict__.get('form', ())
@@ -720,6 +732,19 @@ def goreecloud_readiness():
         if not engine.get('inactive', False) and not engine.get('disabled', False)
     }
     if not configured.intersection(searx.search.processors.PROCESSORS):
+        return Response('NOT_READY', status=503, mimetype='text/plain')
+    # A public or explicitly rate-limited instance may not signal readiness
+    # when its Valkey-backed limiter failed to install at startup.
+    if (settings['server']['public_instance'] or settings['server']['limiter']) and not limiter.is_installed():
+        return Response('NOT_READY', status=503, mimetype='text/plain')
+    # Readiness must also fail when an engine-specific network can bypass
+    # or cannot satisfy the selected private egress configuration. This is
+    # offline config validation, not a claim that providers are reachable.
+    from searx.network.network import NETWORKS  # pylint: disable=import-outside-toplevel
+    if not NETWORKS or any(
+        not network.privacy_proxy_required or not network.private_egress_configured()
+        for network in NETWORKS.values()
+    ):
         return Response('NOT_READY', status=503, mimetype='text/plain')
     return Response('READY', mimetype='text/plain')
 
@@ -882,10 +907,16 @@ def search():
     except SearchPolicyViolation as e:
         return goreecloud_policy_error(e)
     except SearxParameterException as e:
-        logger.exception('search error: SearxParameterException')
+        if settings['goreecloud']['private_search']:
+            logger.warning("Private Search parameter validation failed")
+        else:
+            logger.exception('search error: SearxParameterException')
         return index_error(output_format, e.message), 400
     except Exception as e:  # pylint: disable=broad-except
-        logger.exception(e, exc_info=True)
+        if settings['goreecloud']['private_search']:
+            logger.error("Private Search request failed: %s", type(e).__name__)
+        else:
+            logger.exception(e, exc_info=True)
         return index_error(output_format, gettext('search error')), 500
 
     # 1. An upstream plugin may still provide a redirect. Never perform a
@@ -1273,6 +1304,9 @@ def image_proxy():
     if not url:
         return '', 400
 
+    if settings['goreecloud']['private_search'] and not safe_external_media_url(url):
+        return '', 400
+
     if not is_hmac_of(settings['server']['secret_key'], url.encode(), sxng_request.args.get('h', '')):
         return '', 400
 
@@ -1287,7 +1321,8 @@ def image_proxy():
             'DNT': '1',
         }
         set_context_network_name('image_proxy')
-        resp, stream = http_stream(method='GET', url=url, headers=request_headers, allow_redirects=True)
+        # Never follow a provider-controlled redirect into internal hostnames.
+        resp, stream = http_stream(method='GET', url=url, headers=request_headers, allow_redirects=False)
         content_length = resp.headers.get('Content-Length')
         if content_length and content_length.isdigit() and int(content_length) > maximum_size:
             return 'Max size', 400
@@ -1298,15 +1333,25 @@ def image_proxy():
                 return '', resp.status_code
             return '', 400
 
-        if not resp.headers.get('Content-Type', '').startswith('image/') and not resp.headers.get(
-            'Content-Type', ''
-        ).startswith('binary/octet-stream'):
-            logger.debug('image-proxy: wrong content-type: %s', resp.headers.get('Content-Type', ''))
+        # Reject active SVG/XML and ambiguous octet-stream payloads. Only
+        # raster image MIME types are accepted from untrusted third parties.
+        mime = resp.headers.get('Content-Type', '').split(';', 1)[0].strip().lower()
+        permitted = {
+            'image/png', 'image/jpeg', 'image/gif', 'image/webp',
+            'image/avif', 'image/bmp', 'image/apng', 'image/tiff',
+            'image/x-icon', 'image/vnd.microsoft.icon',
+        }
+        if settings['goreecloud']['private_search']:
+            allowed_media_type = mime in permitted
+        else:
+            allowed_media_type = mime.startswith('image/') or mime == 'binary/octet-stream'
+        if not allowed_media_type:
+            logger.debug('image-proxy: rejected untrusted media type')
             return '', 400
 
         forward_resp = True
     except RequestException:
-        logger.exception('HTTP error')
+        logger.warning('Image proxy upstream request failed')
         return '', 400
     finally:
         if resp and not forward_resp:
@@ -1315,7 +1360,7 @@ def image_proxy():
             try:
                 resp.close()
             except RequestException:
-                logger.exception('HTTP error on closing')
+                logger.warning('Image proxy upstream response close failed')
 
     def close_stream():
         nonlocal resp, stream
@@ -1325,7 +1370,7 @@ def image_proxy():
             del resp
             del stream
         except RequestException as e:
-            logger.debug('Exception while closing response: %s', e)
+            logger.debug('Image proxy cleanup failure: %s', type(e).__name__)
 
     try:
         headers = dict_subset(resp.headers, {'Content-Type', 'Content-Encoding', 'Content-Length', 'Length'})

@@ -68,7 +68,7 @@ class PrivateEmptyResultsTests(unittest.TestCase):
             state = page.xpath('//section[contains(@class,"goreecloud-empty-state")]')[0]
             self.assertIn('No results found', state.text_content())
             self.assertNotIn('reported an error', state.text_content())
-            self.assertIn('Brave Search and Startpage', state.text_content())
+            self.assertIn('Brave Search, Startpage, or Qwant', state.text_content())
             result.close()
 
     def test_multi_source_error_retry_keeps_both_without_fallback(self):

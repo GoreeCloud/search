@@ -260,7 +260,7 @@ class OnlineProcessor(EngineProcessor):
         except ssl.SSLError as e:
             # requests timeout (connect or read)
             self.handle_exception(result_container, e, suspend=True)
-            self.logger.debug("SSLError {}, verify={}".format(e, searx.network.get_network(self.engine.name).verify))
+            self.logger.debug("TLS request failed: %s", type(e).__name__)
         except (Timeout, asyncio.TimeoutError) as e:
             # requests timeout (connect or read)
             self.handle_exception(result_container, e, suspend=True)
@@ -272,18 +272,15 @@ class OnlineProcessor(EngineProcessor):
         except RequestException as e:
             # other requests exception
             self.handle_exception(result_container, e, suspend=True)
-            self.logger.debug(
-                "requests exception (search duration : {0} s, timeout: {1} s) : {2}".format(
-                    default_timer() - start_time, timeout_limit, e
-                )
-            )
+            # Exception strings can embed request URLs and private query terms.
+            self.logger.debug("Provider request failed: %s", type(e).__name__)
         except (
             SearxEngineCaptchaException,
             SearxEngineTooManyRequestsException,
             SearxEngineAccessDeniedException,
         ) as e:
             self.handle_exception(result_container, e, suspend=True)
-            self.logger.debug(e.message)
+            self.logger.debug("Provider access denied or challenged: %s", type(e).__name__)
         except Exception as e:  # pylint: disable=broad-except
             self.handle_exception(result_container, e)
-            self.logger.debug("exception : {0}".format(e))
+            self.logger.debug("Provider exception: %s", type(e).__name__)
