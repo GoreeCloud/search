@@ -30,10 +30,16 @@ class AnonymousEgressTests(unittest.TestCase):
         self.assertTrue(requires_private_egress({'goreecloud': {
             'private_search': False, 'require_anonymous_egress': True,
         }}))
-        self.assertFalse(requires_private_egress({'goreecloud': {
+        self.assertTrue(requires_private_egress({'goreecloud': {
             'private_search': False, 'require_anonymous_egress': False,
         }}))
-        self.assertFalse(requires_private_egress({'goreecloud': None}))
+        self.assertTrue(requires_private_egress({'goreecloud': None}))
+        self.assertTrue(requires_private_egress({'general': {
+            'instance_name': 'GoreeCloud Search',
+        }}))
+        self.assertFalse(requires_private_egress({'general': {
+            'instance_name': 'Generic SearXNG',
+        }}))
 
     def test_only_local_socks5h_all_proxy_is_accepted(self):
         valid = (
