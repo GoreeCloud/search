@@ -160,7 +160,8 @@ app.secret_key = settings['server']['secret_key']
 
 def get_locale():
     locale = localeselector()
-    logger.debug("%s uses locale `%s`", urllib.parse.quote(sxng_request.url), locale)
+    # Never log the request URL: searches and preference tokens may appear in it.
+    logger.debug("Locale selected: %s", locale)
     return locale
 
 
