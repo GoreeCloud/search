@@ -22,6 +22,19 @@ from searx.network.client import _proxy_kwargs
 
 
 class AnonymousEgressTests(unittest.TestCase):
+    def test_private_mode_always_requires_anonymous_egress(self):
+        self.assertTrue(requires_private_egress({'goreecloud': {'private_search': True}}))
+        self.assertTrue(requires_private_egress({'goreecloud': {
+            'private_search': True, 'require_anonymous_egress': False,
+        }}))
+        self.assertTrue(requires_private_egress({'goreecloud': {
+            'private_search': False, 'require_anonymous_egress': True,
+        }}))
+        self.assertFalse(requires_private_egress({'goreecloud': {
+            'private_search': False, 'require_anonymous_egress': False,
+        }}))
+        self.assertFalse(requires_private_egress({'goreecloud': None}))
+
     def test_only_local_socks5h_all_proxy_is_accepted(self):
         valid = (
             (('all://', 'socks5h://127.0.0.1:9050'),),
