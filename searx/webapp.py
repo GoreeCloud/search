@@ -1655,7 +1655,10 @@ def init():
     searx.plugins.initialize(app)
 
     metrics: bool = get_setting("general.enable_metrics")  # type: ignore
-    searx.search.initialize(check_network=True, enable_metrics=metrics)
+    # The private homepage/preview must remain usable while Tor is offline.
+    # Tor is still verified when an outbound HTTP client is first requested.
+    require_tor = settings.get('goreecloud', {}).get('require_anonymous_egress', False)
+    searx.search.initialize(check_network=not require_tor, enable_metrics=metrics)
 
     limiter.initialize(app, settings)
 
