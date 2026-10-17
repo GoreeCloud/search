@@ -1,0 +1,49 @@
+# VPN-only GoreeCloud Search development deployment. No host ports exposed.
+name: goreecloud-search
+services:
+  tor:
+    build:
+      context: ../..
+      dockerfile: deploy/vps/Tor.Dockerfile
+    image: goreecloud/search-tor:private-v1
+    container_name: goreecloud-search-tor
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      proxy:
+        aliases:
+          - goreecloud-search-gateway
+  search:
+    image: ${SEARCH_IMAGE:?Pin the locally built GoreeCloud Search image}
+    container_name: goreecloud-search
+    restart: unless-stopped
+    depends_on:
+      - tor
+    network_mode: service:tor
+    user: "977:977"
+    entrypoint: ["/usr/local/searxng/.venv/bin/granian", "searx.webapp:app"]
+    environment:
+      SEARXNG_SECRET: ${SEARCH_SECRET:?Set the private runtime secret}
+      SEARXNG_SETTINGS_PATH: /usr/local/searxng/private-settings.yml
+      GOREECLOUD_SEARCH_PRIVATE_HOST: search.goreecloud.com
+      GRANIAN_HOST: 0.0.0.0
+      GRANIAN_PORT: "8080"
+      GRANIAN_WORKERS: "1"
+      GRANIAN_INTERFACE: wsgi
+      GRANIAN_WEBSOCKETS: "false"
+      GRANIAN_BLOCKING_THREADS: "4"
+    volumes:
+      - ../../configs/goreecloud/settings.yml:/usr/local/searxng/private-settings.yml:ro
+      - search-cache:/var/cache/searxng
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+volumes:
+  search-cache:
+networks:
+  proxy:
+    external: true

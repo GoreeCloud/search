@@ -2,7 +2,7 @@
 
 Privacy-focused, configurable federated search rebuilt from the SearXNG source engine toward GoreeCloud platform standards.
 
-**Lifecycle:** Development only. **Upstream:** SearXNG `f4822b3`. **Glaze:** V1.7 / 1.7.0 inherited foundation, partial mapping (not formally accepted).
+**Lifecycle:** Development only. The [VPN-only VPS deployment profile](deploy/vps/README.md) is not a public release. **Upstream:** SearXNG `f4822b3`. **Glaze:** V1.7 / 1.7.0 inherited foundation, partial mapping (not formally accepted).
 
 ## Working implementation
 

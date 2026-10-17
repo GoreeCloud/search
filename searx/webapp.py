@@ -514,6 +514,7 @@ def pre_request():
             host=sxng_request.host, scheme=sxng_request.scheme,
             method=sxng_request.method, origin=sxng_request.headers.get('Origin'),
             fetch_site=sxng_request.headers.get('Sec-Fetch-Site'),
+            allowed_public_host=os.environ.get('GOREECLOUD_SEARCH_PRIVATE_HOST'),
         )
         if sxng_request.method == 'POST' and sxng_request.path in ('/', '/search', '/preview'):
             # The user query is capped at 512 characters; other form fields

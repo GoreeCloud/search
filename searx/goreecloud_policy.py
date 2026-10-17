@@ -22,6 +22,7 @@ class SearchPolicyViolation(ValueError):
 def validate_private_request_context(
     *, host: str, scheme: str, method: str,
     origin: str | None, fetch_site: str | None,
+    allowed_public_host: str | None = None,
 ) -> None:
     """Reject DNS-rebinding hosts and browser cross-site POSTs in the loopback profile.
 
@@ -30,11 +31,14 @@ def validate_private_request_context(
     """
     from urllib.parse import urlsplit
 
+    # An explicitly configured VPS hostname may be accepted only behind the
+    # separate VPN-only TLS reverse proxy. Local mode remains loopback-only.
+    vps_host_allowed = allowed_public_host == 'search.goreecloud.com' and host == allowed_public_host
     try:
         target = urlsplit('http://' + host)
         valid_host = (
             target.netloc == host
-            and target.hostname in ('127.0.0.1', 'localhost', '::1')
+            and (target.hostname in ('127.0.0.1', 'localhost', '::1') or (vps_host_allowed and target.port is None))
             and target.username is None and target.password is None
             and not target.path and not target.query and not target.fragment
             and target.port != 0
@@ -57,9 +61,9 @@ def validate_private_request_context(
         try:
             source = urlsplit(origin)
             same_origin = (
-                source.scheme.lower() == scheme.lower()
+                (source.scheme.lower() == 'https' if vps_host_allowed else source.scheme.lower() == scheme.lower())
                 and source.netloc.lower() == host.lower()
-                and source.hostname in ('127.0.0.1', 'localhost', '::1')
+                and (source.hostname in ('127.0.0.1', 'localhost', '::1') or vps_host_allowed)
                 and source.username is None and source.password is None
                 and not source.path and not source.query and not source.fragment
             )
