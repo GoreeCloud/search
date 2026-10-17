@@ -390,10 +390,10 @@ def check_network_configuration():
 
 
 def requires_private_egress(config: dict[str, t.Any]) -> bool:
-    """Private GoreeCloud Search must not fall back to direct egress.
+    """Every branded GoreeCloud Search profile requires an outbound privacy relay.
 
-    The privacy flag may not be disabled independently of private mode.
-    This guard is also used for the image proxy and engine-specific networks.
+    No application privacy toggle can authorize direct provider or image traffic.
+    Generic upstream SearXNG profiles remain unaffected.
     """
     if 'goreecloud' in config:
         return True
