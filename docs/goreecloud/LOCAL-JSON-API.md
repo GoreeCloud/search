@@ -2,7 +2,7 @@
 
 **Lifecycle:** Development. **Exposure:** loopback only. **Authentication:** none; this interface must not be published on a network.
 
-The private profile enables SearXNG's inherited JSON search response through `POST /search` with `q` and `format=json` in the request body. GET with search terms is rejected. Running an actual search transmits the terms to the enabled upstream search providers; the source-selection metadata is not an assertion that any provider received or answered a request.
+**Privacy relay requirement:** the Development runtime now blocks outbound provider access unless a validated local SOCKS5H gateway is configured. It does not send searches directly if the gateway is absent; JSON clients may receive HTTP 200 with an empty `results` list and populated `unresponsive_engines`, so HTTP success must not be treated as successful anonymous search. A functioning approved relay and DNS-leak protection have not been independently qualified. See [private egress requirements](PRIVATE-EGRESS-REQUIREMENTS.md).\n\nThe private profile enables SearXNG's inherited JSON search response through `POST /search` with `q` and `format=json` in the request body. GET with search terms is rejected. Running an actual search transmits the terms to the enabled upstream search providers; the source-selection metadata is not an assertion that any provider received or answered a request.
 
 ### No-network preview contract
 
