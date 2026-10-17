@@ -168,14 +168,9 @@ class Network:
 
     async def log_response(self, response: SXNG_Response):
         request = response.request
-        http_version = self._HTTP_VERSION.get(response.http_version, str(response.http_version))
-        status = f"{response.status_code} {response.reason}"
-        response_line = f"{http_version} {status}"
-        content_type = response.headers.get("Content-Type")
-        content_type = f' ({content_type})' if content_type else ''
         method = request.method if request else "?"
-        url = request.url if request else response.url
-        self._logger.debug(f'HTTP Request: {method} {url} "{response_line}"{content_type}')
+        # Do not log the upstream URL: its query string may contain user searches.
+        self._logger.debug("HTTP Response: %s status=%s", method, response.status_code)
 
     @staticmethod
     async def check_tor_proxy(client: AsyncClient, proxies) -> bool:
@@ -253,8 +248,8 @@ class Network:
                 raise_for_httperror(response)
             except:
                 method = response.request.method if response.request else "?"
-                url = response.request.url if response.request else response.url
-                self._logger.warning(f"HTTP Request failed: {method} {url}")
+                # Upstream URLs can contain search terms, tokens or private parameters.
+                self._logger.warning("HTTP Request failed: %s status=%s", method, response.status_code)
                 raise
         return response
 
