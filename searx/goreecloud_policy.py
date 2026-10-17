@@ -215,7 +215,7 @@ def safe_external_media_url(url: object) -> bool:
         ):
             return False
         if labels[-1] in ('local', 'localhost', 'internal', 'lan', 'invalid',
-                          'test', 'example', 'onion'):
+                          'test', 'example', 'onion', 'arpa'):
             return False
         # Reject ambiguous nonstandard numeric host encodings such as 127.1.
         if not re.fullmatch(r'[a-z]{2,63}|xn--[a-z0-9-]+', labels[-1]):
