@@ -188,3 +188,53 @@ def restrict_explicit_private_engines(enginerefs: Iterable[object], selected: st
     if {ref.name for ref in result} != requested:
         raise SearchPolicyViolation('The selected search source is unavailable for this query.', 422)
     return result
+
+
+# The image-only backend has an independent engine registry. Never broaden
+# the existing private web-search profile's Brave/Startpage allowlist.
+BUILTIN_IMAGE_SOURCES = frozenset({'brave.images', 'bing images', 'duckduckgo images'})
+
+
+def validate_image_api_request(
+    *,
+    method: str,
+    query_in_url: bool,
+    raw_query: str,
+    output_format: str,
+) -> None:
+    """Fail closed before constructing an engine executor or disclosing terms."""
+    if method.upper() != 'POST' or query_in_url:
+        raise SearchPolicyViolation('Image searches require POST without URL query parameters.', 405)
+    if output_format != 'json':
+        raise SearchPolicyViolation('Image service accepts JSON search responses only.', 406)
+    if not raw_query or not raw_query.strip():
+        raise SearchPolicyViolation('Enter a nonempty image search.', 400)
+    if len(raw_query) > 180:
+        raise SearchPolicyViolation('Image query exceeds the 180 character limit.', 413)
+    if any(part.startswith('!') for part in raw_query.split()):
+        raise SearchPolicyViolation('Search bang redirects are unavailable in image service.', 422)
+
+
+def validate_image_api_selection(
+    provider_names: Iterable[str],
+    categories: Iterable[str],
+    *,
+    explicit_engines: str | None,
+    external_redirect: bool,
+    lucky_redirect: bool,
+) -> int:
+    """Do not silently fall back to general-web or unapproved providers."""
+    names = list(provider_names)
+    if not names or any(name not in BUILTIN_IMAGE_SOURCES for name in names):
+        raise SearchPolicyViolation('Only the three approved image engines are available.', 422)
+    if set(categories) != {'images'}:
+        raise SearchPolicyViolation('Only the image-search category is available.', 422)
+    if explicit_engines is not None:
+        requested = [n.strip() for n in explicit_engines.split(',')]
+        if not requested or any(n not in BUILTIN_IMAGE_SOURCES for n in requested):
+            raise SearchPolicyViolation('Only approved image engines may be selected.', 422)
+        if set(requested) != set(names):
+            raise SearchPolicyViolation('Image engine selection must not silently widen.', 422)
+    if external_redirect or lucky_redirect:
+        raise SearchPolicyViolation('Image searches cannot redirect to external providers.', 422)
+    return len(set(names))
