@@ -60,14 +60,17 @@ goreecloud:
   private_search: true
   max_query_chars: 512
   max_provider_fanout: 3
-  # Required for every provider and image-proxy outbound request.
-  # The local SOCKS5H gateway must be independently verified as a privacy relay.
+  # This local developer profile cannot contact providers without a trusted
+  # local privacy gateway. The gateway can be a non-Tor VPN/forwarding relay.
+  # The proxy endpoint itself is not proof of anonymity or remote masking.
   require_anonymous_egress: true
+  egress_mode: gateway
 outgoing:
-  # Never bypass this relay or resolve provider DNS locally.
-  # With no trusted SOCKS5H service listening, searches fail closed.
+  # DNS is resolved by the SOCKS5H gateway, not by this application.
+  # Fail closed if no locally approved SOCKS5H gateway is listening.
   proxies:
     all://: socks5h://127.0.0.1:9050
+  using_tor_proxy: false
   extra_proxy_timeout: 10
 general:
   instance_name: "GoreeCloud Search"
