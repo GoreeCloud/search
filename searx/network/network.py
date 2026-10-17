@@ -233,6 +233,8 @@ class Network:
         if self.privacy_proxy_required:
             if not self.valid_private_proxy(proxies):
                 raise ProxyError('Private Search egress blocked: approved local SOCKS5H proxy required')
+            if not self.using_tor_proxy:
+                raise ProxyError('Private Search egress blocked: Tor verification is required')
             if verify is False or self.enable_http or curl_options:
                 raise ProxyError('Private Search egress blocked: insecure transport override')
         curl_key = tuple(sorted((int(k), v) for k, v in (curl_options or {}).items()))
@@ -405,7 +407,7 @@ def initialize(
         'max_connections': settings_outgoing['pool_connections'],
         'local_addresses': settings_outgoing['source_ips'],
         'using_tor_proxy': settings_outgoing['using_tor_proxy'],
-        'privacy_proxy_required': bool(settings.get('goreecloud', {}).get('require_anonymous_egress')),
+        'privacy_proxy_required': bool(settings.get('goreecloud', {}).get('private_search')),
         'proxies': settings_outgoing['proxies'],
         'max_redirects': settings_outgoing['max_redirects'],
         'retries': settings_outgoing['retries'],
