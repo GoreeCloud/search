@@ -23,6 +23,24 @@ export SEARXNG_SECRET="<unique-strong-secret-from-your-secret-store>"
 
 Never use the upstream placeholder key. The profile binds **127.0.0.1**, disables metrics and remote autocomplete, proxies images, defaults to POST, and exposes opt-in JSON on a private interface. No other upstream engine is registered as an available search option. Startpage has an upstream proof-of-work anti-bot challenge, so inclusion and enabled state do **not** establish that real Startpage searches work. It does **not** implement public rate limiting. Internet exposure requires a separate gated HTTPS/reverse-proxy, Valkey limiter, hardened secrets, security/privacy and operational acceptance.
 
+## Privacy relay required before provider search
+
+**Every outbound search is fail-closed unless an approved privacy relay is configured.**
+The private Development profile uses `socks5h://127.0.0.1:9050` as its
+single, local upstream gateway; without a trusted service listening there,
+external searches intentionally fail rather than send directly to Brave,
+Startpage or Qwant. The network policy also covers the image proxy, rejects
+plaintext upstream requests, strips provider cookies and identifying client
+headers, and prevents per-request proxy overrides. The relay **is not yet
+provisioned or verified on the development laptop**.
+
+A proxy masks the Search server's originating address from providers only
+when it actually works and is independently validated; the providers still
+receive the query text and may correlate searches. **Do not claim guaranteed
+anonymity** until the relay, DNS isolation, browser behavior and operational
+privacy requirements have been assessed. See [Mandatory private egress and
+anonymity limitations](docs/goreecloud/PRIVATE-EGRESS-REQUIREMENTS.md).
+
 ## Private search disclosure safeguards
 
 The local profile now rejects query-bearing GET requests, preserves POST even on Android/WebKit, and disables caching for private search pages. It also refuses non-loopback Host headers and browser cross-origin/cross-site form submissions before any search dispatch (a limited DNS-rebinding/CSRF defense), and caps search/preview form bodies at 64 KiB. Local non-browser clients can omit Origin headers; browser POSTs with opaque `Origin: null` are accepted only when `Sec-Fetch-Site: same-origin` explicitly confirms local origin, matching a verified Chromium form submission. This limited boundary defense is not a substitute for public authentication or abuse prevention. Query-length and distinct-provider limits are set to 512 characters and **three provider families** respectively; searches exceeding these limits return 413/422 rather than silently expanding disclosure. Private result pages omit query-bearing RSS/share URL metadata, and the private homepage does not advertise OpenSearch GET-query registration; the private server also returns uncached 404 responses for direct OpenSearch and autocomplete endpoints until an appropriately safe browser integration is qualified. The privacy-sensitive preferences for POST transport, title disclosure, autocomplete, favicons, and image proxy are locked against cookie and request overrides. The private profile also rejects external-bang redirects and first-result (double exclamation mark) navigation before dispatch; unexpected provider/plugin redirects are refused instead of navigating the browser to a third-party site. Query length is validated on the submitted value before operator parsing. Only the Brave Search (`!br` or `!brave`), Startpage (`!sp` or `!startpage`), and Qwant (`!qw` or `!qwant`) source bangs, plus general/web category bangs, are accepted. Unknown or third-party bangs are rejected rather than silently falling back; unsupported providers cannot be selected or dispatched. Shared serialized-preference GET/POST imports are rejected before parsing because upstream can otherwise change selected providers by following a URL; regular local Preferences forms remain available. Primary HTML/JSON search result links are restricted to well-formed HTTP(S) addresses, rejecting malformed or zero ports and invisible Unicode control characters. These safeguards do not cover all embedded or secondary URLs, cannot prevent configured upstream providers from receiving queries, and do not establish anonymity or production security acceptance.
