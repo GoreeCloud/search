@@ -67,7 +67,8 @@ from searx.goreecloud_policy import (
     SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
     distinct_selected_sources, safe_primary_result_url, represented_result_sources, validate_builtin_sources,
     validate_builtin_search_bangs, restrict_explicit_private_engines, validate_private_request_context,
-    SEARCH_SOURCE_COOKIE, SEARCH_SOURCE_OPTIONS, stored_search_source, requested_search_source,
+    SEARCH_SOURCE_COOKIE, SEARCH_SOURCE_OPTIONS, SEARCH_SOURCE_FAMILIES,
+    stored_search_source, requested_search_source, selected_engines_for_category,
 )
 from searx.engines import (
     DEFAULT_CATEGORY,
@@ -447,6 +448,20 @@ def render(template_name: str, **kwargs):
     # values from settings
     kwargs['search_formats'] = [x for x in settings['search']['formats'] if x != 'html']
     kwargs['private_query_transport'] = settings['goreecloud']['private_search']
+    if settings['goreecloud']['private_search']:
+        chosen_source = stored_search_source(flask.request.cookies.get(SEARCH_SOURCE_COOKIE))
+        available_tabs = []
+        for category_name in SEARCH_SOURCE_FAMILIES:
+            try:
+                engines_for_tab = selected_engines_for_category(category_name, chosen_source)
+            except SearchPolicyViolation:
+                engines_for_tab = None
+            available_tabs.append({
+                'category': category_name,
+                'title': 'Web' if category_name == 'general' else category_name.title(),
+                'engines': engines_for_tab,
+            })
+        kwargs['goreecloud_category_nav'] = available_tabs
     kwargs['instance_name'] = get_setting('general.instance_name')
     kwargs['searxng_version'] = VERSION_STRING
     kwargs['searxng_git_url'] = GIT_URL
@@ -756,6 +771,7 @@ def goreecloud_preview():
             explicit=sxng_request.form.get('engines'),
             stored=flask.request.cookies.get(SEARCH_SOURCE_COOKIE),
             query_specific=bool(raw_text_query and raw_text_query.specific),
+            category=(query.categories[0] if query.categories else 'general'),
         )
     )
     sources = distinct_selected_sources(ref.name for ref in query.engineref_list)
@@ -851,6 +867,7 @@ def search():
                     explicit=sxng_request.form.get('engines'),
                     stored=flask.request.cookies.get(SEARCH_SOURCE_COOKIE),
                     query_specific=bool(raw_text_query and raw_text_query.specific),
+                    category=(search_query.categories[0] if search_query.categories else 'general'),
                 )
             )
             validate_disclosure(

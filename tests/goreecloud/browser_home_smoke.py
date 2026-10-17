@@ -242,6 +242,27 @@ def main() -> None:
         driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", save_button)
         save_button.click()
         WebDriverWait(driver, 12).until(lambda page: page.current_url == url)
+        # GoreeCloud-only Settings identity, responsive layout and real radio save.
+        for width, height, label in ((1440, 900, 'desktop'), (390, 844, 'phone'), (320, 760, 'phone-small')):
+            driver.set_window_size(width, height)
+            driver.get(url + 'preferences')
+            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-preferences-intro h1').text == 'Settings'
+            assert not driver.find_elements(By.CSS_SELECTOR, '#main_preferences > a img.logo')
+            assert len(driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')) == 3
+            prefs_geom = driver.execute_script("""
+              return {width:document.documentElement.clientWidth,
+                scroll:document.documentElement.scrollWidth,
+                title:document.querySelector('#main_preferences h1').getBoundingClientRect().width}
+            """)
+            assert prefs_geom['scroll'] <= prefs_geom['width'] + 1, (label, prefs_geom)
+            driver.save_screenshot(str(artifacts / f'settings-{label}.png'))
+        driver.set_window_size(1440, 900)
+        driver.get(url + 'preferences')
+        driver.find_element(By.ID, 'tab-label-ui').click()
+        assert driver.find_element(By.ID, 'tab-content-ui').is_displayed(), 'Interface settings tab cannot open'
+        driver.find_element(By.ID, 'tab-label-general').click()
+        assert driver.find_element(By.ID, 'tab-content-general').is_displayed(), 'General settings tab cannot reopen'
+        print('PASS branded Settings layout and functioning tabs at desktop, phone and narrow phone')
         print('PASS no homepage source switches; Preferences persists chosen engines')
         # Exercise a real browser POST through the real SearXNG query parser,
         # while replacing provider execution with a synthetic local result.
@@ -353,6 +374,40 @@ def main() -> None:
             driver.save_screenshot(str(artifacts / 'phone-eight-result-layout.png'))
             rich.assert_called_once()
         print('PASS desktop 2-column results and mobile stacked cards, 8 synthetic results, no provider traffic')
+
+        # Category tabs must really submit POST, preserve the original query,
+        # and never send it through the browser URL.
+        with patch('searx.search.SearchWithPlugins', SyntheticBrowserResultsCollection):
+            driver.set_window_size(1440, 900)
+            driver.get(url)
+            driver.find_element(By.ID, 'q').send_keys('synthetic category navigation')
+            driver.find_element(By.ID, 'send_search').click()
+            WebDriverWait(driver, 12).until(
+                lambda page: len(page.find_elements(By.CSS_SELECTOR, '.goreecloud-category-form')) == 4
+            )
+            labels = [button.text.strip() for button in driver.find_elements(
+                By.CSS_SELECTOR, '.goreecloud-category-tab')]
+            assert labels == ['Web', 'Images', 'Videos', 'News'], labels
+            driver.save_screenshot(str(artifacts / 'desktop-category-tabs.png'))
+            driver.find_element(By.XPATH,
+                "//nav[contains(@class,'goreecloud-category-tabs')]//button[normalize-space()='Images']").click()
+            WebDriverWait(driver, 12).until(
+                lambda page: len(page.find_elements(
+                    By.CSS_SELECTOR, '.goreecloud-category-tab[aria-current="page"]')) == 1
+                and page.find_element(
+                    By.CSS_SELECTOR, '.goreecloud-category-tab[aria-current="page"]').text.strip() == 'Images'
+            )
+            assert not driver.execute_script('return location.search'), 'Category switch leaked query'
+            assert driver.find_element(By.CSS_SELECTOR, '#q').get_attribute('value') == 'synthetic category navigation'
+            assert driver.find_element(By.CSS_SELECTOR,
+                '.goreecloud-category-form input[name="engines"][value="brave.images,startpage images"]')
+            driver.set_window_size(390, 844)
+            driver.save_screenshot(str(artifacts / 'phone-category-tabs.png'))
+            overflow = driver.execute_script(
+                'return document.documentElement.scrollWidth - document.documentElement.clientWidth')
+            assert overflow <= 1, f'Category tabs overflow phone width: {overflow}'
+        print('PASS category tabs Web/Images/Videos/News, private POST navigation and phone overflow')
+
 
         # A partial provider failure offers a deliberate POST retry on a
         # populated results page, without switching to an unselected source.

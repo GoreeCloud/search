@@ -14,7 +14,7 @@
       </div>
     </div>
     {% set display_tooltip = true %}
-    {% include 'simple/categories.html' %}
+    {% if not private_query_transport %}{% include 'simple/categories.html' %}{% endif %}
   </div>
   <div class="search_filters">
     {% include 'simple/filters/languages.html' %}
@@ -25,3 +25,4 @@
   <input type="hidden" name="theme" value="{{ theme }}" >
   {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}" >{% endif %}
 </form>
+{% if private_query_transport %}{% include 'simple/goreecloud_category_nav.html' %}{% endif %}

@@ -42,7 +42,8 @@ class PrivatePreferenceImportTests(unittest.TestCase):
         with smoke.app.test_client() as client:
             response = client.get('/preferences', headers={'X-Real-IP': '127.0.0.1'})
             self.assertEqual(200, response.status_code)
-            self.assertIn(b'Changes here are saved to this browser', response.data)
-            self.assertIn(b'shared URL is disabled', response.data)
+            self.assertIn(b'Your choices stay in this browser', response.data)
+            self.assertIn(b'GoreeCloud Search', response.data)
+            self.assertNotIn(b'searxng.png', response.data)
             self.assertIn('no-store', response.headers['Cache-Control'])
             response.close()

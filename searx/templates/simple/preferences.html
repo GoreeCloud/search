@@ -149,10 +149,13 @@
 
 {%- block content -%}
 
-  <h1>{{ _('Preferences') }}</h1>
   {% if private_query_transport %}
-  <p class="goreecloud-source-disclosure" role="note">Changes here are saved to this browser. To protect your selected search providers, importing settings through a shared URL is disabled in this local profile.</p>
-  {% endif %}
+  <div class="goreecloud-preferences-intro">
+    <span class="goreecloud-preferences-eyebrow">GoreeCloud Search</span>
+    <h1>Settings</h1>
+    <p>Personalize your search experience. Your choices stay in this browser.</p>
+  </div>
+  {% else %}<h1>{{ _('Preferences') }}</h1>{% endif %}
 
   {%- if not private_query_transport and request.args.get('preferences_preview_only') == 'true' -%}
     <div class="dialog-warning-block">
@@ -180,7 +183,7 @@
         <span>{{ source_label }}</span>
       </label>
       {% endfor %}
-      <p class="goreecloud-preference-note">Search terms are sent only to your selected provider(s). Source availability may vary, and blocked providers are never replaced automatically.</p>
+      <p class="goreecloud-preference-note">Search terms go only to the selected sources. Images and News support Brave and Startpage; Videos uses Brave only. If you select Startpage only, Videos is unavailable. Blocked providers are never replaced automatically.</p>
     </fieldset>
     {% endif %}
     {%- if 'categories' not in locked_preferences -%}
@@ -274,7 +277,9 @@
 
     {# footer with save & reset buttons #}
 
+    {% if private_query_transport %}<div class="goreecloud-preferences-actions">{% endif %}
     {%- include 'simple/preferences/footer.html' -%}
+    {% if private_query_transport %}</div>{% endif %}
 
   </form>{{- '' -}}
 {%- endblock -%}
