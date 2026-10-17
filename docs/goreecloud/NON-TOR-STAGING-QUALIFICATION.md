@@ -148,6 +148,38 @@ non-443 ports, and that connect receives only a validated numeric IP. They do
 **not** perform real external requests. Generic SearXNG, production egress,
 and default GoreeCloud Search configurations are unaffected.
 
+## GitHub-hosted ephemeral network topology qualification
+
+The `search-ephemeral-staging-topology.yml` workflow now runs a
+**temporary, non-production** Docker topology on a disposable GitHub-hosted
+runner. The integration harness
+`tests/goreecloud/ci_ephemeral_staging_topology.py` creates two randomly named
+Docker bridge networks, one with `--internal` for the synthetic Search
+visitor and gateway, and one external-only bridge for a synthetic provider
+fixture and gateway. There are **no published ports, production mounts,
+live Search queries, access tokens, Tor relays or user data**.
+
+The synthetic visitor cannot route directly to a fixture provider, a public
+Internet target or cloud metadata; all direct probes must fail with an
+unreachable/administratively prohibited errno rather than merely refusing a
+connection. A minimal deliberately synthetic gateway relays exactly one fixed
+marker to a minimal synthetic provider fixture. The provider replies with
+the actual connection peer's private bridge address; the test confirms this
+is the gateway's egress-bridge address rather than the visitor's internal
+address. All fixture processes and Docker bridges are removed automatically
+and verified absent at the end of the CI job.
+
+**The synthetic CI gateway is NOT the product's DNS-pinned SOCKS5H gateway.**
+This topology proves kernel/Docker isolation only for this ephemeral runner
+and visitor path, not that an actual remote GoreeCloud Search installation
+cannot bypass its gateway. The synthetic provider observes a **private bridge
+IP**, not a public remote server IP. It does not verify a real upstream
+provider, a deployment firewall, its DNS rebinding resistance, reverse proxy,
+header redaction, user IP masking on the Internet, DNS logs, or production
+readiness. Those require a distinct owner-authorized hosted environment and
+controlled external observation. This workflow must never be used as
+permission to expose Search or mark security issue #21 resolved.
+
 ## Acceptance tests (synthetic fixtures only)
 
 | Test | Required evidence |
