@@ -27,8 +27,11 @@ cookies are **not passed** to search providers, and common identity-carrying
 headers including `Forwarded`, `X-Forwarded-For`, `X-Real-IP`,
 `Authorization` and `Cookie` are removed. Query-bearing upstream URL
 logging was separately disabled, and the locale-selection debug log no longer
-records the incoming request URL. Remaining application exception, proxy,
-reverse-proxy and telemetry paths still need a comprehensive privacy review.
+records the incoming request URL. Provider processor diagnostics now record
+exception *types* instead of exception text; the private search, cookie/form
+preference, and image-proxy handlers use generic messages without embedding
+potentially query-bearing exception strings. Remaining reverse-proxy,
+third-party, dependency and telemetry paths still need a comprehensive audit.
 
 If the local SOCKS5H gateway is not running, the user can open the private
 homepage and preview source selection, but external provider searches will
@@ -82,13 +85,16 @@ but external result URLs and third-party embeds require further auditing.
 
 ### Bounded evidence
 
-At this Development checkpoint, **seven anonymous egress regression cases**
+At the prior Development checkpoint, **seven anonymous egress regression cases**
 passed on the laptop: allowlist/denylist proxy parsing, no client creation
 without a valid relay, strict cURL/TLS/HTTPS guards, identity header and
 cookie stripping, and all registered network adapters inheriting the policy.
 The earlier local GoreeCloud suite passed **152/152** cases on the previous
-checkpoint. A fresh strict-Tor attestation and repeated-client test suite has
-been committed for CI validation, but no passing new-head CI is claimed here.
+checkpoint. New regression cases cover strict boolean HTTP-200 Tor verification,
+failed-check client shutdown, per-request revalidation of reused connections,
+and revocation of an earlier positive verdict. The new source and these tests
+have been committed for exact-head CI; no live Tor-relayed provider success
+is claimed.
 An actual local Search POST while the proxy was absent returned an error and
 no results at the earlier checkpoint; every registered network (15/15)
 reported private egress enforcement. A private
