@@ -30,11 +30,9 @@ deliberate privacy default, not a reason to bypass the gateway.
 
 ## Critical difference: proxy masking versus anonymity
 
-A SOCKS5H protocol and a loopback listener do **not** prove that the proxy is
+A SOCKS5H protocol and a loopback listener alone do **not** prove that the proxy is
 Tor, that the exit IP is shared, that the provider cannot correlate searches,
-or that queries are end-to-end anonymous. The operator must independently
-verify that the listening gateway is an approved privacy network, such as Tor,
-with its own identity and DNS-leak checks before claiming anonymity. A
+or that queries are end-to-end anonymous. The application now additionally requires `using_tor_proxy: true` and performs a Tor-exit check through the configured gateway before allocating an outbound provider session. The operator must **also** independently verify that the listening service is genuine Tor and conduct exit-IP, DNS-leak and traffic-isolation checks before claiming any anonymity. A
 malicious/misconfigured proxy, upstream network observer, or Tor exit can
 still observe metadata; a search provider receives the **plaintext query**
 over its HTTPS endpoint and can correlate query content and timing. Search
