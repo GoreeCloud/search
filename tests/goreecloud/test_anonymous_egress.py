@@ -106,8 +106,9 @@ class AnonymousEgressTests(unittest.TestCase):
             privacy_proxy_required=True,
         )
         with patch('searx.network.network.new_client') as factory:
-            with self.assertRaises(ProxyError):
-                asyncio.run(n.get_client(verify=False))
+            for untrusted in (False, 0, '/tmp/untrusted-test-ca.pem'):
+                with self.subTest(verify=untrusted), self.assertRaises(ProxyError):
+                    asyncio.run(n.get_client(verify=untrusted))
             with self.assertRaises(ProxyError):
                 asyncio.run(n.get_client(curl_options={1: 1}))
             factory.assert_not_called()
@@ -166,6 +167,7 @@ class AnonymousEgressTests(unittest.TestCase):
                     'https://check.torproject.org/api/ip',
                     client.get.await_args.args[0])
                 self.assertEqual(8, client.get.await_args.kwargs['timeout'])
+                self.assertIs(False, client.get.await_args.kwargs['allow_redirects'])
         failed = Mock()
         failed.get = AsyncMock(side_effect=OSError('no proxy'))
         self.assertFalse(asyncio.run(Network.check_tor_proxy(failed, proxy)))
