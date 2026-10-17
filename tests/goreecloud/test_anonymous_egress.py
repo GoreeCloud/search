@@ -3,12 +3,13 @@ import asyncio
 import unittest
 from unittest.mock import patch
 
+import test_runtime_smoke as smoke
+
 from searx.goreecloud_anonymity import AnonymousEgressError, require_tor_route
 from searx.network.client import new_client
 from searx.network.network import Network
 from curl_cffi.requests.exceptions import ProxyError
 
-import test_runtime_smoke as smoke
 
 
 class AnonymousSearchEgressTests(unittest.TestCase):
