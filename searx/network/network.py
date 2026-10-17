@@ -395,10 +395,10 @@ def requires_private_egress(config: dict[str, t.Any]) -> bool:
     The privacy flag may not be disabled independently of private mode.
     This guard is also used for the image proxy and engine-specific networks.
     """
-    goreecloud = config.get('goreecloud', {})
-    return isinstance(goreecloud, dict) and bool(
-        goreecloud.get('private_search') or goreecloud.get('require_anonymous_egress')
-    )
+    if 'goreecloud' in config:
+        return True
+    general = config.get('general', {})
+    return isinstance(general, dict) and general.get('instance_name') == 'GoreeCloud Search'
 
 
 def initialize(
