@@ -8,6 +8,14 @@ from searx.network.network import Network
 
 
 class SearchNetworkLoggingRedactionTests(unittest.TestCase):
+    def test_embedded_media_never_sends_referrer(self):
+        from pathlib import Path
+        source = (Path(__file__).resolve().parents[2] / 'searx/templates/simple/macros.html').read_text(
+            encoding='utf-8')
+        section = source.split('macro iframe(iframe_src)', 1)[1].split('endmacro', 1)[0]
+        self.assertIn('referrerpolicy="no-referrer"', section)
+        self.assertNotIn('referrerpolicy="origin"', section)
+
     def test_locale_url_is_absent_from_debug_log(self):
         from pathlib import Path
         path = Path(__file__).resolve().parents[2] / "searx/webapp.py"
