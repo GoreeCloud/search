@@ -456,7 +456,19 @@ def main() -> None:
                         scroll:document.documentElement.scrollWidth,
                         cardWidth:cr[0].width, imageWidth:image.getBoundingClientRect().width,
                         inlineImages:cards.every(c=>c.querySelector('img.image_thumbnail').src.startsWith('data:image/png;base64,')),
-                        tileTitles:cards.every(c=>!!c.querySelector('span.title')?.textContent?.trim())};
+                        tileTitles:cards.every(c=>!!c.querySelector('span.title')?.textContent?.trim()),
+                        captionsBelow:cards.every(c=>{
+                            let i=c.querySelector('img.image_thumbnail').getBoundingClientRect();
+                            let t=c.querySelector('span.title').getBoundingClientRect();
+                            let s=c.querySelector('span.source').getBoundingClientRect();
+                            let card=c.getBoundingClientRect();
+                            return t.top >= i.bottom-1 && s.top >= t.bottom-1 && card.bottom >= s.bottom-1;
+                        }),
+                        badgesCompact:cards.every(c=>{
+                            let b=c.querySelector('.image_resolution').getBoundingClientRect();
+                            let i=c.querySelector('img.image_thumbnail').getBoundingClientRect();
+                            return b.height <= 32 && b.top >= i.top && b.bottom <= i.bottom+1;
+                        })};
                 """)
                 print('IMAGE GRID', label, geometry, flush=True)
                 assert geometry['display'] == 'grid', (label, geometry)
@@ -467,6 +479,7 @@ def main() -> None:
                     )
                 )
                 assert geometry['tileTitles'], (label, geometry)
+                assert geometry['captionsBelow'] and geometry['badgesCompact'], (label, geometry)
                 assert geometry['scroll'] <= geometry['viewport'] + 1, (label, geometry)
                 assert geometry['cardWidth'] >= 120 and geometry['imageWidth'] >= 100, (label, geometry)
                 if label == 'desktop':
