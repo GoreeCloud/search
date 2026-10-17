@@ -17,7 +17,7 @@ os.environ.setdefault('SEARXNG_SECRET', 'goreecloud-private-egress-tests-only-00
 
 from curl_cffi.requests.exceptions import ProxyError
 
-from searx.network.network import Network
+from searx.network.network import Network, requires_private_egress
 from searx.network.client import _proxy_kwargs
 
 
