@@ -30,7 +30,7 @@
     <div id="urls" aria-label="Search results">
       {% if results %}
       <div class="goreecloud-results-heading">
-        <h2>Web results</h2>
+        <h2>{{ 'Web results' if 'general' in selected_categories else (selected_categories[0]|capitalize if selected_categories else 'Web results') }}</h2>
         <span>{{ results|length }} displayed on this page</span>
       </div>
       {% if private_query_transport and unresponsive_engines %}

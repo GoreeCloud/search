@@ -1,0 +1,21 @@
+{# Search tabs use same-origin POST; only the category and approved provider
+   instances change. No query parameters or silent provider substitution. #}
+<nav class="goreecloud-category-tabs" aria-label="Search categories">
+  {% for tab in goreecloud_category_nav %}
+    {% if tab.engines %}
+    <form action="{{ url_for('search') }}" method="post" class="goreecloud-category-form">
+      <input type="hidden" name="q" value="{{ q or '' }}">
+      <input type="hidden" name="category_{{ tab.category }}" value="1">
+      <input type="hidden" name="engines" value="{{ tab.engines }}">
+      <input type="hidden" name="language" value="{{ current_language }}">
+      <input type="hidden" name="safesearch" value="{{ safesearch }}">
+      <input type="hidden" name="time_range" value="{{ time_range }}">
+      <input type="hidden" name="theme" value="{{ theme }}">
+      {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}">{% endif %}
+      <button type="submit" class="goreecloud-category-tab{% if tab.category in selected_categories %} selected{% endif %}" {% if tab.category in selected_categories %}aria-current="page"{% endif %}>{{ tab.title }}</button>
+    </form>
+    {% else %}
+    <span class="goreecloud-category-tab unavailable" aria-disabled="true" title="Not available with your saved search engine choice. Change it in Settings.">{{ tab.title }} <span class="goreecloud-tab-unavailable-note">Unavailable</span></span>
+    {% endif %}
+  {% endfor %}
+</nav>

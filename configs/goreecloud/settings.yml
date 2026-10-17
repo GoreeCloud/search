@@ -7,6 +7,11 @@ use_default_settings:
     keep_only:
       - brave
       - startpage
+      - brave.images
+      - brave.videos
+      - brave.news
+      - startpage images
+      - startpage news
 engines:
   - name: brave
     disabled: false
@@ -14,9 +19,27 @@ engines:
   - name: startpage
     disabled: false
     inactive: false
-# General web only; no phantom image/news/map/provider tabs.
+  - name: brave.images
+    disabled: false
+    inactive: false
+  - name: brave.videos
+    disabled: false
+    inactive: false
+  - name: brave.news
+    disabled: false
+    inactive: false
+  - name: startpage images
+    disabled: false
+    inactive: false
+  - name: startpage news
+    disabled: false
+    inactive: false
+# Only categories backed by an approved Brave Search or Startpage adapter.
 categories_as_tabs:
   general:
+  images:
+  videos:
+  news:
 goreecloud:
   private_search: true
   max_query_chars: 512

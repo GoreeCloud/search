@@ -204,7 +204,19 @@ def represented_result_sources(results: Iterable[object], selected_names: Iterab
 
 # Product-wide private Search provider allowlist; legacy upstream adapters
 # remain in the upstream source tree but are not selectable or executable.
-BUILTIN_SEARCH_SOURCES = frozenset({'brave', 'startpage'})
+BUILTIN_SEARCH_SOURCES = frozenset({
+    'brave', 'startpage',
+    'brave.images', 'brave.videos', 'brave.news',
+    'startpage images', 'startpage news',
+})
+SEARCH_SOURCE_FAMILIES = {
+    'general': {'brave': 'brave', 'startpage': 'startpage'},
+    'images': {'brave': 'brave.images', 'startpage': 'startpage images'},
+    'videos': {'brave': 'brave.videos'},
+    'news': {'brave': 'brave.news', 'startpage': 'startpage news'},
+}
+SEARCH_CATEGORIES = tuple(SEARCH_SOURCE_FAMILIES)
+
 
 # Browser-local source preference. Only these two approved engines are allowed.
 SEARCH_SOURCE_COOKIE = 'goreecloud_search_sources'
@@ -215,12 +227,30 @@ SEARCH_SOURCE_OPTIONS = {
 }
 
 
+def selected_engines_for_category(category: str, choice: str = 'both') -> str:
+    """Map saved provider families to actual allowed per-category adapter names.
+
+    No engine fallback is performed: a Startpage-only video request is
+    rejected as unsupported, never silently routed to Brave.
+    """
+    if category not in SEARCH_SOURCE_FAMILIES:
+        raise SearchPolicyViolation('That search category is unavailable.', 422)
+    available = SEARCH_SOURCE_FAMILIES[category]
+    # "Both" means all supported approved providers for this category;
+    # the Videos adapter exists only on Brave (no Startpage video adapter).
+    wanted = tuple(available) if choice == 'both' else (choice,)
+    if any(family not in available for family in wanted):
+        raise SearchPolicyViolation('The selected search provider does not support this category.', 422)
+    return ','.join(available[family] for family in wanted)
+
+
 def stored_search_source(raw: str | None) -> str:
     """Accept only canonical provider choices; fall back to two-source default."""
     return raw if raw in SEARCH_SOURCE_OPTIONS else 'both'
 
 
-def requested_search_source(*, explicit: str | None, stored: str | None, query_specific: bool) -> str | None:
+def requested_search_source(*, explicit: str | None, stored: str | None, query_specific: bool,
+                            category: str = 'general') -> str | None:
     """Explicit POST selections and supported !bangs supersede saved preferences.
 
     A missing cookie preserves SearXNG defaults; no additional data collection
@@ -230,7 +260,7 @@ def requested_search_source(*, explicit: str | None, stored: str | None, query_s
         return explicit
     if query_specific or stored is None:
         return None
-    return SEARCH_SOURCE_OPTIONS[stored_search_source(stored)]
+    return selected_engines_for_category(category, stored_search_source(stored))
 
 
 

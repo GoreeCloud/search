@@ -6,6 +6,7 @@
 
 - The homepage search form offers one primary search action; it does not show Brave Search/Startpage buttons or the source-preview shortcut.
 - The standard Preferences page (General) provides an explicit, persistent choice: **Both sources** (default), **Brave Search only**, **Startpage only**. A Settings link in the header opens the page.
+- Search result tabs offer Web, Images, Videos and News with only approved Brave/Startpage variants. Startpage-only disables Videos because there is no configured Startpage video adapter.
 - Search results occupy the first main content column. Provider attribution, errors and manual same-source retry remain in a secondary collapsible section. Partial failures retain a visible, compact inline notice near the result heading. Empty-result errors retain an accessible on-page recovery action.
 - On small screens, the header uses accessible icon controls; the 320px and 390px Chromium viewport smoke checks explicitly reject horizontal scroll. Navigation remains keyboard-operable.
 

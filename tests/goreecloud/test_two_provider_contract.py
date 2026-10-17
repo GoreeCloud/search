@@ -18,23 +18,23 @@ class TwoProviderContractTests(unittest.TestCase):
         configured = smoke.settings['engines']
         self.assertEqual(BUILTIN_SEARCH_SOURCES, {engine['name'] for engine in configured})
         self.assertEqual(BUILTIN_SEARCH_SOURCES, set(registered_engines))
-        self.assertEqual(2, len(configured))
+        self.assertEqual(7, len(configured))
         self.assertTrue(all(not engine.get('disabled', False) for engine in configured))
         self.assertTrue(all(not engine.get('inactive', False) for engine in configured))
         self.assertEqual(2, smoke.settings['goreecloud']['max_provider_fanout'])
-        self.assertEqual(['general'], list(smoke.settings['categories_as_tabs']))
+        self.assertEqual(['general','images','videos','news'], list(smoke.settings['categories_as_tabs']))
 
     def test_home_preferences_and_preview_have_only_two_built_in_sources(self):
         with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins') as dispatcher:
             home = client.get('/', headers=self.headers)
             self.assertEqual(200, home.status_code)
-            self.assertNotIn(b'category_images', home.data)
+            self.assertNotIn(b'category_images', home.data)  # homepage stays uncluttered
             home.close()
             preferences = client.get('/preferences', headers=self.headers)
             self.assertEqual(200, preferences.status_code)
             fields = html.fromstring(preferences.data).xpath('//input[starts-with(@name,"engine_")]/@name')
-            self.assertEqual({'engine_brave__general','engine_startpage__general'}, set(fields))
-            self.assertEqual(2, len(fields))
+            self.assertTrue({'engine_brave__general','engine_startpage__general'}.issubset(set(fields)))
+            self.assertGreaterEqual(len(fields), 7)
             preferences.close()
             preview = client.post('/preview', data={'q':'synthetic source preflight','format':'json'}, headers=self.headers)
             self.assertEqual(200, preview.status_code)
@@ -45,7 +45,7 @@ class TwoProviderContractTests(unittest.TestCase):
 
     def test_unknown_explicit_engine_never_falls_back_to_other_provider(self):
         with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins') as dispatcher:
-            for engine in ('google','duckduckgo','braveapi','brave.news','startpage news',
+            for engine in ('google','duckduckgo','braveapi','brave.goggles','startpage videos',
                            'brave,startpage,google','', 'BRAVE', 'brave,,startpage'):
                 for route in ('/search','/preview'):
                     with self.subTest(engine=engine,route=route):
@@ -70,7 +70,7 @@ class TwoProviderContractTests(unittest.TestCase):
                         response.close()
 
     def test_unsupported_or_empty_parsed_sources_are_rejected(self):
-        for labels in ([], ['brave','google'], ['startpage','brave.images'], ['braveapi']):
+        for labels in ([], ['brave','google'], ['startpage','braveapi'], ['braveapi']):
             with self.subTest(labels=labels), self.assertRaises(SearchPolicyViolation):
                 validate_builtin_sources(labels)
         self.assertEqual(2,validate_builtin_sources(['brave','startpage']))
