@@ -1,4 +1,4 @@
-"""Brave Search and Startpage are GoreeCloud Search's only built-in engines.
+"""Brave Search, Startpage and Qwant are GoreeCloud Search's only approved providers.
 
 All integration checks substitute SearchWithPlugins to prevent provider traffic.
 """
@@ -18,10 +18,10 @@ class TwoProviderContractTests(unittest.TestCase):
         configured = smoke.settings['engines']
         self.assertEqual(BUILTIN_SEARCH_SOURCES, {engine['name'] for engine in configured})
         self.assertEqual(BUILTIN_SEARCH_SOURCES, set(registered_engines))
-        self.assertEqual(7, len(configured))
+        self.assertEqual(11, len(configured))
         self.assertTrue(all(not engine.get('disabled', False) for engine in configured))
         self.assertTrue(all(not engine.get('inactive', False) for engine in configured))
-        self.assertEqual(2, smoke.settings['goreecloud']['max_provider_fanout'])
+        self.assertEqual(3, smoke.settings['goreecloud']['max_provider_fanout'])
         self.assertEqual(['general','images','videos','news'], list(smoke.settings['categories_as_tabs']))
 
     def test_home_preferences_and_preview_have_only_two_built_in_sources(self):
@@ -33,12 +33,12 @@ class TwoProviderContractTests(unittest.TestCase):
             preferences = client.get('/preferences', headers=self.headers)
             self.assertEqual(200, preferences.status_code)
             fields = html.fromstring(preferences.data).xpath('//input[starts-with(@name,"engine_")]/@name')
-            self.assertTrue({'engine_brave__general','engine_startpage__general'}.issubset(set(fields)))
-            self.assertGreaterEqual(len(fields), 7)
+            self.assertTrue({'engine_brave__general','engine_startpage__general','engine_qwant__general'}.issubset(set(fields)))
+            self.assertGreaterEqual(len(fields), 11)
             preferences.close()
             preview = client.post('/preview', data={'q':'synthetic source preflight','format':'json'}, headers=self.headers)
             self.assertEqual(200, preview.status_code)
-            self.assertEqual(['brave','startpage'], preview.json['goreecloud']['selected_engines'])
+            self.assertEqual(['brave','qwant','startpage'], preview.json['goreecloud']['selected_engines'])
             self.assertIs(False, preview.json['goreecloud']['network_requests_made'])
             preview.close()
             dispatcher.assert_not_called()
@@ -60,7 +60,7 @@ class TwoProviderContractTests(unittest.TestCase):
 
     def test_each_approved_engine_can_be_selected_without_others(self):
         with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins', OfflineSearch):
-            for engine in ('brave','startpage'):
+            for engine in ('brave','startpage','qwant'):
                 for route in ('/search','/preview'):
                     with self.subTest(engine=engine, route=route):
                         response=client.post(route,data={'q':'synthetic', 'engines':engine, 'format':'json'},
@@ -73,13 +73,13 @@ class TwoProviderContractTests(unittest.TestCase):
         for labels in ([], ['brave','google'], ['startpage','braveapi'], ['braveapi']):
             with self.subTest(labels=labels), self.assertRaises(SearchPolicyViolation):
                 validate_builtin_sources(labels)
-        self.assertEqual(2,validate_builtin_sources(['brave','startpage']))
+        self.assertEqual(3,validate_builtin_sources(['brave','startpage','qwant']))
 
     def test_only_approved_provider_bangs_are_accepted(self):
         with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins', side_effect=OfflineSearch) as dispatcher:
             for bang, names in (('!br', ['brave']), ('!brave', ['brave']),
                                 ('!sp', ['startpage']), ('!startpage', ['startpage']),
-                                ('!general', ['brave','startpage'])):
+                                ('!general', ['brave','qwant','startpage'])):
                 with self.subTest(approved=bang):
                     reply = client.post('/preview', data={'q':bang+' synthetic', 'format':'json'}, headers=self.headers)
                     self.assertEqual(200,reply.status_code)

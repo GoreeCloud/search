@@ -217,7 +217,7 @@ def main() -> None:
         assert settings_link.get_attribute('href').endswith('/preferences')
         driver.get(url + 'preferences')
         options = driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')
-        assert sorted(option.get_attribute('value') for option in options) == ['both', 'brave', 'startpage']
+        assert sorted(option.get_attribute('value') for option in options) == ['both', 'brave', 'qwant', 'startpage']
         brave_choice = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="brave"]')
         driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", brave_choice)
         brave_choice.click()
@@ -248,7 +248,7 @@ def main() -> None:
             driver.get(url + 'preferences')
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-preferences-intro h1').text == 'Settings'
             assert not driver.find_elements(By.CSS_SELECTOR, '#main_preferences > a img.logo')
-            assert len(driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')) == 3
+            assert len(driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')) == 4
             prefs_geom = driver.execute_script("""
               return {width:document.documentElement.clientWidth,
                 scroll:document.documentElement.scrollWidth,
@@ -302,7 +302,7 @@ def main() -> None:
             retry = driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry button')
             assert retry.is_displayed() and retry.rect['height'] >= 44, 'Mobile error retry inaccessible'
             assert 'reported an error' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').text
-            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry input[name="engines"]').get_attribute('value') == 'brave,startpage'
+            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry input[name="engines"]').get_attribute('value') == 'brave,qwant,startpage'
             driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", retry)
             WebDriverWait(driver, 8).until(lambda page: page.execute_script(
                 "const r=arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;",
@@ -312,7 +312,7 @@ def main() -> None:
             WebDriverWait(driver, 12).until(lambda page: failed.call_count == 2)
             assert driver.current_url.endswith('/search'), 'Retry left the private result route'
             assert not driver.execute_script('return location.search'), 'Retry leaked search terms into URL'
-            assert driver.find_element(By.CSS_SELECTOR, 'form#search input[name="engines"]').get_attribute('value') == 'brave,startpage'
+            assert driver.find_element(By.CSS_SELECTOR, 'form#search input[name="engines"]').get_attribute('value') == 'brave,qwant,startpage'
         print('PASS mobile explicit same-source retry, no fallback, and POST URL privacy')
 
         # Layout contract with eight real template cards but NO provider
@@ -391,7 +391,7 @@ def main() -> None:
             driver.save_screenshot(str(artifacts / 'desktop-category-tabs.png'))
             driver.find_element(By.XPATH,
                 "//nav[contains(@class,'goreecloud-category-tabs')]//button[normalize-space()='Images']").click()
-            WebDriverWait(driver, 12).until(
+            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
                 lambda page: len(page.find_elements(
                     By.CSS_SELECTOR, '.goreecloud-category-tab[aria-current="page"]')) == 1
                 and page.find_element(
@@ -400,7 +400,7 @@ def main() -> None:
             assert not driver.execute_script('return location.search'), 'Category switch leaked query'
             assert driver.find_element(By.CSS_SELECTOR, '#q').get_attribute('value') == 'synthetic category navigation'
             assert driver.find_element(By.CSS_SELECTOR,
-                '.goreecloud-category-form input[name="engines"][value="brave.images,startpage images"]')
+                '.goreecloud-category-form input[name="engines"][value="brave.images,startpage images,qwant images"]')
             driver.set_window_size(390, 844)
             driver.save_screenshot(str(artifacts / 'phone-category-tabs.png'))
             overflow = driver.execute_script(
@@ -432,7 +432,7 @@ def main() -> None:
             selected = driver.find_element(
                 By.CSS_SELECTOR, '.goreecloud-partial-retry input[name="engines"]'
             ).get_attribute('value')
-            assert selected == 'brave,startpage', f'Partial retry selected unexpected sources: {selected}'
+            assert selected == 'brave,qwant,startpage', f'Partial retry selected unexpected sources: {selected}'
             assert not driver.execute_script('return location.search'), 'Partial-result search leaked query'
             driver.save_screenshot(str(artifacts / 'desktop-partial-retry.png'))
             driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", retry)
@@ -467,7 +467,7 @@ def main() -> None:
             previous = driver.find_element(By.CSS_SELECTOR, '.goreecloud-previous-results button')
             assert previous.is_displayed() and previous.rect['height'] >= 44, 'Previous page touch action is too small'
             assert driver.find_element(By.CSS_SELECTOR,
-                '.goreecloud-previous-results input[name="engines"]').get_attribute('value') == 'brave,startpage'
+                '.goreecloud-previous-results input[name="engines"]').get_attribute('value') == 'brave,qwant,startpage'
             assert driver.find_element(By.CSS_SELECTOR,
                 '.goreecloud-previous-results input[name="pageno"]').get_attribute('value') == '1'
             assert not driver.execute_script('return location.search'), 'Later-page query entered URL'
@@ -482,7 +482,7 @@ def main() -> None:
             assert not driver.execute_script('return location.search'), 'Previous page leaked query into URL'
             assert not driver.find_elements(By.CSS_SELECTOR, '.goreecloud-previous-results')
             assert driver.find_element(By.CSS_SELECTOR,
-                'form#search input[name="engines"]').get_attribute('value') == 'brave,startpage'
+                'form#search input[name="engines"]').get_attribute('value') == 'brave,qwant,startpage'
         print('PASS phone previous-page POST recovery and exact saved-source continuity')
 
         # Exercise a synthetic denied URL without dispatching a search.

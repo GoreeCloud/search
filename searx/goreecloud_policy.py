@@ -208,22 +208,24 @@ BUILTIN_SEARCH_SOURCES = frozenset({
     'brave', 'startpage',
     'brave.images', 'brave.videos', 'brave.news',
     'startpage images', 'startpage news',
+    'qwant', 'qwant images', 'qwant videos', 'qwant news',
 })
 SEARCH_SOURCE_FAMILIES = {
-    'general': {'brave': 'brave', 'startpage': 'startpage'},
-    'images': {'brave': 'brave.images', 'startpage': 'startpage images'},
-    'videos': {'brave': 'brave.videos'},
-    'news': {'brave': 'brave.news', 'startpage': 'startpage news'},
+    'general': {'brave': 'brave', 'startpage': 'startpage', 'qwant': 'qwant'},
+    'images': {'brave': 'brave.images', 'startpage': 'startpage images', 'qwant': 'qwant images'},
+    'videos': {'brave': 'brave.videos', 'qwant': 'qwant videos'},
+    'news': {'brave': 'brave.news', 'startpage': 'startpage news', 'qwant': 'qwant news'},
 }
 SEARCH_CATEGORIES = tuple(SEARCH_SOURCE_FAMILIES)
 
 
-# Browser-local source preference. Only these two approved engines are allowed.
+# Browser-local choice: legacy 'both' now means all three approved providers.
 SEARCH_SOURCE_COOKIE = 'goreecloud_search_sources'
 SEARCH_SOURCE_OPTIONS = {
-    'both': 'brave,startpage',
+    'both': 'brave,startpage,qwant',
     'brave': 'brave',
     'startpage': 'startpage',
+    'qwant': 'qwant',
 }
 
 
@@ -273,14 +275,14 @@ def validate_builtin_sources(provider_names: Iterable[str], *, submitted_engines
     if submitted_engines is not None:
         supplied = [name.strip() for name in submitted_engines.split(',')]
         if not supplied or any(name not in BUILTIN_SEARCH_SOURCES for name in supplied):
-            raise SearchPolicyViolation('Only Brave Search and Startpage are available.', 422)
+            raise SearchPolicyViolation('Only Brave Search, Startpage and Qwant are available.', 422)
     names = list(provider_names)
     if not names or any(not isinstance(name, str) or name not in BUILTIN_SEARCH_SOURCES for name in names):
-        raise SearchPolicyViolation('Only Brave Search and Startpage are available.', 422)
+        raise SearchPolicyViolation('Only Brave Search, Startpage and Qwant are available.', 422)
     return len(set(names))
 
 
-ALLOWED_SEARCH_BANGS = frozenset({'brave', 'br', 'startpage', 'sp', 'general', 'web'})
+ALLOWED_SEARCH_BANGS = frozenset({'brave', 'br', 'startpage', 'sp', 'qwant', 'qw', 'general', 'web'})
 
 
 def validate_builtin_search_bangs(raw_query: str) -> None:
