@@ -90,8 +90,13 @@ authorities, backslashes, whitespace and oversized URLs are denied.
 The server also refuses **all image-proxy HTTP redirects**, including HTTPS
 redirects, rather than allowing an upstream site to redirect a public-looking
 URL to a local service. Invalid signed requests are rejected before starting
-an outbound HTTP client. These defenses may suppress images on nonstandard
-origins; privacy and host safety take priority over rendering every thumbnail.
+an outbound HTTP client. Only a restricted list of inert raster MIME types
+(PNG, JPEG, GIF, WebP, AVIF, BMP, APNG, TIFF and icon images) may be returned.
+Potentially executable SVG/XML and ambiguous octet-stream payloads are rejected.
+The inherited favicon-proxy endpoint remains disabled by the private profile
+and is covered by a no-network regression test. These defenses may suppress
+images on nonstandard origins; privacy and host safety take priority over
+rendering every thumbnail.
 
 **Crucial residual risk:** a permitted-looking public DNS hostname can resolve
 to an internal IP address or change its DNS answer between checks (DNS
@@ -107,10 +112,11 @@ Any outbound clients outside the guarded image-proxy path must be audited too.
 ### Latest bounded image-proxy evidence
 
 A detached local Development checkout of commit
-`75bb54ef31e05b466e8b3018d10a8f5e588f2b35` ran **177 of 177**
+`b17436aded90b9f914c181826d44aa4975788f42` ran **179 of 179**
 GoreeCloud regression tests successfully, including signing/fetch denial for
-private URLs and a synthetic 302 proving that the proxy never follows
-redirects. These offline tests **do not** establish protection from
+private URLs, favicon route disabled, synthetic redirect refusal and MIME
+validation for both inert raster and potentially active types.
+These offline tests **do not** establish protection from
 DNS rebinding, a staging egress firewall, live IP masking or release readiness.
 SQLite threading and limiter-configuration warnings still appeared.
 
