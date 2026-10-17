@@ -11,6 +11,7 @@ from collections.abc import Generator
 import atexit
 import asyncio
 import ipaddress
+import os
 from itertools import cycle
 from urllib.parse import urlsplit
 
@@ -59,6 +60,8 @@ class Network:
         'proxies',
         'using_tor_proxy',
         'privacy_proxy_required',
+        'privacy_egress_mode',
+        'server_masked_acknowledged',
         'max_redirects',
         'retries',
         'retry_on_http_error',
@@ -81,6 +84,8 @@ class Network:
         proxies: str | dict[str, str] | None = None,
         using_tor_proxy: bool = False,
         privacy_proxy_required: bool = False,
+        privacy_egress_mode: str = 'gateway',
+        server_masked_acknowledged: bool = False,
         local_addresses: str | list[str] | None = None,
         retries: int = 0,
         retry_on_http_error: bool = False,
@@ -96,6 +101,8 @@ class Network:
         self.proxies = proxies
         self.using_tor_proxy = using_tor_proxy
         self.privacy_proxy_required = privacy_proxy_required
+        self.privacy_egress_mode = privacy_egress_mode
+        self.server_masked_acknowledged = server_masked_acknowledged
         self.local_addresses = local_addresses
         self.retries = retries
         self.retry_on_http_error = retry_on_http_error
@@ -194,8 +201,8 @@ class Network:
     def valid_private_proxy(proxies: tuple[tuple[str, str], ...]) -> bool:
         """Only a single local SOCKS5H gateway can carry private Search traffic.
 
-        SOCKS5H delegates DNS lookup to the relay. A local gateway must separately
-        be verified as Tor or another owner-approved privacy network.
+        SOCKS5H delegates DNS lookup to the gateway. It may be an owner-approved
+        non-Tor privacy network; protocol syntax alone does not prove masking.
         """
         if len(proxies) != 1 or proxies[0][0] != 'all://':
             return False
@@ -231,10 +238,22 @@ class Network:
         local_address = next(self._local_addresses_cycle)
         proxies = next(self._proxies_cycle)  # is a tuple so it can be part of the key
         if self.privacy_proxy_required:
-            if not self.valid_private_proxy(proxies):
-                raise ProxyError('Private Search egress blocked: approved local SOCKS5H proxy required')
-            if verify is not True or self.enable_http or curl_options:
+            if verify is not True or self.enable_http or curl_options or enable_http3:
                 raise ProxyError('Private Search egress blocked: insecure transport override')
+            if self.privacy_egress_mode == 'gateway':
+                if not self.valid_private_proxy(proxies):
+                    raise ProxyError('Private Search egress blocked: approved local SOCKS5H gateway required')
+            elif self.privacy_egress_mode == 'server_masked':
+                # The provider sees the host IP, never the visitor's IP. Only a
+                # separately verified remote host may activate this mode.
+                if (
+                    proxies or not self.server_masked_acknowledged
+                    or os.environ.get('GOREECLOUD_SERVER_MASKED_EGRESS') != '1'
+                    or self.using_tor_proxy
+                ):
+                    raise ProxyError('Private Search egress blocked: unverified server-masked mode')
+            else:
+                raise ProxyError('Private Search egress blocked: unknown egress mode')
         curl_key = tuple(sorted((int(k), v) for k, v in (curl_options or {}).items()))
         key = (verify, max_redirects, local_address, proxies, impersonate, curl_key, enable_http3)
         if key not in self._clients or self._clients[key].is_closed:
@@ -252,9 +271,9 @@ class Network:
             )
             self._clients[key] = client
         client = self._clients[key]
-        # Verify each outbound use, including reused clients and image proxies.
-        # A local SOCKS listener alone is not proof of an anonymity network.
-        if self.privacy_proxy_required or self.using_tor_proxy:
+        # Tor is optional and is checked ONLY when explicitly configured.
+        # Trusted non-Tor gateways and approved server-masked egress do not use Tor.
+        if self.using_tor_proxy:
             if not await self.check_tor_proxy(client, proxies):
                 await client.aclose()
                 self._clients.pop(key, None)
@@ -323,10 +342,17 @@ class Network:
                     'cf-connecting-ip', 'true-client-ip', 'x-forwarded-host',
                     'x-forwarded-proto', 'x-original-forwarded-for',
                     'x-original-ip', 'x-cluster-client-ip', 'x-proxyuser-ip',
+                    'referer', 'referrer', 'origin', 'x-requested-with',
+                    'x-amzn-trace-id', 'x-cloud-trace-context',
+                    'traceparent', 'tracestate', 'baggage', 'b3',
                 }
+                identifying_prefixes = (
+                    'x-forwarded-', 'x-b3-', 'sec-ch-', 'sec-fetch-',
+                )
                 kwargs['headers'] = {
                     name: value for name, value in kwargs['headers'].items()
                     if name.lower() not in identifying
+                    and not name.lower().startswith(identifying_prefixes)
                 }
         while retries >= 0:  # pragma: no cover
             client = await self.get_client(**kwargs_clients)
@@ -423,6 +449,10 @@ def initialize(
         'local_addresses': settings_outgoing['source_ips'],
         'using_tor_proxy': settings_outgoing['using_tor_proxy'],
         'privacy_proxy_required': requires_private_egress(settings),
+        'privacy_egress_mode': settings.get('goreecloud', {}).get('egress_mode', 'gateway')
+        if isinstance(settings.get('goreecloud'), dict) else 'gateway',
+        'server_masked_acknowledged': settings.get('goreecloud', {}).get('server_masked_acknowledged', False)
+        if isinstance(settings.get('goreecloud'), dict) else False,
         'proxies': settings_outgoing['proxies'],
         'max_redirects': settings_outgoing['max_redirects'],
         'retries': settings_outgoing['retries'],
@@ -436,6 +466,8 @@ def initialize(
         result.update(params)  # pyright: ignore[reportUnknownMemberType]
         # Engine-specific network overrides cannot downgrade the private egress policy.
         result['privacy_proxy_required'] = default_params['privacy_proxy_required']
+        result['privacy_egress_mode'] = default_params['privacy_egress_mode']
+        result['server_masked_acknowledged'] = default_params['server_masked_acknowledged']
         if logger_name:
             result['logger_name'] = logger_name
         return Network(**result)  # type: ignore
