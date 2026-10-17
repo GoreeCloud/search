@@ -268,6 +268,7 @@ class Network:
                 max_redirects,
                 impersonate=impersonate,
                 curl_options=curl_options,
+                disable_env_proxy=bool(self.privacy_proxy_required and self.privacy_egress_mode == 'server_masked'),
             )
             self._clients[key] = client
         client = self._clients[key]
