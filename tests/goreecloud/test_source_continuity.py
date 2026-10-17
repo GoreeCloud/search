@@ -48,28 +48,25 @@ class ProviderContinuityTests(unittest.TestCase):
                     continued.close()
                     reply.close()
 
-    def test_switch_toolbar_has_only_both_brave_and_startpage_post_actions(self):
+    def test_source_toolbar_is_removed_but_approved_bang_selection_remains(self):
         with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins', PagedSearch):
-            reply = client.post('/search',data={'q':'!sp synthetic terms'},headers=self.headers)
-            self.assertEqual(200,reply.status_code)
-            doc=html.fromstring(reply.data)
-            toolbar=doc.xpath('//section[contains(@class,"goreecloud-source-switch")]')
-            self.assertEqual(1,len(toolbar))
-            forms=toolbar[0].xpath('.//form')
-            self.assertEqual(3,len(forms))
-            expected=['brave,startpage','brave','startpage']
-            for form,provider in zip(forms,expected):
-                self.assertEqual('/search',form.get('action'))
-                self.assertEqual('post',form.get('method').lower())
-                self.assertEqual([provider],form.xpath('.//input[@name="engines"]/@value'))
-                self.assertEqual(['synthetic terms'],form.xpath('.//input[@name="q"]/@value'))
-                self.assertEqual(provider=='startpage',bool(form.xpath('.//button[@disabled]')))
-                fields={element.get('name'):element.get('value') for element in form.xpath('.//input')}
-                next_reply=client.post('/search',data={**fields,'format':'json'},headers=self.headers)
-                self.assertEqual(200,next_reply.status_code)
-                self.assertEqual(sorted(provider.split(',')),next_reply.json['goreecloud']['selected_engines'])
-                next_reply.close()
+            reply = client.post('/search', data={'q': '!sp synthetic terms'}, headers=self.headers)
+            self.assertEqual(200, reply.status_code)
+            doc = html.fromstring(reply.data)
+            self.assertFalse(doc.xpath('//section[contains(@class,"goreecloud-source-switch")]'))
+            self.assertEqual(1, len(doc.xpath('//details[@id="goreecloud-source-diagnostics"]')))
+            self.assertIn('Startpage', doc.text_content())
             reply.close()
+            for provider in ('brave,startpage', 'brave', 'startpage'):
+                with self.subTest(provider=provider):
+                    check = client.post('/search', data={
+                        'q': 'synthetic terms', 'engines': provider, 'format': 'json'
+                    }, headers=self.headers)
+                    self.assertEqual(200, check.status_code)
+                    self.assertEqual(sorted(provider.split(',')), check.json['goreecloud']['selected_engines'])
+                    self.assertNotIn('Set-Cookie', check.headers)
+                    self.assertNotIn('Location', check.headers)
+                    check.close()
 
     def test_switch_does_not_modify_saved_browser_preferences(self):
         with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins', PagedSearch):

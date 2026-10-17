@@ -126,10 +126,9 @@ class PrivateEmptyResultsTests(unittest.TestCase):
                 for key in ('language', 'safesearch', 'time_range', 'theme', 'timeout_limit'):
                     if key in request_fields:
                         self.assertEqual(request_fields[key], fields[key])
-                source_form = doc.xpath('//form[contains(@class,"goreecloud-refine-source")]')[0]
-                expected_categories = {e.get('name'): e.get('value')
-                                       for e in source_form.xpath('.//input')
-                                       if e.get('name', '').startswith('category_')}
+                expected_categories = {k:v for k,v in request_fields.items() if k.startswith('category_')}
+                if request_fields['q'].startswith('!sp '):
+                    expected_categories['category_none'] = '1'
                 actual_categories = {k: v for k, v in fields.items() if k.startswith('category_')}
                 self.assertEqual(expected_categories, actual_categories)
                 response.close()
@@ -181,9 +180,9 @@ class PrivateEmptyResultsTests(unittest.TestCase):
                 self.assertEqual('no-referrer', response.headers['Referrer-Policy'])
                 self.assertNotIn('Set-Cookie', response.headers)
                 self.assertNotIn('Location', response.headers)
-                refine = doc.xpath('//form[contains(@class, "goreecloud-refine-source")]')[0]
-                categories = {e.get('name'): e.get('value') for e in refine.xpath('.//input')
-                              if e.get('name', '').startswith('category_')}
+                categories = {k:v for k,v in submitted.items() if k.startswith('category_')}
+                if submitted['q'].startswith('!sp '):
+                    categories['category_none'] = '1'
                 for selector, page_no, button in (
                     ('goreecloud-page-error-retry', current, 'Retry this results page'),
                     ('goreecloud-previous-results', previous, 'Previous results page'),

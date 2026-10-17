@@ -206,6 +206,33 @@ def represented_result_sources(results: Iterable[object], selected_names: Iterab
 # remain in the upstream source tree but are not selectable or executable.
 BUILTIN_SEARCH_SOURCES = frozenset({'brave', 'startpage'})
 
+# Browser-local source preference. Only these two approved engines are allowed.
+SEARCH_SOURCE_COOKIE = 'goreecloud_search_sources'
+SEARCH_SOURCE_OPTIONS = {
+    'both': 'brave,startpage',
+    'brave': 'brave',
+    'startpage': 'startpage',
+}
+
+
+def stored_search_source(raw: str | None) -> str:
+    """Accept only canonical provider choices; fall back to two-source default."""
+    return raw if raw in SEARCH_SOURCE_OPTIONS else 'both'
+
+
+def requested_search_source(*, explicit: str | None, stored: str | None, query_specific: bool) -> str | None:
+    """Explicit POST selections and supported !bangs supersede saved preferences.
+
+    A missing cookie preserves SearXNG defaults; no additional data collection
+    or silent provider failover is performed.
+    """
+    if explicit is not None:
+        return explicit
+    if query_specific or stored is None:
+        return None
+    return SEARCH_SOURCE_OPTIONS[stored_search_source(stored)]
+
+
 
 def validate_builtin_sources(provider_names: Iterable[str], *, submitted_engines: str | None = None) -> int:
     """Fail closed before a private search/preview can dispatch to any other engine.

@@ -11,80 +11,6 @@
 {% block meta %}{% if not private_query_transport %}<link rel="alternate" type="application/rss+xml" title="Searx search: {{ q|e }}" href="{{ url_for('search', _external=True) }}?q={{ q|urlencode }}&amp;categories={{ selected_categories|join(",") | replace(' ','+') }}&amp;pageno={{ pageno }}&amp;time_range={{ time_range }}&amp;language={{ current_language }}&amp;safesearch={{ safesearch }}&amp;format=rss">{% endif %}{% endblock %}
 {% block content %}
 {% include 'simple/search.html' %}
-{% if private_query_transport %}
-<aside class="goreecloud-source-summary" aria-label="Selected search sources">
-  <p class="goreecloud-source-intro"><strong>{{ selected_source_names|length }} source(s) selected</strong> <span>— Only approved providers receive terms when searched.</span></p>
-  <details class="goreecloud-source-audit">
-    <summary>Source selection and result attribution</summary>
-  {% if selected_source_names %}
-  <details><summary>View selected sources</summary>
-    <ul>{% for source in selected_source_names %}
-      <li>{{ 'Brave Search' if source == 'brave' else 'Startpage' }}
-        <form class="goreecloud-refine-source" method="post" action="{{ url_for('search') }}">
-          <input type="hidden" name="q" value="{{ source_switch_query }}">
-          <input type="hidden" name="engines" value="{{ source }}">
-          {% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}
-          <input type="hidden" name="language" value="{{ current_language }}">
-          <input type="hidden" name="safesearch" value="{{ safesearch }}">
-          <input type="hidden" name="time_range" value="{{ time_range }}">
-          <input type="hidden" name="theme" value="{{ theme }}">
-          {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}">{% endif %}
-          <button type="submit" aria-label="Search only {{ 'Brave Search' if source == 'brave' else 'Startpage' }}">Search only</button>
-        </form>
-      </li>
-    {% endfor %}</ul>
-  </details>
-  {% endif %}
-  <p><strong>{{ represented_source_counts|length }} selected source(s) represented</strong> in the displayed web results. These result labels are not proof of provider contact or successful network requests.</p>
-  {% if represented_source_counts %}
-  <details><summary>View represented sources and result counts</summary>
-    <ul>{% for source, count in represented_source_counts.items() %}<li>{{ 'Brave Search' if source == 'brave' else 'Startpage' }} — {{ count }} displayed result(s)</li>{% endfor %}</ul>
-  </details>
-  {% endif %}
-  </details>
-  <section class="goreecloud-source-switch" aria-label="Switch search provider">
-    <p>Search these terms with:</p>
-    <div class="goreecloud-source-switch-actions">
-    {% for source_value, source_label in [('brave,startpage', 'Both sources'), ('brave', 'Brave Search'), ('startpage', 'Startpage')] %}
-      <form method="post" action="{{ url_for('search') }}">
-        <input type="hidden" name="q" value="{{ source_switch_query }}">
-        <input type="hidden" name="engines" value="{{ source_value }}">
-        {% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}
-        <input type="hidden" name="language" value="{{ current_language }}">
-        <input type="hidden" name="safesearch" value="{{ safesearch }}">
-        <input type="hidden" name="time_range" value="{{ time_range }}">
-        <input type="hidden" name="theme" value="{{ theme }}">
-        {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}">{% endif %}
-        <button type="submit" {% if selected_engine_post == source_value %}disabled aria-label="{{ source_label }} (current selection)"{% else %}aria-label="Search with {{ source_label }}"{% endif %}>{{ source_label }}</button>
-      </form>
-    {% endfor %}
-    </div>
-  </section>
-</aside>
-{% endif %}
-
-{% if private_query_transport and unresponsive_engines and (results or answers) %}
-<div class="goreecloud-partial-recovery">
-<p class="goreecloud-partial-results" role="status">
-  <strong>Some search sources reported an error.</strong> Displayed results may be incomplete.
-  <a href="#engines_msg-title">Review source messages</a>. No replacement provider is selected automatically.
-</p>
-<form class="goreecloud-partial-retry goreecloud-empty-retry" method="post" action="{{ url_for('search') }}">
-  <input type="hidden" name="q" value="{{ source_switch_query }}">
-  <input type="hidden" name="engines" value="{{ selected_engine_post }}">
-  {% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}
-  <input type="hidden" name="pageno" value="{{ pageno }}">
-  <input type="hidden" name="language" value="{{ current_language }}">
-  <input type="hidden" name="time_range" value="{{ time_range }}">
-  <input type="hidden" name="safesearch" value="{{ safesearch }}">
-  <input type="hidden" name="theme" value="{{ theme }}">
-  {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}">{% endif %}
-  <button type="submit" aria-describedby="goreecloud-partial-retry-hint">Retry selected sources</button>
-</form>
-<p id="goreecloud-partial-retry-hint">Retrying sends these terms to the same selected providers again and replaces the displayed results.</p>
-</div>
-{% endif %}
-
 {% if results and results|map(attribute='template')|unique|list|count == 1 %}
   {% set only_template = 'only_template_' + results[0]['template']|default('default')|replace('.html', '') %}
 {% else %}
@@ -97,6 +23,30 @@
     {%- include 'simple/elements/answers.html' -%}
   {%- endif %}
 
+    {%- if corrections -%}
+      {%- include 'simple/elements/corrections.html' -%}
+    {%- endif -%}
+
+    <div id="urls" aria-label="Search results">
+      {% if results %}
+      <div class="goreecloud-results-heading">
+        <h2>Web results</h2>
+        <span>{{ results|length }} displayed on this page</span>
+      </div>
+      {% if private_query_transport and unresponsive_engines %}
+      <p class="goreecloud-results-inline-note" role="status">Some sources reported an error. Results may be incomplete. <a href="#goreecloud-source-diagnostics">Details and retry</a></p>
+      {% endif %}
+      {% endif %}
+    {% for result in results %}
+        {% if result.open_group and not only_template %}<div class="template_group_{{ result['template']|replace('.html', '') }}">{% endif %}
+        {% set index = loop.index %}
+        {% include get_result_template('simple', result['template']) %}
+        {% if result.close_group and not only_template %}</div>{% endif %}
+    {% endfor %}
+    {% if not results and not answers %}
+        {% include 'simple/messages/no_results.html' %}
+    {% endif %}
+    </div>
     <div id="sidebar">
 
         {%- if infoboxes -%}
@@ -115,6 +65,7 @@
         {%- endif -%}
 
         {%- include 'simple/elements/engines_msg.html' -%}
+        {% include 'simple/goreecloud_source_diagnostics.html' %}
 
         {%- if method == 'POST' and not private_query_transport -%}
           {%- include 'simple/elements/search_url.html' -%}
@@ -127,27 +78,6 @@
         <div id="sidebar-end-collapsible"></div>
     </div>
 
-    {%- if corrections -%}
-      {%- include 'simple/elements/corrections.html' -%}
-    {%- endif -%}
-
-    <div id="urls" aria-label="Search results">
-      {% if results %}
-      <div class="goreecloud-results-heading">
-        <h2>Web results</h2>
-        <span>{{ results|length }} displayed on this page</span>
-      </div>
-      {% endif %}
-    {% for result in results %}
-        {% if result.open_group and not only_template %}<div class="template_group_{{ result['template']|replace('.html', '') }}">{% endif %}
-        {% set index = loop.index %}
-        {% include get_result_template('simple', result['template']) %}
-        {% if result.close_group and not only_template %}</div>{% endif %}
-    {% endfor %}
-    {% if not results and not answers %}
-        {% include 'simple/messages/no_results.html' %}
-    {% endif %}
-    </div>
     <div id="backToTop">
       <a href="#" aria-label="{{ _('Back to top') }}">{{ icon_small('navigate-up') }}</a>
     </div>

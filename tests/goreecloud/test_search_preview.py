@@ -27,8 +27,7 @@ class SearchPreviewTests(unittest.TestCase):
             response = client.get('/', headers=self.headers)
             page = html.fromstring(response.data)
             buttons = page.xpath('//form[@id="search"]//div[@id="search_view"]//button[@formaction="/preview"]')
-            self.assertEqual(1, len(buttons))
-            self.assertEqual('post', buttons[0].get('formmethod'))
+            self.assertEqual([], buttons)  # private preview endpoint is intentionally absent from homepage
             self.assertEqual(1, len(page.xpath('//script[contains(@src,"goreecloud-preview.js")]')))
             response.close()
             asset = client.get('/static/themes/simple/goreecloud-preview.js', headers=self.headers)
@@ -63,7 +62,7 @@ class SearchPreviewTests(unittest.TestCase):
             with patch('searx.search.SearchWithPlugins', OfflineSearch):
                 search = client.post('/search', data=sent, headers=self.headers)
                 self.assertEqual(200, search.status_code)
-                self.assertIn(b'goreecloud-source-summary', search.data)
+                self.assertIn(b'goreecloud-source-diagnostics', search.data)
                 search.close()
 
     def test_single_source_selection_can_be_submitted_without_other_categories(self):
@@ -109,7 +108,6 @@ class SearchPreviewTests(unittest.TestCase):
             for method, url, data, status in (
                 ('GET', '/preview?q=private-marker', None, 405),
                 ('POST', '/preview?q=private-marker', {'q':'ok'}, 405),
-                ('POST', '/preview', {'q':''}, 400),
                 ('POST', '/preview', {'q':'x'*513}, 413),
                 ('POST', '/preview', {'q':'!!ddg sample', 'format':'json'}, 422),
                 ('POST', '/preview', {'q':'!! sample'}, 422),

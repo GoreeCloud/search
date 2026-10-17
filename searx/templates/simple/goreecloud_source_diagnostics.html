@@ -1,0 +1,23 @@
+{% if private_query_transport %}
+<details class="goreecloud-source-diagnostics" id="goreecloud-source-diagnostics">
+  <summary>Sources and search details{% if unresponsive_engines %} · Attention needed{% endif %}</summary>
+  <p>Selected: {% for source in selected_source_names %}{{ 'Brave Search' if source == 'brave' else 'Startpage' }}{% if not loop.last %} + {% endif %}{% endfor %}.</p>
+  <p>{{ represented_source_counts|length }} source(s) represented in the displayed results. Attribution does not confirm provider availability.</p>
+  {% if unresponsive_engines and (results or answers) %}
+  <p>Some providers reported an error. No automatic replacement occurred.</p>
+  <form method="post" action="{{ url_for('search') }}" class="goreecloud-empty-retry goreecloud-partial-retry">
+    <input type="hidden" name="q" value="{{ source_switch_query }}">
+    <input type="hidden" name="engines" value="{{ selected_engine_post }}">
+    {% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}
+    <input type="hidden" name="pageno" value="{{ pageno }}">
+    <input type="hidden" name="language" value="{{ current_language }}">
+    <input type="hidden" name="time_range" value="{{ time_range }}">
+    <input type="hidden" name="safesearch" value="{{ safesearch }}">
+    <input type="hidden" name="theme" value="{{ theme }}">
+    {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}">{% endif %}
+    <button type="submit">Retry same sources</button>
+  </form>
+  {% endif %}
+  <p>Change default engines in <a href="{{ url_for('preferences') }}">Settings</a>.</p>
+</details>
+{% endif %}

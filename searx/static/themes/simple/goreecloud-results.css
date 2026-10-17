@@ -413,3 +413,113 @@ html[data-glaze-consumer] body.results_endpoint .goreecloud-partial-recovery #go
     margin-inline: 0; padding-inline: 0;
   }
 }
+
+/* Results-first Search: one line of filters, then web results. Provider
+   choice is a browser-local preference rather than homepage clutter. */
+html[data-glaze-consumer] body.results_endpoint #main_results .search_filters {
+  margin: 8px 0 0;
+  padding: 0;
+  min-height: 0;
+}
+html[data-glaze-consumer] body.results_endpoint #main_results > #results {
+  margin-top: 8px;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-results-inline-note {
+  margin: 0;
+  padding: 7px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--gc-muted);
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-results-inline-note a {
+  color: var(--gc-accent-strong);
+  font-weight: 600;
+}
+html[data-glaze-consumer] body.results_endpoint #results #sidebar .goreecloud-source-diagnostics {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--gc-surface);
+  border: 1px solid var(--gc-outline);
+  border-radius: 14px;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-source-diagnostics summary {
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 13px;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-source-diagnostics :is(p,li) {
+  color: var(--gc-muted);
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 9px 0;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-source-diagnostics .goreecloud-empty-retry button {
+  min-height: 44px;
+}
+html[data-glaze-consumer] .goreecloud-provider-preferences {
+  border: 1px solid var(--gc-outline);
+  border-radius: 14px;
+  background: var(--gc-surface);
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  max-width: 680px;
+}
+html[data-glaze-consumer] .goreecloud-provider-preferences legend {
+  color: var(--gc-ink);
+  font-weight: 700;
+  font-size: 17px;
+  padding-inline: 5px;
+}
+html[data-glaze-consumer] .goreecloud-provider-preferences p {
+  color: var(--gc-muted);
+  line-height: 1.5;
+}
+html[data-glaze-consumer] .goreecloud-provider-option {
+  display: flex; align-items: center; gap: 12px;
+  box-sizing: border-box; min-height: 44px;
+  padding: 9px 10px; cursor: pointer;
+  border-radius: 8px;
+}
+html[data-glaze-consumer] .goreecloud-provider-option:has(input:checked) {
+  background: color-mix(in srgb, var(--gc-accent-strong) 9%, var(--gc-surface));
+}
+html[data-glaze-consumer] .goreecloud-provider-option input {
+  accent-color: var(--gc-accent-strong);
+  min-width: 18px; min-height: 18px;
+}
+html[data-glaze-consumer] .goreecloud-settings-link {
+  display: inline-flex; align-items: center; justify-content: center;
+  box-sizing: border-box; min-height: 44px; gap: 5px;
+  text-decoration: none;
+}
+html[data-glaze-consumer] .goreecloud-settings-link svg {
+  width: 17px; height: 17px;
+}
+@media (max-width: 700px) {
+  html[data-glaze-consumer] .goreecloud-open-source-text { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+  html[data-glaze-consumer] .goreecloud-site-nav a[href*="github.com/GoreeCloud/search"] { display: inline-grid; place-items: center; box-sizing: border-box; min-width: 44px; min-height: 44px; font-size: 20px; }
+  html[data-glaze-consumer] .goreecloud-site-header { padding-inline: 12px; gap: 6px; }
+  html[data-glaze-consumer] .goreecloud-site-nav { gap: 4px; }
+}
+@media (max-width: 380px) {
+  html[data-glaze-consumer] .goreecloud-site-brand .goreecloud-brand-divider,
+  html[data-glaze-consumer] .goreecloud-site-brand .goreecloud-brand-product { display: none; }
+}
+@media (max-width: 600px) {
+  html[data-glaze-consumer] .goreecloud-settings-link span {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap;
+  }
+  html[data-glaze-consumer] .goreecloud-settings-link {
+    min-width: 44px; max-width: 44px;
+  }
+  html[data-glaze-consumer] .goreecloud-site-nav {
+    gap: 3px;
+  }
+}
+@media (forced-colors: active) {
+  html[data-glaze-consumer] .goreecloud-provider-preferences,
+  html[data-glaze-consumer] body.results_endpoint #results #sidebar .goreecloud-source-diagnostics {
+    background: Canvas; color: CanvasText; border-color: CanvasText;
+  }
+}

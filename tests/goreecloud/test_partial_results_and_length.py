@@ -54,14 +54,14 @@ class PartialResultsAndLengthTests(unittest.TestCase):
             }, headers=self.headers)
             self.assertEqual(200, response.status_code)
             doc = html.fromstring(response.data)
-            notices = doc.xpath('//p[contains(@class,"goreecloud-partial-results")][@role="status"]')
+            notices = doc.xpath('//p[contains(@class,"goreecloud-results-inline-note")][@role="status"]')
             self.assertEqual(1, len(notices))
-            self.assertIn('Displayed results may be incomplete.', notices[0].text_content())
-            self.assertIn('No replacement provider is selected automatically.', notices[0].text_content())
-            self.assertEqual(['#engines_msg-title'], notices[0].xpath('.//a/@href'))
+            self.assertIn('Results may be incomplete.', notices[0].text_content())
+            self.assertIn('No automatic replacement occurred.', doc.text_content())
+            self.assertEqual(['#goreecloud-source-diagnostics'], notices[0].xpath('.//a/@href'))
             self.assertFalse(doc.xpath('//section[contains(@class,"goreecloud-empty-state")]'))
             self.assertIn('Synthetic offline result', doc.text_content())
-            self.assertIn('2 source(s) selected', doc.text_content())
+            self.assertIn('Brave Search + Startpage', doc.text_content())
             self.assertIn('no-store', response.headers['Cache-Control'])
             self.assertNotIn('Location', response.headers)
             response.close()
@@ -73,7 +73,7 @@ class PartialResultsAndLengthTests(unittest.TestCase):
             }, headers=self.headers)
             self.assertEqual(200, response.status_code)
             doc = html.fromstring(response.data)
-            self.assertFalse(doc.xpath('//p[contains(@class,"goreecloud-partial-results")]'))
+            self.assertFalse(doc.xpath('//p[contains(@class,"goreecloud-results-inline-note")]'))
             self.assertIn('Synthetic offline result', doc.text_content())
             response.close()
 
@@ -130,7 +130,7 @@ class PartialResultsAndLengthTests(unittest.TestCase):
                 self.assertEqual(expanded, panels[0].get('open') is not None)
                 messages = panels[0].xpath('.//td[contains(@class,"response-error")]')
                 self.assertEqual(int(expanded), len(messages))
-                self.assertEqual(expanded, bool(doc.xpath('//p[contains(@class,"goreecloud-partial-results")]')))
+                self.assertEqual(expanded, bool(doc.xpath('//p[contains(@class,"goreecloud-results-inline-note")]')))
                 self.assertIn('no-store', response.headers['Cache-Control'])
                 response.close()
 
@@ -156,13 +156,13 @@ class PartialResultsAndLengthTests(unittest.TestCase):
                 response = client.post('/search', data=request_fields, headers=self.headers)
                 self.assertEqual(200, response.status_code)
                 doc = html.fromstring(response.data)
-                self.assertEqual(1, len(doc.xpath('//p[contains(@class,"goreecloud-partial-results")][@role="status"]')))
+                self.assertEqual(1, len(doc.xpath('//p[contains(@class,"goreecloud-results-inline-note")][@role="status"]')))
                 forms = doc.xpath('//form[contains(@class,"goreecloud-partial-retry")]')
                 self.assertEqual(1, len(forms))
                 form = forms[0]
                 self.assertEqual('post', form.get('method').lower())
                 self.assertEqual('/search', form.get('action'))
-                self.assertEqual(['Retry selected sources'], [
+                self.assertEqual(['Retry same sources'], [
                     ' '.join(node.text_content().split()) for node in form.xpath('./button')
                 ])
                 fields = {node.get('name'): node.get('value') for node in form.xpath('.//input')}
@@ -174,12 +174,10 @@ class PartialResultsAndLengthTests(unittest.TestCase):
                 for key in ('language', 'time_range', 'safesearch', 'theme', 'timeout_limit'):
                     if key in request_fields:
                         self.assertEqual(request_fields[key], fields[key])
-                # Compare parsed categories with the authoritative source-refine form.
-                refine = doc.xpath('//form[contains(@class,"goreecloud-refine-source")]')[0]
-                refined = {e.get('name'): e.get('value') for e in refine.xpath('.//input')
-                           if e.get('name', '').startswith('category_')}
-                retried = {k: v for k, v in fields.items() if k.startswith('category_')}
-                self.assertEqual(refined, retried)
+                # Any explicitly submitted categories must survive the same-source retry.
+                for category_key, category_value in request_fields.items():
+                    if category_key.startswith('category_'):
+                        self.assertEqual(category_value, fields.get(category_key))
                 self.assertIn('no-store', response.headers['Cache-Control'])
                 self.assertEqual('no-referrer', response.headers['Referrer-Policy'])
                 self.assertNotIn('Location', response.headers)
@@ -205,5 +203,5 @@ class PartialResultsAndLengthTests(unittest.TestCase):
             self.assertEqual(200, response.status_code)
             doc = html.fromstring(response.data)
             self.assertFalse(doc.xpath('//form[contains(@class,"goreecloud-partial-retry")]'))
-            self.assertFalse(doc.xpath('//p[contains(@class,"goreecloud-partial-results")]'))
+            self.assertFalse(doc.xpath('//p[contains(@class,"goreecloud-results-inline-note")]'))
             response.close()
