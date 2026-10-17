@@ -63,6 +63,20 @@ class ImageProxyPrivacyTests(unittest.TestCase):
             self.assertEqual(400, response.status_code)
             request.assert_not_called()
 
+    def test_favicon_proxy_remains_disabled_in_private_profile(self):
+        # The inherited favicon endpoint must not become a separate SSRF
+        # path when the active private profile disables favicon resolution.
+        authority = '127.0.0.1'
+        signed = new_hmac(settings['server']['secret_key'], authority.encode())
+        with app.test_client() as client:
+            with patch('searx.favicons.proxy.search_favicon') as fetch:
+                response = client.get(
+                    '/favicon_proxy',
+                    query_string={'authority': authority, 'h': signed},
+                )
+            self.assertEqual(400, response.status_code)
+            fetch.assert_not_called()
+
     def test_public_looking_url_never_follows_redirects(self):
         target = 'https://images.example.org/safe-looking.png'
         signed = new_hmac(settings['server']['secret_key'], target.encode())
