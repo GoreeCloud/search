@@ -201,9 +201,10 @@ class Network:
         local_address = next(self._local_addresses_cycle)
         proxies = next(self._proxies_cycle)  # is a tuple so it can be part of the key
         from searx import settings as current_settings  # pylint: disable=import-outside-toplevel
-        if current_settings.get("goreecloud", {}).get("require_anonymous_egress", False):
-            if not self.using_tor_proxy:
-                raise ProxyError("Anonymous Search requires Tor verification.")
+        privacy = current_settings.get("goreecloud", {})
+        if privacy.get("private_search", False):
+            if privacy.get("require_anonymous_egress") is not True or not self.using_tor_proxy:
+                raise ProxyError("Private Search requires verified Tor egress.")
         curl_key = tuple(sorted((int(k), v) for k, v in (curl_options or {}).items()))
         key = (verify, max_redirects, local_address, proxies, impersonate, curl_key, enable_http3)
         if key not in self._clients or self._clients[key].is_closed:
