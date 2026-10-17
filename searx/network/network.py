@@ -389,6 +389,18 @@ def check_network_configuration():
         raise RuntimeError("Invalid network configuration")
 
 
+def requires_private_egress(config: dict[str, t.Any]) -> bool:
+    """Private GoreeCloud Search must not fall back to direct egress.
+
+    The privacy flag may not be disabled independently of private mode.
+    This guard is also used for the image proxy and engine-specific networks.
+    """
+    goreecloud = config.get('goreecloud', {})
+    return isinstance(goreecloud, dict) and bool(
+        goreecloud.get('private_search') or goreecloud.get('require_anonymous_egress')
+    )
+
+
 def initialize(
     settings_engines: list[dict[str, t.Any]] = None,  # pyright: ignore[reportArgumentType]
     settings_outgoing: dict[str, t.Any] = None,  # pyright: ignore[reportArgumentType]
@@ -410,7 +422,7 @@ def initialize(
         'max_connections': settings_outgoing['pool_connections'],
         'local_addresses': settings_outgoing['source_ips'],
         'using_tor_proxy': settings_outgoing['using_tor_proxy'],
-        'privacy_proxy_required': bool(settings.get('goreecloud', {}).get('require_anonymous_egress')),
+        'privacy_proxy_required': requires_private_egress(settings),
         'proxies': settings_outgoing['proxies'],
         'max_redirects': settings_outgoing['max_redirects'],
         'retries': settings_outgoing['retries'],
