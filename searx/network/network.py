@@ -421,6 +421,9 @@ def initialize(
         result.update(params)  # pyright: ignore[reportUnknownMemberType]
         # Engine-specific network overrides cannot downgrade the private egress policy.
         result['privacy_proxy_required'] = default_params['privacy_proxy_required']
+        if result['privacy_proxy_required']:
+            # A provider-specific network cannot disable the Tor exit check.
+            result['using_tor_proxy'] = True
         if logger_name:
             result['logger_name'] = logger_name
         return Network(**result)  # type: ignore
