@@ -1,108 +1,112 @@
-# GoreeCloud Search — mandatory private egress
+# GoreeCloud Search — privacy-preserving egress without Tor
 
-**Lifecycle: Development.** Effective source candidate: draft PR #18. This is a
-privacy-control implementation, **not proof of complete anonymity**.
+**Lifecycle: Development / Draft PR #18. Updated October 17, 2026.**
+This is a technical contract and threat model, **not a promise of anonymity or
+authorization to expose Search publicly**.
 
-## Mandatory behavior
+## Privacy promise and limits
 
-Every GoreeCloud Search profile requires a privacy relay, even if individual
-privacy toggles are disabled or omitted. The current Development profile uses
-`goreecloud.require_anonymous_egress: true` and a single `outgoing.proxies.all://`
-gateway: `socks5h://127.0.0.1:9050`. **Every outbound SearXNG network
-client**, including the Brave, Startpage, Qwant and image-proxy clients, must
-have a validated local SOCKS5H gateway. SOCKS5H requests DNS resolution through
-the gateway rather than the user's DNS resolver. Before every outbound use,
-including reused provider and image-proxy connections, Search now requests a
-fresh HTTPS Tor-exit attestation through that same client from
-`check.torproject.org/api/ip` with an 8-second timeout. Only HTTP 200 with a
-JSON boolean `IsTor: true` is accepted; strings, errors, timeouts, non-Tor
-exits and malformed results block that outbound use. Failed clients are closed
-and discarded, and no earlier Tor verdict is cached or trusted. No HTTPS or
-HTTP direct fallback is permitted if the gateway is missing or rejected.
+The user requests **no Tor requirement**. A remote GoreeCloud Search server
+can mask its visitors' source IP from Brave Search, Startpage and Qwant: the
+providers receive the hosting server's public egress IP, not the browser's
+original IP, provided the reverse proxy and upstream requests do not forward
+identifying metadata. An independently trusted non-Tor VPN/SOCKS gateway can
+further mask the **server's** IP. Neither arrangement hides the plaintext
+search terms from each selected provider. A user browsing from the same host
+as the Search server is **not** IP-masked by a direct server request.
 
-All registered networks inherit this requirement, even if an engine specifies
-its own network override. The network layer rejects external proxy addresses,
-non-SOCKS5H protocols, plaintext HTTP targets, disabled TLS verification,
-per-request proxy/interface overrides and custom cURL settings. Incoming
-cookies are **not passed** to search providers, and common identity-carrying
-headers including `Forwarded`, `X-Forwarded-For`, `X-Real-IP`,
-`Authorization` and `Cookie` are removed. Query-bearing upstream URL
-logging was separately disabled, and the locale-selection debug log no longer
-records the incoming request URL. Provider processor diagnostics now record
-exception *types* instead of exception text; the private search, cookie/form
-preference, and image-proxy handlers use generic messages without embedding
-potentially query-bearing exception strings. Remaining reverse-proxy,
-third-party, dependency and telemetry paths still need a comprehensive audit.
+The GoreeCloud host, its reverse proxy, upstream hoster, VPN/gateway operator
+(if used), and search providers remain distinct trust boundaries. A
+single-tenant dedicated server IP or distinctive query text may allow search
+providers to correlate requests. Query obfuscation that changes search meaning
+is not a reliable privacy guarantee. A user who clicks a result may expose
+their browser IP, cookies and fingerprint directly to the destination site;
+the server-side search proxy cannot prevent that without separate browser
+protections.
 
-If the local SOCKS5H gateway is not running, the user can open the private
-homepage and preview source selection, but external provider searches will
-fail with provider errors and **no direct egress**. This failure is the
-deliberate privacy default, not a reason to bypass the gateway.
+## Supported egress modes
 
-## Critical difference: proxy masking versus anonymity
+GoreeCloud Search always applies HTTPS-only requests, normal TLS certificate
+verification, cookie suppression, removal of known client-identifying headers,
+URL-free network diagnostics, POST-only query submission and no-store search
+responses. All registered provider and image-proxy networks share the policy,
+regardless of engine-specific network overrides or privacy UI settings.
 
-A SOCKS5H protocol and a loopback listener do **not** prove that the proxy is
-Tor, that the exit IP is shared, that the provider cannot correlate searches,
-or that queries are end-to-end anonymous. The Tor-exit attestation is a useful technical control, not a proof of full
-anonymity. The operator must independently verify the listening gateway, its
-DNS handling, circuit behavior and identity separation before claiming
-anonymity. A
-malicious/misconfigured proxy, upstream network observer, or Tor exit can
-still observe metadata; a search provider receives the **plaintext query**
-over its HTTPS endpoint and can correlate query content and timing. Search
-terms are not blindly randomized because changing their meaning is not a
-reliable anonymity measure.
+### 1. Trusted gateway (default; local developer profile)
 
-There is **no Tor service listening on 127.0.0.1:9050 on the tested laptop**
-at the October 2026 development checkpoint. Actual successful provider
-responses over a verified Tor circuit, resistance to traffic correlation,
-public service requests, DNS leak tests, user/session isolation, and
-end-user browser privacy remain unverified. This source change is **not a
-working anonymous-search deployment yet**.
+`goreecloud.egress_mode: gateway` requires exactly one loopback-bound
+`socks5h://` gateway configured for **all protocols**. SOCKS5H delegates DNS
+resolution to the gateway. Tor is **not** required; an owner-controlled VPN
+gateway or another audited relay is acceptable. When the gateway is missing,
+unconfigured or invalid, search fails closed without switching to server-direct
+egress. Configuring a SOCKS5H port is **not proof** of the gateway's exit
+identity, trustworthiness or protection against DNS leaks. The local
+`configs/goreecloud/settings.yml` selects this mode and does not send search
+requests without an approved running gateway.
 
-Following result links leaves the Search service and can reveal the user's
-network identity to the destination site unless browser-side protections
-are used. The inherited image proxy follows the same mandatory egress rule,
-but external result URLs and third-party embeds require further auditing.
+### 2. Hosted server IP masking (optional; remote staging profile)
 
-## Release gates
+`configs/goreecloud/server-masked-staging.yml` is a separate opt-in
+**Development/Staging-only** template for an independently controlled, remotely
+hosted Search server. Providers receive the **server IP**; **do not use it on a
+visitor's own laptop, phone or localhost-only personal search deployment**.
 
-1. Provision and independently verify a genuine Tor SOCKS5H privacy gateway
-   in a properly isolated Development/Staging environment. The current
-   implementation's attestation is specifically **Tor-only**; another approved
-   privacy network would require its own independently verified implementation.
-   A process merely binding port 9050 is insufficient.
-2. Verify actual HTTPS provider request delivery through the gateway and
-   **no direct traffic** when gateway connections fail, time out, or are
-   interrupted. Include DNS resolution and image-proxy requests.
-3. Validate search functionality and provider anti-abuse response when
-   cookies are suppressed, especially Startpage challenges and Qwant
-   DataDome. Never bypass anti-bot/access restrictions or silently reroute
-   to disallowed providers.
-4. Complete query/URL logging, browser link leakage, exception handling,
-   response caching, privacy-retention and session isolation reviews.
-5. Integrate GoreeCloud Identity/Privacy Shield and audited public
-   authentication and rate limiting, then staging performance and rollback.
+Both safeguards must be present before Search can send requests without a
+SOCKS gateway:
+- `goreecloud.egress_mode: server_masked` plus
+  `goreecloud.server_masked_acknowledged: true` in the approved deployment
+  profile, and
+- `GOREECLOUD_SERVER_MASKED_EGRESS=1` explicitly set in the verified hosting
+  environment.
 
-### Bounded evidence
+The runtime rejects missing acknowledgements, configured alternative proxies,
+unknown modes, insecure TLS options, HTTP and direct per-request transport
+overrides. curl's ambient `HTTP_PROXY`, `HTTPS_PROXY` and `ALL_PROXY`
+proxy inheritance is disabled when the verified server-masked mode is used.
+**These configuration checks do not independently prove that a deployment is
+remote or that the host IP is unrelated to the user.** The operator must
+verify this before setting the acknowledgement. The staging template remains
+bound to `127.0.0.1` with no public Identity/rate-limit qualification;
+do not publish it to users or reuse it unchanged in Production.
 
-At the prior Development checkpoint, **seven anonymous egress regression cases**
-passed on the laptop: allowlist/denylist proxy parsing, no client creation
-without a valid relay, strict cURL/TLS/HTTPS guards, identity header and
-cookie stripping, and all registered network adapters inheriting the policy.
-The earlier local GoreeCloud suite passed **152/152** cases on the previous
-checkpoint. New regression cases cover strict boolean HTTP-200 Tor verification,
-failed-check client shutdown, per-request revalidation of reused connections,
-and revocation of an earlier positive verdict. The new source and these tests
-have been committed for exact-head CI; no live Tor-relayed provider success
-is claimed.
-An actual local Search POST while the proxy was absent returned an error and
-no results at the earlier checkpoint; every registered network (15/15)
-reported private egress enforcement. A private
-Granian no-provider listener smoke passed. Those checks do not establish
-production readiness or a functioning Tor relay.
+### Tor compatibility (not part of GoreeCloud's privacy requirement)
 
-Any previously recorded real-provider results (e.g. Startpage Web/Images/News
-during the October 16–17 live-provider investigation) were captured **before**
-this mandatory privacy-relay change and must not be presented as proof of
-anonymous searches.
+The upstream `outgoing.using_tor_proxy` verification path remains usable only
+when explicitly enabled for another configuration. GoreeCloud's two supported
+privacy modes require **no Tor**, no Tor exit check and no Tor installation.
+Tor-related historical regression cases are retained as opt-in compatibility
+tests, not a product requirement.
+
+## Remaining safeguards and risks
+
+- Query text still goes to the selected approved search providers; no claim
+  of encrypted search terms *from* providers or end-to-end anonymity.
+- Strip client IP/forwarding, Referer, Origin, tracking and client-hint headers,
+  provider cookies and trace IDs. Verify third-party engine adapters don't
+  create new identity-bearing headers or direct outbound clients outside this
+  guarded network layer.
+- Reverse-proxy, hosting-provider, network and exception logs must be audited
+  for query and client IP retention. Query-sensitive URLs and error strings
+  were redacted in identified application paths, **not all dependencies**.
+- Browser result navigation, embedded content, previews, image loading,
+  referrer policy and redirects still need full end-user browser verification.
+- For public exposure, require verified HTTPS ingress, GoreeCloud Identity,
+  Privacy Shield, Valkey/limiter, consent and retention policies, rate limits,
+  SSRF protections, compatibility, rollback and actual deployment tests.
+- Startpage CAPTCHA, Brave rate limits and Qwant access restrictions may
+  affect availability. Never bypass challenges or silently add providers.
+
+## Bounded evidence
+
+At the non-Tor development checkpoint, the laptop's detached checkout
+passed **170/170** GoreeCloud regression tests including offline tests of
+server-masked acknowledgement, header/cookie stripping, denial on bad
+transport/TLS, non-Tor gateway routing and ambient-proxy suppression.
+These are **code and contract tests**, not a live hosted visitor/server
+separation or DNS/IP packet-leak test. Prior successful live Startpage requests
+were made before the mandatory privacy design and do not qualify this change.
+
+**Release remains blocked** until a remote hosted/staging architecture is
+verified and an actual synthetic provider search demonstrates that upstream
+sees only the server/gateway address, with no client identifiers or local DNS
+leaks. GoreeCloud Search remains Development and PR #18 remains Draft.
