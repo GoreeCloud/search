@@ -8,6 +8,14 @@ from searx.network.network import Network
 
 
 class SearchNetworkLoggingRedactionTests(unittest.TestCase):
+    def test_locale_url_is_absent_from_debug_log(self):
+        from pathlib import Path
+        path = Path(__file__).resolve().parents[2] / "searx/webapp.py"
+        source = path.read_text(encoding="utf-8")
+        section = source.split("def get_locale():", 1)[1].split("\n\n", 1)[0]
+        self.assertNotIn("sxng_request.url", section)
+        self.assertIn('logger.debug("Locale selected: %s", locale)', section)
+
     def test_failure_and_debug_logs_never_include_query_url(self):
         needle = "sensitive-synthetic-query-needle"
         url = "https://search.example/search?q=" + needle
