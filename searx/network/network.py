@@ -12,6 +12,7 @@ import atexit
 import asyncio
 import ipaddress
 from itertools import cycle
+from urllib.parse import urlsplit
 
 from curl_cffi import CurlHttpVersion
 from curl_cffi.requests.exceptions import (
@@ -57,6 +58,7 @@ class Network:
         'local_addresses',
         'proxies',
         'using_tor_proxy',
+        'privacy_proxy_required',
         'max_redirects',
         'retries',
         'retry_on_http_error',
@@ -79,6 +81,7 @@ class Network:
         max_connections: int = None,  # pyright: ignore[reportArgumentType]
         proxies: str | dict[str, str] | None = None,
         using_tor_proxy: bool = False,
+        privacy_proxy_required: bool = False,
         local_addresses: str | list[str] | None = None,
         retries: int = 0,
         retry_on_http_error: bool = False,
@@ -93,6 +96,7 @@ class Network:
         self.max_connections = max_connections
         self.proxies = proxies
         self.using_tor_proxy = using_tor_proxy
+        self.privacy_proxy_required = privacy_proxy_required
         self.local_addresses = local_addresses
         self.retries = retries
         self.retry_on_http_error = retry_on_http_error
@@ -186,6 +190,32 @@ class Network:
         Network._TOR_CHECK_RESULT[proxies] = result
         return result
 
+    @staticmethod
+    def valid_private_proxy(proxies: tuple[tuple[str, str], ...]) -> bool:
+        """Only a single local SOCKS5H gateway can carry private Search traffic.
+
+        SOCKS5H delegates DNS lookup to the relay. A local gateway must separately
+        be verified as Tor or another owner-approved privacy network.
+        """
+        if len(proxies) != 1 or proxies[0][0] != 'all://':
+            return False
+        url = proxies[0][1]
+        if not isinstance(url, str) or not url or url != url.strip():
+            return False
+        try:
+            parsed = urlsplit(url)
+            port = parsed.port
+        except ValueError:
+            return False
+        return (
+            parsed.scheme == 'socks5h'
+            and parsed.hostname in ('127.0.0.1', '::1')
+            and port is not None and port > 0
+            and not parsed.username and not parsed.password
+            and not parsed.path and not parsed.query and not parsed.fragment
+            and '#' not in url and '?' not in url
+        )
+
     async def get_client(
         self,
         verify: bool | None = None,
@@ -200,6 +230,11 @@ class Network:
         enable_http3 = self.enable_http3 if enable_http3 is None else enable_http3
         local_address = next(self._local_addresses_cycle)
         proxies = next(self._proxies_cycle)  # is a tuple so it can be part of the key
+        if self.privacy_proxy_required:
+            if not self.valid_private_proxy(proxies):
+                raise ProxyError('Private Search egress blocked: approved local SOCKS5H proxy required')
+            if verify is False or self.enable_http or curl_options:
+                raise ProxyError('Private Search egress blocked: insecure transport override')
         curl_key = tuple(sorted((int(k), v) for k, v in (curl_options or {}).items()))
         key = (verify, max_redirects, local_address, proxies, impersonate, curl_key, enable_http3)
         if key not in self._clients or self._clients[key].is_closed:
@@ -268,6 +303,26 @@ class Network:
         was_disconnected = False
         do_raise_for_httperror = Network.extract_do_raise_for_httperror(kwargs)
         kwargs_clients = Network.extract_kwargs_clients(kwargs)
+        if self.privacy_proxy_required:
+            if any(key in kwargs for key in ('proxy', 'proxies', 'interface', 'curl_options')):
+                raise ProxyError('Private Search egress blocked: per-request proxy override')
+            if urlsplit(url).scheme != 'https':
+                raise ProxyError('Private Search egress blocked: HTTPS required')
+            # Do not forward upstream cookies or client-identifying headers.
+            # Provider challenges might need cookies; privacy takes precedence.
+            kwargs.pop('cookies', None)
+            if kwargs.get('headers'):
+                identifying = {
+                    'cookie', 'authorization', 'proxy-authorization', 'x-api-key',
+                    'forwarded', 'x-forwarded-for', 'x-real-ip', 'x-client-ip',
+                    'cf-connecting-ip', 'true-client-ip', 'x-forwarded-host',
+                    'x-forwarded-proto', 'x-original-forwarded-for',
+                    'x-original-ip', 'x-cluster-client-ip', 'x-proxyuser-ip',
+                }
+                kwargs['headers'] = {
+                    name: value for name, value in kwargs['headers'].items()
+                    if name.lower() not in identifying
+                }
         while retries >= 0:  # pragma: no cover
             client = await self.get_client(**kwargs_clients)
             try:
@@ -350,6 +405,7 @@ def initialize(
         'max_connections': settings_outgoing['pool_connections'],
         'local_addresses': settings_outgoing['source_ips'],
         'using_tor_proxy': settings_outgoing['using_tor_proxy'],
+        'privacy_proxy_required': bool(settings.get('goreecloud', {}).get('require_anonymous_egress')),
         'proxies': settings_outgoing['proxies'],
         'max_redirects': settings_outgoing['max_redirects'],
         'retries': settings_outgoing['retries'],
@@ -361,6 +417,8 @@ def initialize(
         result = {}
         result.update(default_params)  # pyright: ignore[reportUnknownMemberType]
         result.update(params)  # pyright: ignore[reportUnknownMemberType]
+        # Engine-specific network overrides cannot downgrade the private egress policy.
+        result['privacy_proxy_required'] = default_params['privacy_proxy_required']
         if logger_name:
             result['logger_name'] = logger_name
         return Network(**result)  # type: ignore
