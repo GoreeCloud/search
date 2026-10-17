@@ -98,6 +98,20 @@ class AnonymousSearchEgressTests(unittest.TestCase):
         self.assertEqual(['https://check.torproject.org/api/ip'], fake.urls)
         self.assertTrue(fake.is_closed)
 
+    def test_private_profile_cannot_opt_out_of_anonymous_egress(self):
+        for setting in (False, None):
+            with self.subTest(setting=setting), patch.dict(
+                smoke.settings['goreecloud'], {'require_anonymous_egress': setting}
+            ), patch('searx.network.client.AsyncClient') as construct:
+                with self.assertRaises(AnonymousEgressError):
+                    new_client(
+                        enable_http=False, verify=True, enable_http2=False,
+                        enable_http3=False, max_connections=1,
+                        proxies={'all://': 'socks5h://127.0.0.1:9050'},
+                        local_address=None, max_redirects=2,
+                    )
+                construct.assert_not_called()
+
     def test_named_network_cannot_disable_tor_verification(self):
         network = Network(
             proxies={'all://': 'socks5h://127.0.0.1:9050'},
