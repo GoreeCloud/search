@@ -172,6 +172,60 @@ def safe_primary_result_url(url: object) -> bool:
         return False
 
 
+
+def safe_external_media_url(url: object) -> bool:
+    """Reject unsafe image-proxy targets before signing or fetching a URL.
+
+    DNS rebinding requires a separate network/firewall defense. This validation
+    removes direct local-address and malformed-host SSRF paths; it does NOT prove
+    that an arbitrary public-looking domain resolves to a public IP.
+    """
+    import ipaddress
+    import re
+    from urllib.parse import urlsplit
+
+    if (not isinstance(url, str) or not url or len(url) > 4096
+            or '\\' in url or any(ord(ch) <= 32 or ord(ch) == 127 for ch in url)):
+        return False
+    try:
+        target = urlsplit(url)
+        host = target.hostname
+        port = target.port
+        if (target.scheme.lower() != 'https' or not host
+                or port not in (None, 443)
+                or target.username is not None or target.password is not None
+                or target.fragment or '%' in target.netloc):
+            return False
+        # Disallow IP literals (including IPv6) and numeric/ambiguous hostname
+        # forms. Image URLs should be resolved by the restricted egress firewall.
+        try:
+            ipaddress.ip_address(host)
+            return False
+        except ValueError:
+            pass
+        ascii_host = host.encode('idna').decode('ascii').lower()
+        if (ascii_host.endswith('.') or len(ascii_host) > 253
+                or '.' not in ascii_host or ascii_host.startswith('.')):
+            return False
+        labels = ascii_host.split('.')
+        if any(
+            not 1 <= len(label) <= 63
+            or not re.fullmatch(r'[a-z0-9](?:[a-z0-9-]*[a-z0-9])?', label)
+            for label in labels
+        ):
+            return False
+        if labels[-1] in ('local', 'localhost', 'internal', 'lan', 'invalid',
+                          'test', 'example', 'onion'):
+            return False
+        # Reject ambiguous nonstandard numeric host encodings such as 127.1.
+        if not re.fullmatch(r'[a-z]{2,63}|xn--[a-z0-9-]+', labels[-1]):
+            return False
+        return True
+    except (UnicodeError, TypeError, ValueError):
+        return False
+
+
+
 def represented_result_sources(results: Iterable[object], selected_names: Iterable[str]) -> dict[str, int]:
     """Count selected provider labels attached to *displayed* primary results.
 
