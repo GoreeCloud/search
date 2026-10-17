@@ -60,6 +60,7 @@ goreecloud:
   private_search: true
   max_query_chars: 512
   max_provider_fanout: 3
+  require_anonymous_egress: true
 general:
   instance_name: "GoreeCloud Search"
   enable_metrics: false
