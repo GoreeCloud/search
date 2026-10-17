@@ -1,0 +1,31 @@
+<form id="search" method="{{ method }}" action="{{ url_for('search') }}" role="search">
+  <div id="search_header">
+    <a id="search_logo" href="{{ url_for('index') }}" title="{{ _('Display the front page') }}">
+      <span class="goreecloud-wordmark">GoreeCloud <span>Search</span></span>
+    </a>
+    <div id="search_view">
+      <div class="search_box">
+        <label class="goreecloud-visually-hidden" for="q">Search query</label>
+        {% if private_query_transport and get_setting('goreecloud.max_query_chars') %}<span class="goreecloud-visually-hidden" id="goreecloud-query-length-hint">Search terms are limited to {{ get_setting('goreecloud.max_query_chars') }} characters.</span>{% endif %}
+        <input id="q" name="q" type="search"{% if private_query_transport and get_setting('goreecloud.max_query_chars') %} maxlength="{{ get_setting('goreecloud.max_query_chars') }}" aria-describedby="goreecloud-query-length-hint"{% endif %} aria-keyshortcuts="/" title="Press / to focus search" placeholder="{{ _('Search for...') }}" autocomplete="off" autocapitalize="none" spellcheck="false" autocorrect="off" dir="auto" value="{{ q or '' }}">
+        <button id="clear_search" type="reset" aria-label="{{ _('clear') }}" class="hide_if_nojs"><span>{{ icon_big('close') }}</span></button>
+        <button id="send_search" type="submit" {%- if search_on_category_select -%}name="category_{{ selected_categories[0]|replace(' ', '_') }}"{%- endif -%} aria-label="{{ _('search') }}"><span class="hide_if_nojs">{{ icon_big('search') }}</span><span class="show_if_nojs">{{ _('search') }}</span></button>
+        <div class="autocomplete hide_if_nojs"><ul></ul></div>
+      </div>
+      {% if private_query_transport %}<button type="submit" class="goreecloud-preview-trigger" formaction="{{ url_for('goreecloud_preview') }}" formmethod="post">Preview sources without searching</button>{% endif %}
+    </div>
+    {% set display_tooltip = true %}
+    {% include 'simple/categories.html' %}
+  </div>
+  {% if private_query_transport %}
+  <p class="goreecloud-source-disclosure" role="note">Only Brave Search and Startpage are available. Searches send terms to the selected source(s). <a href="{{ url_for('static', filename='goreecloud/privacy.html') }}">Source disclosure</a></p>
+  {% endif %}
+  <div class="search_filters">
+    {% include 'simple/filters/languages.html' %}
+    {% include 'simple/filters/time_range.html' %}
+    {% include 'simple/filters/safesearch.html' %}
+  </div>
+  {% if private_query_transport and selected_engine_post %}<input type="hidden" name="engines" value="{{ selected_engine_post }}">{% endif %}
+  <input type="hidden" name="theme" value="{{ theme }}" >
+  {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}" >{% endif %}
+</form>

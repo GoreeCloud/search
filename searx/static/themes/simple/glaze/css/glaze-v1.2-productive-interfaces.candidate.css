@@ -1,0 +1,207 @@
+/* GLAZE UI V1.2 Candidate — bounded productive-interface composition over canonical Structure controls. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-productive-library {
+  display: grid;
+  gap: var(--glz12-space-section);
+  min-inline-size: 0;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-productive-scene {
+  min-inline-size: 0;
+  display: grid;
+  gap: var(--glz12-space-standard-cluster);
+  padding: var(--glz12-space-content);
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-surface);
+  background: var(--glz1-base);
+  color: var(--glz1-text-primary);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-command-bar,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-filter-bar,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--glz12-space-control);
+  min-inline-size: 0;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-command-bar {
+  position: relative;
+  padding: var(--glz12-space-control);
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-floating-control);
+  background: var(--glz12-glass-raised);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-command-bar > [data-command-priority="primary"] { font-weight: 700; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-command-spacer { flex: 1 1 auto; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--glz12-space-control);
+  min-block-size: var(--glz12-target-min);
+  padding-inline: var(--glz12-space-standard-cluster);
+  border: 1px solid currentColor;
+  border-radius: var(--glz12-radius-pill);
+  background: var(--glz1-raised);
+  color: inherit;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-table-scroll {
+  min-inline-size: 0;
+  inline-size: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-control);
+  background: var(--glz1-base);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-productive-table {
+  min-inline-size: 760px;
+  inline-size: 100%;
+  border-collapse: collapse;
+  background: var(--glz1-base);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-productive-table th,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-productive-table td {
+  padding: var(--glz12-space-compact-cluster) var(--glz12-space-standard-cluster);
+  text-align: start;
+  border-block-end: 1px solid var(--glz12-structural-border);
+  vertical-align: middle;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glaze-density-profile="productive"] .glz12-productive-table th,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glaze-density-profile="productive"] .glz12-productive-table td {
+  padding-block: var(--glz12-space-control);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-productive-table .glz12-numeric {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-productive-table tr[data-selected="true"] {
+  box-shadow: inset var(--glz12-state-focus-width) 0 0 currentColor;
+  font-weight: 650;
+}
+html[dir="rtl"][data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-productive-table tr[data-selected="true"] {
+  box-shadow: inset calc(-1 * var(--glz12-state-focus-width)) 0 0 currentColor;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-row-focus:focus-visible,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-sort-button:focus-visible,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-productivity-action:focus-visible {
+  outline: var(--glz12-state-focus-width) solid var(--glz1-focus);
+  outline-offset: var(--glz12-state-focus-offset);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-sort-button,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-productivity-action,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-selection-control {
+  min-inline-size: var(--glz12-target-min);
+  min-block-size: var(--glz12-target-min);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--glz12-space-control);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-status-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--glz12-space-control);
+  white-space: nowrap;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-status-cell::before {
+  content: "?";
+  inline-size: 1.4em;
+  block-size: 1.4em;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-weight: 800;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-status-cell[data-state="healthy"]::before { content: "✓"; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-status-cell[data-state="offline"]::before { content: "×"; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-status-cell[data-state="warning"]::before { content: "!"; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-status-cell[data-state="unknown"] { border-block-end: 1px dashed currentColor; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-inspector {
+  min-inline-size: 0;
+  display: grid;
+  gap: var(--glz12-space-standard-cluster);
+  padding: var(--glz12-space-content);
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-panel);
+  background: var(--glz1-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-table-inspector-layout {
+  min-inline-size: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  gap: var(--glz12-space-standard-cluster);
+  align-items: start;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-state-banner {
+  padding: var(--glz12-space-standard-cluster);
+  border: 1px solid var(--glz12-structural-border);
+  border-inline-start-width: var(--glz12-state-focus-width-contrast);
+  border-radius: var(--glz12-radius-control);
+  background: var(--glz1-raised);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-log-viewer {
+  max-block-size: 240px;
+  overflow: auto;
+  padding: var(--glz12-space-standard-cluster);
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-control);
+  background: var(--glz1-base);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-log-entry {
+  display: grid;
+  grid-template-columns: max-content max-content minmax(0,1fr);
+  gap: var(--glz12-space-control);
+  padding-block: var(--glz12-space-hairline);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-structured-list { display: none; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="compact"] .glz12-table-scroll[data-mobile-transform="structured-list"] { display: none; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="compact"] .glz12-structured-list {
+  display: grid;
+  gap: var(--glz12-space-control);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-record-card {
+  display: grid;
+  gap: var(--glz12-space-control);
+  padding: var(--glz12-space-standard-cluster);
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-control);
+  background: var(--glz1-base);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="compact"] .glz12-table-inspector-layout { grid-template-columns: minmax(0,1fr); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="compact"] .glz12-inspector { order: 2; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-touch-assistance="true"] :is(.glz12-sort-button,.glz12-productivity-action,.glz12-selection-control,.glz12-filter-chip) {
+  min-block-size: var(--glz12-shell-target-assisted, 56px);
+  min-inline-size: var(--glz12-shell-target-assisted, 56px);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"] :is(.glz12-productive-library,.glz12-productive-scene,.glz12-table-inspector-layout,.glz12-command-bar,.glz12-filter-bar,.glz12-bulk-bar,.glz12-record-card) {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"] .glz12-table-inspector-layout { grid-template-columns: minmax(0,1fr); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] :is(.glz12-productive-scene,.glz12-command-bar,.glz12-inspector,.glz12-log-viewer) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none;
+}
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(.glz12-productive-scene,.glz12-command-bar,.glz12-filter-chip,.glz12-table-scroll,.glz12-inspector,.glz12-state-banner,.glz12-log-viewer,.glz12-record-card) {
+    forced-color-adjust: auto;
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+  }
+}

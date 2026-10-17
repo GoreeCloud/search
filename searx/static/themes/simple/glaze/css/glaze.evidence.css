@@ -1,0 +1,248 @@
+/* GLAZE UI V1.0 Stable — evidence presentation primitives. */
+
+.glaze-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: clamp(14px, 2vw, 22px);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.glaze-evidence-card {
+  grid-column: span 6;
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  max-width: 100%;
+  padding: clamp(18px, 2.4vw, 26px);
+}
+
+.glaze-evidence-card[data-size="full"] {
+  grid-column: 1 / -1;
+}
+
+.glaze-evidence-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.glaze-evidence-heading > div,
+.glaze-evidence-authority {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.glaze-evidence-kicker,
+.glaze-evidence-authority {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.glaze-evidence-state {
+  margin: 4px 0 0;
+  font-size: clamp(1.18rem, 2vw, 1.55rem);
+  line-height: 1.18;
+}
+
+.glaze-evidence-summary {
+  margin: 0;
+  max-width: 72ch;
+}
+
+.glaze-evidence-card :is(h2, h3, p, strong, span, dt, dd, summary),
+.glaze-evidence-callout {
+  overflow-wrap: anywhere;
+}
+
+.glaze-evidence-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  min-width: 0;
+}
+
+.glaze-evidence-meta > div {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--glaze-line);
+  border-radius: var(--glaze-radius-card, 16px);
+  background: var(--glaze-surface-muted);
+}
+
+.glaze-evidence-meta dt {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.glaze-evidence-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.glaze-evidence-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.glaze-evidence-chip {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--glaze-line);
+  border-radius: 999px;
+  background: var(--glaze-surface-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* Freshness and transport chips are deliberately presentation-neutral.
+ * current/available must never inherit success/protected styling by default.
+ */
+.glaze-evidence-chip[data-freshness],
+.glaze-evidence-chip[data-transport] {
+  color: inherit;
+}
+
+.glaze-evidence-chip[data-freshness="stale"],
+.glaze-evidence-chip[data-freshness="expired"],
+.glaze-evidence-chip[data-freshness="unknown"],
+.glaze-evidence-chip[data-transport="unavailable"],
+.glaze-evidence-chip[data-transport="invalid"] {
+  border-style: dashed;
+}
+
+.glaze-evidence-details {
+  border-top: 1px solid var(--glaze-line);
+  padding-top: 12px;
+  min-width: 0;
+}
+
+.glaze-evidence-details summary {
+  min-height: var(--glaze-target-min, 44px);
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.glaze-evidence-source {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: var(--glaze-radius-card, 16px);
+  background: var(--glaze-surface-muted);
+  overflow-wrap: anywhere;
+}
+
+.glaze-evidence-conflict {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.glaze-evidence-conflict > section {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--glaze-line);
+  border-radius: var(--glaze-radius-card, 16px);
+  background: var(--glaze-surface-muted);
+}
+
+.glaze-evidence-callout {
+  min-width: 0;
+  max-width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--glaze-line);
+  border-radius: var(--glaze-radius-card, 16px);
+  background: var(--glaze-surface-muted);
+}
+
+/* TV is a far-view/directional-input context. Interactive disclosure and
+   appearance controls retain the Stable TV target floor rather than inheriting
+   near-view Desktop sizing. */
+body[data-glaze-form-factor="tv"] .glaze-evidence-details summary,
+body[data-glaze-form-factor="tv"] .theme-group button {
+  min-height: 56px;
+  min-width: 56px;
+}
+
+body[data-glaze-form-factor="tv"] .glaze-evidence-card {
+  gap: 20px;
+  padding: 30px;
+}
+
+body[data-glaze-form-factor="tv"] .glaze-evidence-state {
+  font-size: clamp(1.5rem, 2vw, 2rem);
+}
+
+/* Portable fallback for hosts and rendered acceptance that cannot expose
+   prefers-reduced-transparency directly. */
+body[data-glaze-reduced-transparency="true"] .glaze-evidence-card,
+body[data-glaze-reduced-transparency="true"] .glaze-glass-functional {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: var(--glaze-surface-strong) !important;
+}
+
+@media (max-width: 760px) {
+  .glaze-evidence-card {
+    grid-column: 1 / -1;
+  }
+
+  .glaze-evidence-meta,
+  .glaze-evidence-conflict {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glaze-evidence-card,
+  .glaze-evidence-chip,
+  .glaze-evidence-details summary {
+    scroll-behavior: auto;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glaze-evidence-card,
+  .glaze-glass-functional {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: var(--glaze-surface-strong) !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .glaze-evidence-card,
+  .glaze-evidence-meta > div,
+  .glaze-evidence-chip,
+  .glaze-evidence-conflict > section,
+  .glaze-evidence-callout {
+    border: 1px solid CanvasText;
+  }
+}

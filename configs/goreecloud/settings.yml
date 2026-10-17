@@ -1,0 +1,63 @@
+# Private/local GoreeCloud Search profile: exactly two built-in providers.
+# Brave Search is the search service (not the Brave Browser executable).
+# Startpage's upstream connector may be challenged by proof-of-work CAPTCHA.
+# Do not use this profile unchanged for an Internet-facing instance.
+use_default_settings:
+  engines:
+    keep_only:
+      - brave
+      - startpage
+engines:
+  - name: brave
+    disabled: false
+    inactive: false
+  - name: startpage
+    disabled: false
+    inactive: false
+# General web only; no phantom image/news/map/provider tabs.
+categories_as_tabs:
+  general:
+goreecloud:
+  private_search: true
+  max_query_chars: 512
+  max_provider_fanout: 2
+general:
+  instance_name: "GoreeCloud Search"
+  enable_metrics: false
+  open_metrics: ""
+brand:
+  docs_url: https://github.com/GoreeCloud/search
+  wiki_url: https://github.com/GoreeCloud/search
+  issue_url: https://github.com/GoreeCloud/search/issues
+  public_instances: ""
+search:
+  safe_search: 1
+  autocomplete: ""
+  favicon_resolver: ""
+  formats:
+    - html
+    - json
+server:
+  bind_address: "127.0.0.1"
+  public_instance: false
+  limiter: false
+  image_proxy: true
+  method: "POST"
+  default_http_headers:
+    X-Content-Type-Options: nosniff
+    X-Frame-Options: DENY
+    Referrer-Policy: no-referrer
+    X-Robots-Tag: noindex, nofollow
+    Permissions-Policy: "camera=(), microphone=(), geolocation=()"
+preferences:
+  lock:
+    - method
+    - query_in_title
+    - autocomplete
+    - favicon_resolver
+    - image_proxy
+ui:
+  default_theme: simple
+  query_in_title: false
+  theme_args:
+    simple_style: auto

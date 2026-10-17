@@ -1,0 +1,11 @@
+{% extends 'simple/base.html' %}
+{% block title %}Search request declined - {% endblock %}
+{% block content %}
+<section class="goreecloud-policy-error" role="alert" aria-labelledby="goreecloud-policy-heading">
+  <p class="goreecloud-eyebrow">Privacy guard</p>
+  <h1 id="goreecloud-policy-heading">Search request declined</h1>
+  <p>{{ policy_message }}</p>
+  <p>Search terms are never displayed on this error page. You can retry using the local search form.</p>
+  <a href="{{ url_for('index') }}">Return to GoreeCloud Search</a>
+</section>
+{% endblock %}

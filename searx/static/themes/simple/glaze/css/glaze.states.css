@@ -1,0 +1,98 @@
+:root {
+  --glaze-focus-ring-width: 2px;
+  --glaze-focus-ring-offset: 2px;
+  --glaze-state-opacity-disabled: .48;
+  --glaze-state-opacity-readonly: .78;
+  --glaze-state-press-scale: .98;
+}
+
+.glaze-interactive {
+  position: relative;
+  outline: none;
+}
+
+.glaze-interactive:focus-visible,
+[data-glaze-focus-visible="true"] {
+  outline: var(--glaze-focus-ring-width) solid CanvasText;
+  outline-offset: var(--glaze-focus-ring-offset);
+  box-shadow: 0 0 0 calc(var(--glaze-focus-ring-width) + var(--glaze-focus-ring-offset)) color-mix(in srgb, Highlight 55%, transparent);
+}
+
+@media (forced-colors: active) {
+  .glaze-interactive:focus-visible,
+  [data-glaze-focus-visible="true"] {
+    outline-color: Highlight;
+    box-shadow: none;
+    forced-color-adjust: auto;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .glaze-interactive:hover:not(:disabled):not([aria-disabled="true"]) {
+    filter: brightness(1.03);
+  }
+}
+
+.glaze-interactive:active:not(:disabled):not([aria-disabled="true"]),
+.glaze-interactive[aria-pressed="true"] {
+  transform: scale(var(--glaze-state-press-scale));
+}
+
+.glaze-interactive[aria-selected="true"],
+.glaze-interactive[data-glaze-selected="true"] {
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+
+.glaze-interactive[aria-expanded="true"]::after {
+  content: "▴";
+}
+
+.glaze-interactive[aria-expanded="false"]::after {
+  content: "▾";
+}
+
+.glaze-interactive:disabled,
+.glaze-interactive[aria-disabled="true"] {
+  opacity: var(--glaze-state-opacity-disabled);
+  cursor: not-allowed;
+}
+
+.glaze-readonly,
+.glaze-interactive[readonly],
+.glaze-interactive[aria-readonly="true"] {
+  opacity: var(--glaze-state-opacity-readonly);
+  cursor: text;
+}
+
+.glaze-busy,
+[aria-busy="true"] {
+  cursor: progress;
+}
+
+.glaze-invalid,
+[aria-invalid="true"] {
+  border-style: double;
+  border-width: 3px;
+}
+
+.glaze-success::before,
+[data-glaze-status="success"]::before {
+  content: "✓";
+  margin-inline-end: .4em;
+  font-weight: 800;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glaze-interactive,
+  .glaze-interactive:active,
+  .glaze-interactive[aria-pressed="true"] {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+[data-glaze-reduced-transparency="true"] .glaze-interactive:focus-visible,
+[data-glaze-performance="constrained"] .glaze-interactive:focus-visible {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}

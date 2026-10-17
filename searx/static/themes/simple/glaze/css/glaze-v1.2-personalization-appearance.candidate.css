@@ -1,0 +1,104 @@
+/*
+ * GLAZE UI V1.2 — bounded Personalization and Appearance Candidate.
+ * Expression only: this layer does not own semantic colors, system state,
+ * preference persistence/sync, product identity, security, or privacy truth.
+ * It MUST load before the final accessibility resolution layer.
+ */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] {
+  --glz12-personal-accent: rgb(82 151 181);
+  --glz12-personal-atmosphere-strength: 0.08;
+  --glz12-wallpaper-atmosphere: transparent;
+  --glz12-personal-density-gap: 16px;
+  --glz12-personal-density-pad: 18px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-accent="ice"] { --glz12-personal-accent: rgb(82 151 181); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-accent="slate"] { --glz12-personal-accent: rgb(104 123 137); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-accent="indigo"] { --glz12-personal-accent: rgb(98 108 188); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-accent="aqua"] { --glz12-personal-accent: rgb(48 151 157); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-accent="rose"] { --glz12-personal-accent: rgb(178 102 132); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-accent="amber"] { --glz12-personal-accent: rgb(184 132 65); }
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-atmosphere="calm"] { --glz12-personal-atmosphere-strength: 0.035; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-atmosphere="balanced"] { --glz12-personal-atmosphere-strength: 0.08; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-atmosphere="expressive"] { --glz12-personal-atmosphere-strength: 0.13; }
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-density="comfortable"] { --glz12-personal-density-gap: 20px; --glz12-personal-density-pad: 22px; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-density="standard"] { --glz12-personal-density-gap: 16px; --glz12-personal-density-pad: 18px; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-density="productive"] { --glz12-personal-density-gap: 10px; --glz12-personal-density-pad: 12px; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-density="immersive"] { --glz12-personal-density-gap: 24px; --glz12-personal-density-pad: 26px; }
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-personalization-library,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-personalization-library > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-personalization-surface {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  padding: var(--glz12-personal-density-pad);
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-surface, 20px);
+  background-color: var(--glz1-base);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-personalization-grid {
+  display: grid;
+  gap: var(--glz12-personal-density-gap);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-personalization-grid > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-personalization-accent {
+  border-color: color-mix(in srgb, var(--glz12-personal-accent) 52%, var(--glz12-structural-border));
+  background-color: color-mix(in srgb, var(--glz12-personal-accent) 13%, var(--glz1-raised));
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-personalization-atmosphere {
+  background-image:
+    radial-gradient(110% 95% at 88% 2%, var(--glz12-wallpaper-atmosphere), transparent 62%),
+    linear-gradient(145deg,
+      color-mix(in srgb, var(--glz12-personal-accent) calc(var(--glz12-personal-atmosphere-strength) * 100%), transparent),
+      transparent 58%);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-personalization-action {
+  min-block-size: 48px;
+  min-inline-size: 48px;
+  max-inline-size: 100%;
+}
+
+/* Accessibility wins over atmosphere. The final accessibility layer remains authoritative. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] .glz12-personalization-atmosphere {
+  background-image: none !important;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"] .glz12-personalization-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"] :is(
+  .glz12-personalization-library,
+  .glz12-personalization-library > *,
+  .glz12-personalization-library h1,
+  .glz12-personalization-library h2,
+  .glz12-personalization-surface,
+  .glz12-personalization-grid,
+  .glz12-personalization-grid > *,
+  .glz12-personalization-chip,
+  .glz12-semantic-state,
+  .glz12-personalization-action
+) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(.glz12-personalization-accent,.glz12-personalization-atmosphere) {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    forced-color-adjust: auto;
+  }
+}

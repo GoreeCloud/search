@@ -1,0 +1,15 @@
+/*
+ * GLAZE UI V1.2 Candidate — accessibility navigation reflow companion.
+ *
+ * Compact floating/sticky navigation is subordinate to accessibility enlargement.
+ * Large Text or Touch Assistance must keep the Navigation Capsule in document
+ * flow so larger targets and labels cannot occlude nearby controls or content.
+ */
+@media (max-width: 720px) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"]:root [data-glaze-navigation-capsule],
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-touch-assistance="true"]:root [data-glaze-navigation-capsule] {
+    position: static !important;
+    inset: auto !important;
+    z-index: auto !important;
+  }
+}

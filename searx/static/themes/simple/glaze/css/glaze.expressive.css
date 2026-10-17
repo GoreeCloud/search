@@ -1,0 +1,174 @@
+:root {
+  --glaze-glass-regular-blur: 24px;
+  --glaze-glass-regular-saturation: 145%;
+  --glaze-glass-clear-blur: 12px;
+  --glaze-glass-clear-saturation: 118%;
+  --glaze-glass-regular-opacity: .78;
+  --glaze-glass-clear-opacity: .34;
+  --glaze-shape-compact: 12px;
+  --glaze-shape-standard: 18px;
+  --glaze-shape-expressive: 26px;
+  --glaze-shape-hero: 34px;
+  --glaze-shape-pressed: 14px;
+  --glaze-motion-effects-fast: 140ms;
+  --glaze-motion-effects-standard: 220ms;
+  --glaze-motion-spatial-fast: 180ms;
+  --glaze-motion-spatial-standard: 300ms;
+  --glaze-motion-spatial-emphasized: 420ms;
+  --glaze-ease-spatial: cubic-bezier(.16, 1, .3, 1);
+  --glaze-ease-effects: cubic-bezier(.2, 0, 0, 1);
+  --glaze-reach-zone-gap: 20px;
+}
+
+/* Functional glass is reserved for navigation, controls, toolbars, and transient chrome. */
+.glaze-glass-functional {
+  background: color-mix(in srgb, var(--glaze-surface-strong) calc(var(--glaze-glass-regular-opacity) * 100%), transparent);
+  border: 1px solid color-mix(in srgb, var(--glaze-line) 84%, white 16%);
+  box-shadow: var(--glaze-shadow-raised);
+  -webkit-backdrop-filter: blur(var(--glaze-glass-regular-blur)) saturate(var(--glaze-glass-regular-saturation));
+  backdrop-filter: blur(var(--glaze-glass-regular-blur)) saturate(var(--glaze-glass-regular-saturation));
+}
+
+/* Clear glass is intentionally limited to controls floating above visually rich media. */
+.glaze-glass-clear {
+  background: color-mix(in srgb, var(--glaze-surface-strong) calc(var(--glaze-glass-clear-opacity) * 100%), transparent);
+  border: 1px solid color-mix(in srgb, white 24%, var(--glaze-line));
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .14);
+  -webkit-backdrop-filter: blur(var(--glaze-glass-clear-blur)) saturate(var(--glaze-glass-clear-saturation));
+  backdrop-filter: blur(var(--glaze-glass-clear-blur)) saturate(var(--glaze-glass-clear-saturation));
+}
+
+.glaze-shape-compact { border-radius: var(--glaze-shape-compact); }
+.glaze-shape-standard { border-radius: var(--glaze-shape-standard); }
+.glaze-shape-expressive { border-radius: var(--glaze-shape-expressive); }
+.glaze-shape-hero { border-radius: var(--glaze-shape-hero); }
+
+.glaze-expressive-action,
+.glaze-expressive-tile {
+  transition:
+    border-radius var(--glaze-motion-spatial-fast) var(--glaze-ease-spatial),
+    transform var(--glaze-motion-spatial-fast) var(--glaze-ease-spatial),
+    background var(--glaze-motion-effects-fast) var(--glaze-ease-effects),
+    box-shadow var(--glaze-motion-effects-fast) var(--glaze-ease-effects);
+}
+
+.glaze-expressive-action {
+  min-height: var(--glaze-target-comfortable);
+  border-radius: var(--glaze-shape-expressive);
+}
+
+.glaze-expressive-action:active:not(:disabled) {
+  border-radius: var(--glaze-shape-pressed);
+  transform: scale(.97);
+}
+
+.glaze-expressive-tile[data-emphasis="hero"] {
+  border-radius: var(--glaze-shape-hero);
+}
+
+.glaze-expressive-tile[data-selected="true"],
+.glaze-expressive-tile[aria-selected="true"] {
+  border-radius: var(--glaze-shape-expressive);
+  box-shadow: var(--glaze-shadow-raised);
+}
+
+/* Adaptive button groups allow important actions to claim more space without changing order. */
+.glaze-button-group {
+  display: flex;
+  align-items: stretch;
+  gap: var(--glaze-space-2);
+}
+
+.glaze-button-group > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.glaze-button-group > [data-emphasis="high"] {
+  flex-grow: 1.35;
+}
+
+.glaze-button-group > :is(button, a):active {
+  flex-grow: 1.08;
+}
+
+/* Reachability layout separates glanceable context from frequent actions on compact screens. */
+.glaze-reach-layout {
+  display: grid;
+  gap: var(--glaze-reach-zone-gap);
+}
+
+.glaze-reach-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--glaze-space-2);
+}
+
+.glaze-hero-type {
+  max-width: 18ch;
+  font-size: clamp(2rem, 6vw, 4.75rem);
+  line-height: .98;
+  letter-spacing: -.045em;
+  font-weight: 800;
+  text-wrap: balance;
+}
+
+.glaze-supporting-type {
+  max-width: 62ch;
+  color: var(--glaze-muted);
+  font-size: clamp(1rem, 1.4vw, 1.125rem);
+  line-height: 1.6;
+}
+
+@media (max-width: 599px) {
+  .glaze-reach-layout {
+    min-height: min(78svh, 680px);
+    grid-template-rows: auto 1fr auto;
+  }
+
+  .glaze-reach-actions {
+    align-self: end;
+    padding-bottom: max(var(--glaze-space-2), env(safe-area-inset-bottom));
+  }
+
+  .glaze-button-group {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glaze-expressive-action,
+  .glaze-expressive-tile,
+  .glaze-button-group > * {
+    transition-duration: 1ms !important;
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glaze-glass-functional,
+  .glaze-glass-clear {
+    background: var(--glaze-surface-strong);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .glaze-glass-functional,
+  .glaze-glass-clear,
+  .glaze-expressive-action,
+  .glaze-expressive-tile {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: none;
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glaze-glass-functional,
+  .glaze-glass-clear {
+    background: var(--glaze-surface-strong);
+  }
+}

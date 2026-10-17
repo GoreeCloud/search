@@ -1,0 +1,95 @@
+/*
+ * GLAZE UI V1.0 Foundation Components — composed Candidate runtime entrypoint.
+ * Planned until exact-head rendered acceptance passes.
+ */
+@import url("./glaze-v1.components.adaptive.css");
+
+/* Foundation primitives must never force a responsive pane wider than its
+   containing layout. Long localized values wrap/reflow within the semantic
+   control instead of creating document-level horizontal overflow. */
+.glz1-button,
+.glz1-icon-button,
+.glz1-field,
+.glz1-field-control,
+.glz1-select,
+.glz1-choice,
+.glz1-switch,
+.glz1-slider,
+.glz1-slider-row {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.glz1-button,
+.glz1-choice,
+.glz1-switch,
+.glz1-field-label,
+.glz1-field-message {
+  overflow-wrap: anywhere;
+}
+.glz1-choice > :last-child,
+.glz1-switch > :first-child,
+.glz1-slider-row > input[type="range"] {
+  min-inline-size: 0;
+}
+
+/* Deterministic focus: a focused control always retains a visible boundary.
+   :focus-visible remains supported by the imported layer, but accessibility
+   must not depend on a browser's focus-visible heuristic. */
+.glz1-button:focus,
+.glz1-icon-button:focus,
+.glz1-field-control:focus-within,
+.glz1-select:focus,
+.glz1-choice input:focus + .glz1-choice-control,
+.glz1-switch input:focus + .glz1-switch-track,
+.glz1-slider input:focus {
+  outline: var(--glz1-focus-width) solid var(--glz1-focus);
+  outline-offset: var(--glz1-focus-offset);
+}
+
+/* Native browser zoom scales CSS pixels automatically. Hosts that expose an
+   explicit Glaze text-scale state use these relative roles so 200% text does
+   not remain pinned to compact pixel typography. */
+[data-glz-text-scale="200"] .glz1-button,
+[data-glz-text-scale="200"] .glz1-icon-button,
+[data-glz-text-scale="200"] .glz1-field-control,
+[data-glz-text-scale="200"] .glz1-select,
+[data-glz-text-scale="200"] .glz1-choice,
+[data-glz-text-scale="200"] .glz1-switch,
+[data-glz-text-scale="200"] .glz1-slider {
+  font-size: 1rem;
+}
+[data-glz-text-scale="200"] .glz1-field-label { font-size: 0.875rem; }
+[data-glz-text-scale="200"] .glz1-field-message,
+[data-glz-text-scale="200"] .glz1-slider-value { font-size: 0.75rem; }
+[data-glz-text-scale="200"] .glz1-button,
+[data-glz-text-scale="200"] .glz1-field-control,
+[data-glz-text-scale="200"] .glz1-select {
+  white-space: normal;
+  block-size: auto;
+  min-block-size: var(--glz1-control-hit);
+}
+
+@media (forced-colors: active) {
+  /* Match or exceed the specificity of Glaze variant rules. Forced Colors is
+     an effects-free semantic rendering, never translucent glass with system
+     colors painted over it. */
+  .glz1-button[data-variant="glaze"],
+  .glz1-icon-button[data-variant="glaze"],
+  .glz1-field-control[data-variant="glaze"],
+  .glz1-select[data-variant="glaze"] {
+    background: Canvas;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  .glz1-button:focus,
+  .glz1-icon-button:focus,
+  .glz1-field-control:focus-within,
+  .glz1-select:focus,
+  .glz1-choice input:focus + .glz1-choice-control,
+  .glz1-switch input:focus + .glz1-switch-track,
+  .glz1-slider input:focus {
+    outline-color: Highlight;
+  }
+}

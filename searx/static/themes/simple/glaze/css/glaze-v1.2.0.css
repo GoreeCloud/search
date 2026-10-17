@@ -1,0 +1,9 @@
+/*
+ * GLAZE UI V1.2.0 — official Stable web entrypoint.
+ *
+ * This wrapper freezes the promoted V1.2 rendering source exactly as developed.
+ * The imported layers retain their historical .candidate filenames and compatibility
+ * activation selectors; lifecycle authority is VERSION + registry/lifecycle.json.
+ * Consumers migrate explicitly and remain independently acceptance-gated.
+ */
+@import url("./glaze-v1.2.0-candidate.css");

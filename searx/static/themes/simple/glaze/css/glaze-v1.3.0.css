@@ -1,0 +1,13 @@
+/*
+ * GLAZE UI V1.3.0 — official Stable web entrypoint.
+ *
+ * V1.3 Adaptive Resonance inherits the verified V1.2 Stable rendering foundation
+ * and adds adaptive behavior through the V1.3 token, contract, runtime, and
+ * reference layers integrated on main. Historical .candidate source filenames
+ * identify implementation-stage provenance; lifecycle authority is VERSION +
+ * registry/lifecycle.json.
+ *
+ * V1.3.1 contains post-release hardening/qualification follow-up and is not
+ * imported here.
+ */
+@import url("./glaze-v1.2.0.css");
