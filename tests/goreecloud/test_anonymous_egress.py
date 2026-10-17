@@ -196,6 +196,7 @@ class AnonymousEgressTests(unittest.TestCase):
             enable_http=False,
             proxies={'all://': 'socks5h://127.0.0.1:9050'},
             privacy_proxy_required=True,
+            using_tor_proxy=True,  # Tor is explicitly optional, not a default.
         )
         client = Mock(is_closed=False)
         client.get = AsyncMock(return_value=SimpleNamespace(
@@ -214,6 +215,7 @@ class AnonymousEgressTests(unittest.TestCase):
             enable_http=False,
             proxies={'all://': 'socks5h://127.0.0.1:9050'},
             privacy_proxy_required=True,
+            using_tor_proxy=True,  # Tor is explicitly optional, not a default.
         )
         client = Mock(is_closed=False)
         client.get = AsyncMock(return_value=SimpleNamespace(
@@ -233,6 +235,7 @@ class AnonymousEgressTests(unittest.TestCase):
             enable_http=False,
             proxies={'all://': 'socks5h://127.0.0.1:9050'},
             privacy_proxy_required=True,
+            using_tor_proxy=True,  # Tor is explicitly optional, not a default.
         )
         verdicts = [
             SimpleNamespace(status_code=200, json=lambda: {'IsTor': True}),
@@ -266,6 +269,8 @@ class AnonymousEgressTests(unittest.TestCase):
         )
         self.assertTrue(NETWORKS)
         self.assertTrue(all(n.privacy_proxy_required for n in NETWORKS.values()))
+        self.assertTrue(all(n.privacy_egress_mode == 'gateway' for n in NETWORKS.values()))
+        self.assertTrue(all(not n.using_tor_proxy for n in NETWORKS.values()))
 
 
 if __name__ == '__main__':
