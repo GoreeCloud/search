@@ -78,15 +78,9 @@ class CanonicalPrivateQueryTests(unittest.TestCase):
                 self.assertEqual('no-referrer', response.headers['Referrer-Policy'])
                 self.assertIn('no-store', response.headers['Cache-Control'])
 
-                refine = document.xpath('//form[contains(@class,"goreecloud-refine-source")]')
-                self.assertEqual(len(selected.split(',')), len(refine))
-                for form in refine:
-                    self.assert_private_form(form, terms, self.fields(form)['engines'])
-
-                switches = document.xpath('//section[contains(@class,"goreecloud-source-switch")]//form')
-                self.assertEqual(3, len(switches))
-                for form, source in zip(switches, ('brave,startpage', 'brave', 'startpage')):
-                    self.assert_private_form(form, terms, source)
+                # Source switches are settings-only, not repeated before results.
+                self.assertFalse(document.xpath('//form[contains(@class,"goreecloud-refine-source")]'))
+                self.assertFalse(document.xpath('//section[contains(@class,"goreecloud-source-switch")]'))
 
                 pagination = document.xpath('//form[contains(@class, "previous_page") or '
                                             'contains(@class, "next_page") or contains(@class,"page_number")]')
@@ -130,13 +124,8 @@ class CanonicalPrivateQueryTests(unittest.TestCase):
                 self.assertEqual([CORRECTED], document.xpath(
                     '//div[@id="corrections"]//input[@name="q"]/@value'
                 ))
-                for form in document.xpath('//form[contains(@class,"goreecloud-refine-source")]'):
-                    self.assert_private_form(form, terms, self.fields(form)['engines'])
-                for form, source in zip(
-                    document.xpath('//section[contains(@class,"goreecloud-source-switch")]//form'),
-                    ('brave,startpage', 'brave', 'startpage')
-                ):
-                    self.assert_private_form(form, terms, source)
+                self.assertFalse(document.xpath('//form[contains(@class,"goreecloud-refine-source")]'))
+                self.assertFalse(document.xpath('//section[contains(@class,"goreecloud-source-switch")]'))
                 if page == '1':
                     recovery = document.xpath('//form[contains(@class,"goreecloud-empty-retry")]')
                     self.assertEqual(1, len(recovery))

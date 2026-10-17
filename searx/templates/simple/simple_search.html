@@ -10,13 +10,6 @@
         <button id="send_search" type="submit" aria-label="Search"><span class="goreecloud-submit-label">Search</span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M4 12h15m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div class="autocomplete hide_if_nojs"><ul></ul></div>
       </div>
-  {% if private_query_transport %}
-  <div class="goreecloud-home-source-choices" role="group" aria-label="Search one provider">
-    <span>Or search only:</span>
-    <button type="submit" class="goreecloud-home-source" name="engines" value="brave" aria-label="Search only Brave Search">Brave Search</button>
-    <button type="submit" class="goreecloud-home-source" name="engines" value="startpage" aria-label="Search only Startpage">Startpage</button>
-  </div>
-  {% endif %}
   <ul class="goreecloud-home-benefits" aria-label="Project principles">
     <li><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="m12 2 8 3v6c0 5-3.3 8.1-8 11-4.7-2.9-8-6-8-11V5l8-3Z" stroke="currentColor" stroke-width="1.8"/><path d="m8.5 11.7 2.2 2.2 4.8-5" stroke="currentColor" stroke-width="1.8"/></svg><span>No tracking</span></li>
     <li><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="1.5" stroke="currentColor" stroke-width="1.7"/><path d="m8 8 8 8m0-8-8 8" stroke="currentColor" stroke-width="1.7"/></svg><span>No user profiles</span></li>
@@ -28,7 +21,6 @@
     <span class="goreecloud-link-dot" aria-hidden="true">·</span>
     <a href="https://github.com/GoreeCloud/search" rel="noopener noreferrer">View the project <span aria-hidden="true">↗</span></a>
   </div>
-  {% if private_query_transport %}<button type="submit" class="goreecloud-preview-trigger" formaction="{{ url_for('goreecloud_preview') }}" formmethod="post">Preview sources without searching</button>{% endif %}
     </div>
   </div>
   {% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}

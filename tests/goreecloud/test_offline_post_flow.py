@@ -25,7 +25,7 @@ class OfflinePostFlowTests(unittest.TestCase):
                 response = client.post('/search', data={'q':'synthetic private browser flow'},
                                        headers={'X-Real-IP':'127.0.0.1'})
                 self.assertEqual(200, response.status_code)
-                self.assertIn(b'goreecloud-source-summary', response.data)
+                self.assertIn(b'goreecloud-source-diagnostics', response.data)
                 self.assertIn(b'goreecloud-empty-state', response.data)
                 self.assertNotIn(b'application/opensearchdescription+xml', response.data)
                 self.assertIn('no-store', response.headers['Cache-Control'])

@@ -46,19 +46,16 @@ class PrivateFollowupTests(unittest.TestCase):
                     self.assertEqual('no-referrer', response.headers['Referrer-Policy'])
                     self.assertNotIn('Set-Cookie', response.headers)
                     document = html.fromstring(response.data)
-                    # Bang-selected engines may use SearXNG's internal category_none;
-                    # visible category checkboxes do not reflect that. Compare with the
-                    # independently rendered per-source action for this result page.
-                    current_source_forms = document.xpath(
-                        '//form[contains(@class, "goreecloud-refine-source")]'
-                    )
-                    self.assertTrue(current_source_forms)
+                    # Engine choice moved to Preferences. Suggestions and corrections
+                    # must still preserve the effective engine/category selection.
+                    self.assertFalse(document.xpath('//form[contains(@class, "goreecloud-refine-source")]'))
+                    first_followup = self._forms(document)[0][1]
                     effective_categories = {
                         field.get('name'): field.get('value')
-                        for field in current_source_forms[0].xpath(
-                            './/input[starts-with(@name, "category_")]'
-                        )
+                        for field in first_followup.xpath('.//input[starts-with(@name, "category_")]')
                     }
+                    if not original.startswith('!sp'):
+                        self.assertEqual('1', effective_categories.get('category_general'))
                     for kind, form in self._forms(document):
                         with self.subTest(kind=kind):
                             values = {node.get('name'): node.get('value') for node in form.xpath('.//input[@type="hidden"]')}

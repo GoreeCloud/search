@@ -67,6 +67,7 @@ from searx.goreecloud_policy import (
     SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
     distinct_selected_sources, safe_primary_result_url, represented_result_sources, validate_builtin_sources,
     validate_builtin_search_bangs, restrict_explicit_private_engines, validate_private_request_context,
+    SEARCH_SOURCE_COOKIE, SEARCH_SOURCE_OPTIONS, stored_search_source, requested_search_source,
 )
 from searx.engines import (
     DEFAULT_CATEGORY,
@@ -530,10 +531,11 @@ def pre_request():
             sxng_request.form[k] = v
 
     if settings['goreecloud']['private_search'] and (
-        'preferences' in sxng_request.args or 'preferences' in sxng_request.form
+        'preferences' in sxng_request.args or bool(sxng_request.form.get('preferences'))
     ):
-        # Upstream supports auto-applying serialized preferences via a GET link.
-        # Reject before decoding: such links can unexpectedly change providers.
+        # Reject serialized imports from URLs and nonempty POST fields.
+        # A blank optional field exists in the normal local Settings form;
+        # do not mistake its presence for a serialized import.
         raise SearchPolicyViolation(
             'Shared preference imports are disabled in private mode. Use local Preferences instead.', 422
         )
@@ -740,7 +742,7 @@ def goreecloud_preview():
     )
     validate_builtin_search_bangs(raw_query)
     try:
-        query, _, _, _, selected_locale = get_search_query_from_webapp(
+        query, raw_text_query, _, _, selected_locale = get_search_query_from_webapp(
             sxng_request.preferences, sxng_request.form
         )
     except SearxParameterException:
@@ -750,7 +752,11 @@ def goreecloud_preview():
         lucky_redirect=bool(query.redirect_to_first_result),
     )
     query.engineref_list = restrict_explicit_private_engines(
-        query.engineref_list, sxng_request.form.get('engines')
+        query.engineref_list, requested_search_source(
+            explicit=sxng_request.form.get('engines'),
+            stored=flask.request.cookies.get(SEARCH_SOURCE_COOKIE),
+            query_specific=bool(raw_text_query and raw_text_query.specific),
+        )
     )
     sources = distinct_selected_sources(ref.name for ref in query.engineref_list)
     validate_disclosure(
@@ -841,7 +847,11 @@ def search():
                 lucky_redirect=bool(search_query.redirect_to_first_result),
             )
             search_query.engineref_list = restrict_explicit_private_engines(
-                search_query.engineref_list, sxng_request.form.get('engines')
+                search_query.engineref_list, requested_search_source(
+                    explicit=sxng_request.form.get('engines'),
+                    stored=flask.request.cookies.get(SEARCH_SOURCE_COOKIE),
+                    query_specific=bool(raw_text_query and raw_text_query.specific),
+                )
             )
             validate_disclosure(
                 search_query.query,
@@ -1103,15 +1113,30 @@ def preferences():
             resp = make_response(redirect(url_for('index', _external=True)))
             return sxng_request.preferences.save(resp)
 
-    # save preferences
+    # Save the source choice in a separate host-only browser cookie. It is not
+    # a user account, search log, request URL or replacement for upstream prefs.
     if sxng_request.method == 'POST':
+        source_choice = None
+        if settings['goreecloud']['private_search']:
+            source_choice = sxng_request.form.get('goreecloud_sources', 'both')
+            if source_choice not in SEARCH_SOURCE_OPTIONS:
+                return goreecloud_policy_error(
+                    SearchPolicyViolation('Choose an available search source in Preferences.', 422)
+                )
         resp = make_response(redirect(url_for('index', _external=True)))
         try:
             sxng_request.preferences.parse_form(sxng_request.form)
         except ValidationException:
             sxng_request.errors.append(gettext('Invalid settings, please edit your preferences'))
             return resp
-        return sxng_request.preferences.save(resp)
+        resp = sxng_request.preferences.save(resp)
+        if source_choice is not None:
+            resp.set_cookie(
+                SEARCH_SOURCE_COOKIE, source_choice, max_age=60 * 60 * 24 * 365,
+                httponly=True, secure=flask.request.is_secure,
+                samesite='Lax', path='/',
+            )
+        return resp
 
     # render preferences
     image_proxy = sxng_request.preferences.get_value('image_proxy')  # pylint: disable=redefined-outer-name
@@ -1193,6 +1218,7 @@ def preferences():
         # fmt: off
         'preferences.html',
         preferences = True,
+        goreecloud_source_choice = stored_search_source(flask.request.cookies.get(SEARCH_SOURCE_COOKIE)),
         engines_with_tokens = any(getattr(e, "tokens", None) for e in engines.values()),
         selected_categories = get_selected_categories(sxng_request.preferences, sxng_request.form),
         locales = LOCALE_NAMES,

@@ -209,66 +209,40 @@ def main() -> None:
         assert q_field.get_attribute('value') == 'literal/segment', 'Slash was intercepted while typing'
         assert not driver.execute_script('return location.search'), 'Keyboard shortcut leaked query into URL'
         print('PASS slash focuses search and does not intercept typing inside search')
-        # Home quick actions carry their submitter engine field via native POST,
-        # despite inherited SearXNG form-submission interception.
-        with patch('searx.search.SearchWithPlugins', SyntheticBrowserSearch):
-            for source in ('brave', 'startpage'):
-                driver.get(url)
-                driver.find_element(By.ID, 'q').send_keys('synthetic quick provider')
-                driver.find_element(By.CSS_SELECTOR, f'.goreecloud-home-source[value="{source}"]').click()
-                try:
-                    WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
-                        lambda page: page.current_url.endswith('/search') and
-                        '1 source(s) selected' in page.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
-                    )
-                except Exception:
-                    print('BROWSER BOUNDARY DIAGNOSTIC:', source,
-                          'url=', driver.current_url,
-                          'title=', driver.title,
-                          'page_head=', driver.find_element(By.TAG_NAME, 'body').text[:220],
-                          'requests=', request_meta[-5:], flush=True)
-                    raise
-                selected = driver.find_element(By.CSS_SELECTOR, 'form#search input[name="engines"]')
-                assert selected.get_attribute('value') == source, f'{source}: quick provider selection lost'
-                assert not driver.execute_script('return location.search'), 'Provider shortcut leaked query in URL'
-        print('PASS homepage provider shortcuts retain POST-only single-source selection')
-        # Preview selected providers first, then explicitly continue to the
-        # synthetic search. The preview must never create a provider executor.
-        with patch('searx.search.SearchWithPlugins', side_effect=SyntheticBrowserSearch) as preview_search:
-            driver.set_window_size(390, 844)
-            driver.get(url)
-            driver.find_element(By.ID, 'q').send_keys('synthetic private preflight')
-            preview_action = driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-trigger')
-            assert preview_action.rect['height'] >= 44, 'Preview touch target too small'
-            driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", preview_action)
-            WebDriverWait(driver, 8).until(lambda page: page.execute_script(
-                "const r=arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;",
-                preview_action
-            ))
-            preview_action.click()
-            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: page.current_url != url)
-            assert driver.current_url.endswith('/preview'), driver.current_url
-            assert not driver.execute_script('return location.search'), 'preview query entered URL'
-            preview_heading = driver.find_element(By.CSS_SELECTOR, '#preview-heading')
-            assert preview_heading.is_displayed()
-            assert 'No search-provider requests have been sent' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview').text
-            approved = driver.find_elements(By.CSS_SELECTOR, '.goreecloud-preview-single select[name=engines] option[value]:not([value=""])')
-            assert sorted(option.get_attribute('value') for option in approved) == ['brave', 'startpage']
-            preview_search.assert_not_called()
-            driver.save_screenshot(str(artifacts / 'phone-source-preview.png'))
-            assert 'Startpage availability' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-startpage-note').text
-            continue_button = driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-continue')
-            driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", continue_button)
-            WebDriverWait(driver, 8).until(lambda page: page.execute_script(
-                "const rect=arguments[0].getBoundingClientRect(); return rect.top >= 0 && rect.bottom <= innerHeight;", continue_button
-            ))
-            continue_button.click()
-            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: page.current_url.endswith('/search'))
-            assert driver.current_url.endswith('/search'), driver.current_url
-            assert not driver.execute_script('return location.search'), 'continued query entered URL'
-            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').is_displayed()
-            preview_search.assert_called_once()
-            print('PASS private preview, no provider executor, explicit POST continuation and URL privacy')
+        # Provider choices belong to Preferences, not the home page.
+        driver.get(url)
+        assert not driver.find_elements(By.CSS_SELECTOR, '.goreecloud-home-source')
+        assert not driver.find_elements(By.CSS_SELECTOR, '.goreecloud-preview-trigger')
+        settings_link = driver.find_element(By.CSS_SELECTOR, 'a.goreecloud-settings-link')
+        assert settings_link.get_attribute('href').endswith('/preferences')
+        driver.get(url + 'preferences')
+        options = driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')
+        assert sorted(option.get_attribute('value') for option in options) == ['both', 'brave', 'startpage']
+        brave_choice = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="brave"]')
+        driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", brave_choice)
+        brave_choice.click()
+        save_button = driver.find_element(By.CSS_SELECTOR, 'form#search_form input[type="submit"]')
+        driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", save_button)
+        save_button.click()
+        try:
+            WebDriverWait(driver, 12).until(lambda page: page.current_url == url)
+        except Exception:
+            print('PREFERENCES SAVE DIAGNOSTIC', 'url=', driver.current_url,
+                  'title=', driver.title,
+                  'body_start=', driver.find_element(By.TAG_NAME, 'body').text[:190],
+                  'post_metadata=', request_meta[-3:], flush=True)
+            raise
+        driver.get(url + 'preferences')
+        selected = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="brave"]')
+        assert selected.is_selected(), 'Saved Brave-only choice not persisted'
+        both_choice = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="both"]')
+        driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", both_choice)
+        both_choice.click()
+        save_button = driver.find_element(By.CSS_SELECTOR, 'form#search_form input[type="submit"]')
+        driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", save_button)
+        save_button.click()
+        WebDriverWait(driver, 12).until(lambda page: page.current_url == url)
+        print('PASS no homepage source switches; Preferences persists chosen engines')
         # Exercise a real browser POST through the real SearXNG query parser,
         # while replacing provider execution with a synthetic local result.
         with patch('searx.search.SearchWithPlugins', SyntheticBrowserSearch):
@@ -279,41 +253,18 @@ def main() -> None:
             WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: page.current_url.endswith('/search'))
             assert driver.current_url.endswith('/search'), driver.current_url
             assert not driver.execute_script('return location.search'), 'search terms leaked into URL'
-            summary = driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary')
-            assert summary.is_displayed()
-            summary.find_element(By.CSS_SELECTOR, '.goreecloud-source-audit > summary').click()
-            assert '0 selected source(s) represented' in summary.text, summary.text
-            assert not driver.find_element(By.ID, 'search_logo').is_displayed(), 'Duplicate app logo in results header'
-            assert driver.find_element(By.CSS_SELECTOR, '#main_results .search_box').rect['width'] >= 300
+            details = driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-diagnostics')
+            assert details.get_attribute('open') is None, 'Diagnostics must start collapsed'
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').is_displayed()
-            assert 'synthetic no-network test' not in driver.title, 'private query leaked into page title'
+            assert not driver.find_elements(By.CSS_SELECTOR, '.goreecloud-source-switch')
+            assert not driver.execute_script('return location.search')
             driver.save_screenshot(str(artifacts / 'phone-synthetic-results.png'))
-            driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-audit details summary').click()
-            driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary .goreecloud-refine-source button').click()
-            # A just-replaced results document can briefly invalidate Selenium's
-            # DevTools node ID before the settled page can be read.
-            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException, WebDriverException)).until(
-                lambda page: '1 source(s) selected' in page.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
-            )
-            assert driver.current_url.endswith('/search'), driver.current_url
-            assert not driver.execute_script('return location.search'), 'one-source query entered URL'
-            assert '1 source(s) selected' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
-            switch_startpage = driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(3) button')
-            driver.execute_script("arguments[0].scrollIntoView({block:'center'})", switch_startpage)
-            switch_startpage.click()
-            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(3) button:disabled')))
-            assert '1 source(s) selected' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
-            switch_both = driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(1) button')
-            driver.execute_script("arguments[0].scrollIntoView({block:'center'})", switch_both)
-            switch_both.click()
-            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-source-switch form:nth-child(1) button:disabled')))
-            assert '2 source(s) selected' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').text
-            assert not driver.execute_script('return location.search'), 'switching sources entered URL query'
-            print('PASS mobile POST, one-source refinement, Startpage/Both switching and URL privacy')
+            print('PASS results-first no-results state with collapsible provider diagnostics')
             driver.get(url)
             driver.find_element(By.ID, 'q').send_keys('synthetic keyboard submission' + Keys.ENTER)
-            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(lambda page: page.current_url.endswith('/search'))
-            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-summary').is_displayed()
+            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
+                lambda page: page.current_url.endswith('/search'))
+            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-diagnostics')
             assert not driver.execute_script('return location.search'), 'Keyboard search leaked terms into URL'
             print('PASS keyboard Enter submits normal private POST search')
         # When a provider reports an error and results are empty, the user
@@ -322,7 +273,7 @@ def main() -> None:
             driver.set_window_size(390, 844)
             driver.get(url)
             driver.find_element(By.ID, 'q').send_keys('synthetic recoverable source error')
-            driver.find_element(By.CSS_SELECTOR, '.goreecloud-home-source[value="startpage"]').click()
+            driver.find_element(By.ID, 'send_search').click()
             WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
                 lambda page: page.current_url.endswith('/search') and
                 bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-empty-retry button'))
@@ -330,7 +281,7 @@ def main() -> None:
             retry = driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry button')
             assert retry.is_displayed() and retry.rect['height'] >= 44, 'Mobile error retry inaccessible'
             assert 'reported an error' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').text
-            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry input[name="engines"]').get_attribute('value') == 'startpage'
+            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry input[name="engines"]').get_attribute('value') == 'brave,startpage'
             driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", retry)
             WebDriverWait(driver, 8).until(lambda page: page.execute_script(
                 "const r=arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;",
@@ -340,7 +291,7 @@ def main() -> None:
             WebDriverWait(driver, 12).until(lambda page: failed.call_count == 2)
             assert driver.current_url.endswith('/search'), 'Retry left the private result route'
             assert not driver.execute_script('return location.search'), 'Retry leaked search terms into URL'
-            assert driver.find_element(By.CSS_SELECTOR, 'form#search input[name="engines"]').get_attribute('value') == 'startpage'
+            assert driver.find_element(By.CSS_SELECTOR, 'form#search input[name="engines"]').get_attribute('value') == 'brave,startpage'
         print('PASS mobile explicit same-source retry, no fallback, and POST URL privacy')
 
         # Layout contract with eight real template cards but NO provider
@@ -363,7 +314,7 @@ def main() -> None:
                 separate:main.right + 10 <= side.left,
                 headline:parseFloat(getComputedStyle(document.querySelector('#urls article.result h3')).fontSize),
                 heading:!!document.querySelector('.goreecloud-results-heading'),
-                audit:!!document.querySelector('.goreecloud-source-audit') };
+                audit:!!document.querySelector('.goreecloud-source-diagnostics') };
             """)
             assert desktop_geometry['separate'], f'Results/sidebar overlap: {desktop_geometry}'
             assert desktop_geometry['main'] >= 590, f'Results too narrow: {desktop_geometry}'
@@ -389,7 +340,7 @@ def main() -> None:
                   .filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.right>document.documentElement.clientWidth+1&&getComputedStyle(e).position!=='fixed'})
                   .slice(0,10).map(e=>({tag:e.tagName,id:e.id,cls:typeof e.className==='string'?e.className.slice(0,75):'',right:Math.round(e.getBoundingClientRect().right)})),
                 sidebarBelow:side.top >= main.top + main.height - 4,
-                choices:[...document.querySelectorAll('.goreecloud-source-switch-actions button')]
+                choices:[...document.querySelectorAll('.goreecloud-provider-option')]
                   .map(e=>({y:Math.round(e.getBoundingClientRect().top),
                             h:e.getBoundingClientRect().height,
                             w:e.getBoundingClientRect().width})) };
@@ -399,9 +350,6 @@ def main() -> None:
             assert mobile_geometry['main'] >= 310, mobile_geometry
             assert mobile_geometry['card'] >= 305, mobile_geometry
             assert mobile_geometry['sidebarBelow'], mobile_geometry
-            assert len(mobile_geometry['choices']) == 3, mobile_geometry
-            assert len({item['y'] for item in mobile_geometry['choices']}) == 1, mobile_geometry
-            assert all(item['h'] >= 44 and item['w'] >= 85 for item in mobile_geometry['choices']), mobile_geometry
             driver.save_screenshot(str(artifacts / 'phone-eight-result-layout.png'))
             rich.assert_called_once()
         print('PASS desktop 2-column results and mobile stacked cards, 8 synthetic results, no provider traffic')
@@ -417,12 +365,13 @@ def main() -> None:
                 lambda page: page.current_url.endswith('/search') and
                 bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-partial-retry button'))
             )
-            warning = driver.find_element(By.CSS_SELECTOR, '.goreecloud-partial-results[role="status"]')
+            warning = driver.find_element(By.CSS_SELECTOR, '.goreecloud-results-inline-note[role="status"]')
             assert warning.is_displayed(), 'Partial provider warning not displayed'
             assert driver.find_element(By.ID, 'engines_msg').find_element(
                 By.CSS_SELECTOR, 'details'
             ).get_attribute('open') is not None, 'Provider error details were collapsed'
             assert driver.find_element(By.CSS_SELECTOR, '#urls').is_displayed()
+            driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-diagnostics > summary').click()
             retry = driver.find_element(By.CSS_SELECTOR, '.goreecloud-partial-retry button')
             assert retry.is_displayed(), 'Partial retry action hidden'
             selected = driver.find_element(
@@ -455,7 +404,7 @@ def main() -> None:
                 p.value = '2';
                 form.appendChild(p);
             """)
-            driver.find_element(By.CSS_SELECTOR, '.goreecloud-home-source[value="brave"]').click()
+            driver.find_element(By.ID, 'send_search').click()
             WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
                 lambda page: page.current_url.endswith('/search') and
                 bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-previous-results button'))
@@ -463,7 +412,7 @@ def main() -> None:
             previous = driver.find_element(By.CSS_SELECTOR, '.goreecloud-previous-results button')
             assert previous.is_displayed() and previous.rect['height'] >= 44, 'Previous page touch action is too small'
             assert driver.find_element(By.CSS_SELECTOR,
-                '.goreecloud-previous-results input[name="engines"]').get_attribute('value') == 'brave'
+                '.goreecloud-previous-results input[name="engines"]').get_attribute('value') == 'brave,startpage'
             assert driver.find_element(By.CSS_SELECTOR,
                 '.goreecloud-previous-results input[name="pageno"]').get_attribute('value') == '1'
             assert not driver.execute_script('return location.search'), 'Later-page query entered URL'
@@ -478,8 +427,8 @@ def main() -> None:
             assert not driver.execute_script('return location.search'), 'Previous page leaked query into URL'
             assert not driver.find_elements(By.CSS_SELECTOR, '.goreecloud-previous-results')
             assert driver.find_element(By.CSS_SELECTOR,
-                'form#search input[name="engines"]').get_attribute('value') == 'brave'
-        print('PASS phone previous-page POST recovery and exact Brave provider continuity')
+                'form#search input[name="engines"]').get_attribute('value') == 'brave,startpage'
+        print('PASS phone previous-page POST recovery and exact saved-source continuity')
 
         # Exercise a synthetic denied URL without dispatching a search.
         driver.get(url + 'search?q=synthetic-private-smoke-fixture')

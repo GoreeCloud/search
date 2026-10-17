@@ -8,39 +8,28 @@ from test_search_preview import OfflineSearch
 
 
 class SourceRefinementTests(unittest.TestCase):
-    def test_result_source_only_action_preserves_query_privacy_and_limits_engine(self):
+    def test_explicit_post_selection_preserves_query_privacy_and_filters(self):
+        headers = {'X-Real-IP': '127.0.0.1'}
+        values = {
+            'q': 'synthetic source refinement', 'engines': 'startpage',
+            'category_general': '1', 'language': 'en', 'safesearch': '2',
+            'time_range': 'week', 'theme': 'simple', 'timeout_limit': '2.75',
+        }
         with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins', OfflineSearch):
-            page = client.post('/search', data={'q':'synthetic source refinement','category_general':'1',
-                                                  'language':'en','safesearch':'2',
-                                                  'time_range':'week','theme':'simple',
-                                                  'timeout_limit':'2.75'},
-                               headers={'X-Real-IP':'127.0.0.1'})
+            page = client.post('/search', data=values, headers=headers)
             self.assertEqual(200, page.status_code)
-            root = html.fromstring(page.data)
-            forms = root.xpath('//form[contains(@class,"goreecloud-refine-source")]')
-            self.assertGreater(len(forms), 1)
-            selected = forms[0]
-            self.assertEqual('post', selected.get('method'))
-            self.assertEqual('/search', selected.get('action'))
-            fields = {node.get('name'): node.get('value') for node in selected.xpath('.//input')}
-            self.assertEqual('synthetic source refinement', fields['q'])
-            self.assertTrue(fields['engines'])
-            self.assertEqual('1', fields['category_general'])
-            self.assertEqual('en', fields['language'])
-            self.assertEqual('2', fields['safesearch'])
-            self.assertEqual('week', fields['time_range'])
-            self.assertEqual('simple', fields['theme'])
-            self.assertEqual('2.75', fields['timeout_limit'])
-            self.assertNotIn('preferences', fields)
+            doc = html.fromstring(page.data)
+            self.assertFalse(doc.xpath('//form[contains(@class,"goreecloud-refine-source")]'))
+            self.assertFalse(doc.xpath('//section[contains(@class,"goreecloud-source-switch")]'))
             self.assertNotIn('Location', page.headers)
+            self.assertIn('no-store', page.headers['Cache-Control'])
             page.close()
-
-            response = client.post('/search', data={**fields, 'format':'json'},
-                                   headers={'X-Real-IP':'127.0.0.1'})
-            self.assertEqual(200, response.status_code)
-            self.assertEqual([fields['engines']], response.json['goreecloud']['selected_engines'])
-            self.assertIn('no-store', response.headers['Cache-Control'])
-            response.close()
+            selected = client.post('/search', data={**values, 'format': 'json'}, headers=headers)
+            self.assertEqual(200, selected.status_code)
+            self.assertEqual(['startpage'], selected.json['goreecloud']['selected_engines'])
+            self.assertEqual(values['q'], selected.json['query'])
+            self.assertNotIn('Location', selected.headers)
+            selected.close()
 
     def test_source_only_action_does_not_echo_untrusted_provider_html(self):
         # Rendering uses autoescaping, including hidden inputs and button labels.
