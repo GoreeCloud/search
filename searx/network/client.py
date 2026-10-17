@@ -76,8 +76,13 @@ def new_client(
 ) -> AsyncClient:
     # Never create a direct outbound client in GoreeCloud private mode.
     from searx import settings as current_settings  # pylint: disable=import-outside-toplevel
-    if current_settings.get("goreecloud", {}).get("require_anonymous_egress", False):
-        from searx.goreecloud_anonymity import require_tor_route  # pylint: disable=import-outside-toplevel
+    privacy = current_settings.get("goreecloud", {})
+    if privacy.get("private_search", False):
+        from searx.goreecloud_anonymity import (  # pylint: disable=import-outside-toplevel
+            AnonymousEgressError, require_tor_route
+        )
+        if privacy.get("require_anonymous_egress") is not True:
+            raise AnonymousEgressError("Private Search cannot disable anonymous egress.")
         require_tor_route(proxies, using_tor_proxy=True)
     extra_curl = dict(curl_options or {})
     if not enable_http:
