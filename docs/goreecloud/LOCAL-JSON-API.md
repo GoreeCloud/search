@@ -18,7 +18,7 @@ Before searching, `POST /preview` with form-body `q=...&format=json` returns **n
     "selected_engine_count": 0,
     "selected_categories": [],
     "language": "en",
-    "safesearch": 1,
+    "safesearch": 0,
     "time_range": "",
     "page": 1,
     "query_length": 12,
@@ -43,8 +43,8 @@ An additive `goreecloud` response object is available when `goreecloud.private_s
   "suggestions": [],
   "unresponsive_engines": [],
   "goreecloud": {
-    "selected_engines": ["brave", "startpage"],
-    "selected_engine_count": 2,
+    "selected_engines": ["brave", "qwant", "startpage"],
+    "selected_engine_count": 3,
     "selection_not_contact_confirmation": true,
     "represented_engines": [],
     "represented_result_counts": {},
@@ -55,6 +55,6 @@ An additive `goreecloud` response object is available when `goreecloud.private_s
 
 This is an illustrative shape, not a fabricated live-search response. SearXNG's original keys and result serialization remain unchanged; the private extension filters out primary result links that are not well-formed HTTP(S) destinations, while upstream callers not requesting the extension continue to receive the upstream response shape and result population. The selected list reflects engine selection after query parsing, not contacted, completed or successful providers. `represented_engines` and `represented_result_counts` describe selected engine labels attached to the safe primary results actually returned on this page. A merged result tagged by multiple engines contributes once to each represented engine, so counts can overlap. These labels are attribution attached to result objects, not independently verified provider identity, network completion, response authenticity, or total provider requests. Empty results produce an empty attribution map.
 
-Private-profile limits: at most 512 raw submitted query characters and **exactly two permitted built-in engines**, `brave` (Brave Search, used by Brave Browser) and `startpage`. Only one or both can be selected; every other engine is rejected before provider dispatch. An explicit form-body `engines=brave` or `engines=startpage` wins over inherited General category selections; otherwise SearXNG would union `engines` and `category_general` and unexpectedly include both. Conflict with a provider bang that selects a different source is rejected, not broadened. Result-page POST actions retain the exact engine selection through pagination without storing a global preference. The fanout cap is 2. Oversized queries return HTTP 413; unsupported explicit engines, provider bangs or automatic external-navigation requests return 422, and URL-query submission returns 405. Rejected JSON searches return a structured privacy policy error without echoing query terms. Unexpected upstream plugin redirects are also denied. Private responses are uncached (`Cache-Control: private, no-store, max-age=0`) and set `Referrer-Policy: no-referrer`.
+Private-profile limits: at most 512 raw submitted query characters and **three allowlisted provider families**: Brave Search (`brave`), Startpage (`startpage`) and Qwant (`qwant`), plus their specifically configured category variants. The all-sources choice enables three families by default (at most three adapters in a given category; Videos supports Brave and Qwant, not Startpage). Explicit `engines=` form selections take precedence over inherited category selections; otherwise upstream SearXNG can union selections and unexpectedly broaden disclosure. An engine/bang conflict is rejected, never silently expanded. Result-page POST actions preserve validated engine selection through pagination without changing the saved preference. The fanout cap is **3**. Oversized queries return HTTP 413; unsupported explicit engines, provider bangs or automatic external navigation return 422, and URL-query submission returns 405. Rejected JSON searches return privacy policy errors without reflecting query terms. Unexpected redirects are denied. Private responses use `Cache-Control: private, no-store, max-age=0` and `Referrer-Policy: no-referrer`.
 
 **Not included:** public authentication, OAuth, quotas, versioned API stability, audited upstream provider identity, Privacy Shield consent, or Wardveil admission. Those require independently governed contracts and security acceptance before network exposure.
