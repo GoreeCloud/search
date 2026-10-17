@@ -5,7 +5,8 @@ privacy-control implementation, **not proof of complete anonymity**.
 
 ## Mandatory behavior
 
-The GoreeCloud private Development profile uses
+Every GoreeCloud Search profile requires a privacy relay, even if individual
+privacy toggles are disabled or omitted. The current Development profile uses
 `goreecloud.require_anonymous_egress: true` and a single `outgoing.proxies.all://`
 gateway: `socks5h://127.0.0.1:9050`. **Every outbound SearXNG network
 client**, including the Brave, Startpage, Qwant and image-proxy clients, must
