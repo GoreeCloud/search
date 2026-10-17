@@ -67,6 +67,7 @@ from searx.goreecloud_policy import (
     SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
     distinct_selected_sources, safe_primary_result_url, represented_result_sources, validate_builtin_sources,
     validate_builtin_search_bangs, restrict_explicit_private_engines,
+    validate_image_api_request, validate_image_api_selection,
 )
 from searx.engines import (
     DEFAULT_CATEGORY,
@@ -565,6 +566,9 @@ def add_default_headers(response: flask.Response):
         if header in response.headers:
             continue
         response.headers[header] = value
+    if settings['goreecloud'].get('image_search', False) and sxng_request.endpoint == 'search':
+        response.headers['Cache-Control'] = 'private, no-store, max-age=0'
+        response.headers['Referrer-Policy'] = 'no-referrer'
     if settings['goreecloud']['private_search'] and (
         sxng_request.endpoint in ('index', 'search', 'goreecloud_preview', 'autocompleter', 'opensearch', 'preferences')
         or sxng_request.path == '/preview'
@@ -776,6 +780,13 @@ def search():
     # pylint: disable=too-many-locals, too-many-return-statements, too-many-branches
     # pylint: disable=too-many-statements
 
+    if settings['goreecloud'].get('image_search', False):
+        validate_image_api_request(
+            method=sxng_request.method, query_in_url=bool(sxng_request.args),
+            raw_query=sxng_request.form.get('q', ''),
+            output_format=sxng_request.form.get('format', ''),
+        )
+
     if settings['goreecloud']['private_search'] and 'q' in sxng_request.form:
         validate_transport(method=sxng_request.method, query_in_url=bool(sxng_request.args), private=True)
         # Reject raw-size limit before validating bangs or parser operator rewrites.
@@ -827,6 +838,14 @@ def search():
                 max_query_chars=settings['goreecloud']['max_query_chars'],
                 max_providers=settings['goreecloud']['max_provider_fanout'],
             )
+        if settings['goreecloud'].get('image_search', False):
+            validate_image_api_selection(
+                (ref.name for ref in search_query.engineref_list),
+                search_query.categories,
+                explicit_engines=sxng_request.form.get('engines'),
+                external_redirect=bool(search_query.external_bang),
+                lucky_redirect=bool(search_query.redirect_to_first_result),
+            )
         search_obj = searx.search.SearchWithPlugins(search_query, sxng_request, sxng_request.user_plugins)
         result_container = search_obj.search()
 
@@ -842,6 +861,8 @@ def search():
     # 1. An upstream plugin may still provide a redirect. Never perform a
     # third-party browser navigation from this privacy profile.
     if result_container.redirect_url:
+        if settings['goreecloud'].get('image_search', False):
+            return goreecloud_policy_error(SearchPolicyViolation('Image redirects are disabled.', 422))
         if settings['goreecloud']['private_search']:
             return goreecloud_policy_error(
                 SearchPolicyViolation('External redirects are disabled in private mode.', 422)
