@@ -10,6 +10,9 @@ use_default_settings:
       - duckduckgo images
 engines:
   - name: brave.images
+    # Its upstream named network points to a filtered-out general Brave engine.
+    # Give the isolated image engine its own default network instead.
+    network: null
     disabled: false
     inactive: false
   - name: bing images
