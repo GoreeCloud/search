@@ -536,7 +536,10 @@ def pre_request():
         preferences.parse_dict(sxng_request.cookies)
 
     except Exception as e:  # pylint: disable=broad-except
-        logger.exception(e, exc_info=True)
+        if settings['goreecloud']['private_search']:
+            logger.warning("Private Search rejected malformed cookie preferences")
+        else:
+            logger.exception(e, exc_info=True)
         sxng_request.errors.append(gettext('Invalid settings, please edit your preferences'))
 
     # merge GET, POST vars
@@ -562,7 +565,10 @@ def pre_request():
         else:
             preferences.parse_dict(sxng_request.form)
     except Exception as e:  # pylint: disable=broad-except
-        logger.exception(e, exc_info=True)
+        if settings['goreecloud']['private_search']:
+            logger.warning("Private Search rejected malformed form preferences")
+        else:
+            logger.exception(e, exc_info=True)
         sxng_request.errors.append(gettext('Invalid settings'))
 
     # language is defined neither in settings nor in preferences
@@ -883,10 +889,16 @@ def search():
     except SearchPolicyViolation as e:
         return goreecloud_policy_error(e)
     except SearxParameterException as e:
-        logger.exception('search error: SearxParameterException')
+        if settings['goreecloud']['private_search']:
+            logger.warning("Private Search parameter validation failed")
+        else:
+            logger.exception('search error: SearxParameterException')
         return index_error(output_format, e.message), 400
     except Exception as e:  # pylint: disable=broad-except
-        logger.exception(e, exc_info=True)
+        if settings['goreecloud']['private_search']:
+            logger.error("Private Search request failed: %s", type(e).__name__)
+        else:
+            logger.exception(e, exc_info=True)
         return index_error(output_format, gettext('search error')), 500
 
     # 1. An upstream plugin may still provide a redirect. Never perform a
@@ -1307,7 +1319,7 @@ def image_proxy():
 
         forward_resp = True
     except RequestException:
-        logger.exception('HTTP error')
+        logger.warning('Image proxy upstream request failed')
         return '', 400
     finally:
         if resp and not forward_resp:
@@ -1316,7 +1328,7 @@ def image_proxy():
             try:
                 resp.close()
             except RequestException:
-                logger.exception('HTTP error on closing')
+                logger.warning('Image proxy upstream response close failed')
 
     def close_stream():
         nonlocal resp, stream
@@ -1326,7 +1338,7 @@ def image_proxy():
             del resp
             del stream
         except RequestException as e:
-            logger.debug('Exception while closing response: %s', e)
+            logger.debug('Image proxy cleanup failure: %s', type(e).__name__)
 
     try:
         headers = dict_subset(resp.headers, {'Content-Type', 'Content-Encoding', 'Content-Length', 'Length'})
