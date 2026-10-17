@@ -1655,7 +1655,10 @@ def init():
     searx.plugins.initialize(app)
 
     metrics: bool = get_setting("general.enable_metrics")  # type: ignore
-    searx.search.initialize(check_network=True, enable_metrics=metrics)
+    # The local homepage and privacy preview stay available without Tor.
+    # Every provider HTTP client must still verify Tor before any outbound request.
+    require_anonymous_network = settings.get('goreecloud', {}).get('private_search', False)
+    searx.search.initialize(check_network=not require_anonymous_network, enable_metrics=metrics)
 
     limiter.initialize(app, settings)
 
