@@ -68,7 +68,6 @@ class Network:
         '_logger',
     )
 
-    _TOR_CHECK_RESULT = {}
     _CLIENT_KWARGS = ('verify', 'max_redirects', 'impersonate', 'curl_options', 'enable_http3')
 
     def __init__(
@@ -178,17 +177,18 @@ class Network:
 
     @staticmethod
     async def check_tor_proxy(client: AsyncClient, proxies) -> bool:
-        if proxies in Network._TOR_CHECK_RESULT:
-            return Network._TOR_CHECK_RESULT[proxies]
-
+        """Attest this client through its relay, never relying on a cached verdict."""
         if not proxies or not all(url.startswith('socks5h://') for _, url in proxies):
-            Network._TOR_CHECK_RESULT[proxies] = False
             return False
-
-        response = await client.get("https://check.torproject.org/api/ip", timeout=60)
-        result = bool(response.json()["IsTor"])
-        Network._TOR_CHECK_RESULT[proxies] = result
-        return result
+        try:
+            response = await client.get("https://check.torproject.org/api/ip", timeout=8)
+            if response.status_code != 200:
+                return False
+            payload = response.json()
+            return isinstance(payload, dict) and payload.get("IsTor") is True
+        except (RequestException, OSError, ValueError, TypeError, AttributeError):
+            # An unavailable or malformed attestation is a hard privacy failure.
+            return False
 
     @staticmethod
     def valid_private_proxy(proxies: tuple[tuple[str, str], ...]) -> bool:
@@ -250,11 +250,16 @@ class Network:
                 impersonate=impersonate,
                 curl_options=curl_options,
             )
-            if self.using_tor_proxy and not await self.check_tor_proxy(client, proxies):
-                await client.aclose()
-                raise ProxyError('Network configuration problem: not using Tor')
             self._clients[key] = client
-        return self._clients[key]
+        client = self._clients[key]
+        # Verify each outbound use, including reused clients and image proxies.
+        # A local SOCKS listener alone is not proof of an anonymity network.
+        if self.privacy_proxy_required or self.using_tor_proxy:
+            if not await self.check_tor_proxy(client, proxies):
+                await client.aclose()
+                self._clients.pop(key, None)
+                raise ProxyError('Private Search egress blocked: Tor exit verification failed')
+        return client
 
     async def aclose(self):
         async def close_client(client):
