@@ -66,6 +66,61 @@ trusted-forwarded-IP handling, expiry verification, provider failure behavior,
 legitimate-device traffic and abuse cases. A synthetic unit test cannot prove
 that the hosting reverse proxy, Valkey, logs or DNS have zero data retention.
 
+## DNS-pinned SOCKS5H gateway experiment — Development only
+
+This repository now includes a **staging-only** non-Tor TCP SOCKS5H gateway
+(`utils/goreecloud_private_socks_gateway.py`) and matching
+`configs/goreecloud/dns-pinned-gateway-staging.yml`. They are opt-in
+experimental files, **not an installed or running service**. The existing
+server-masked and local profiles are unchanged. The staging profile binds the
+HTTP server to loopback, sends all HTTPS provider requests to
+`socks5h://127.0.0.1:19050` and forbids public ingress and Tor.
+
+Use the gateway **only inside a dedicated remotely hosted Search network
+namespace** where both processes share localhost, under a service-specific
+egress firewall and trusted private DNS. The gateway's only accepted SOCKS5
+command is CONNECT with a DNS hostname on TCP 443; it rejects client-supplied
+IP literals, nonstandard ports, private/local names and unauthenticated
+methods. The gateway resolves each hostname once, refuses the *entire* DNS
+answer if any IPv4 or IPv6 result is not publicly routable, then connects
+via a numeric IP socket. It never re-resolves the hostname during connecting.
+It does not capture, inspect or log HTTPS queries or hostname/IP details.
+Its finite DNS, connect and connection timeouts and small concurrency
+allowance limit resource exhaustion.
+
+This closes a **gateway-path DNS-rebinding time-of-check/time-of-use gap**
+for the source-resolved address in the tested connection flow. It is **not**
+proof that the host has no alternative egress path, that the local resolver
+cannot be abused, or that TLS providers only see the remote server address.
+A separate scoped firewall must restrict all traffic — including IPv6,
+localhost, metadata, internal routing and bypass attempts — from the
+Search workload; a container or a loopback gateway alone is insufficient.
+
+### Required staging verification, prior to operation
+
+1. Provision a new isolated *remote* namespace and service account, no
+   shared Docker host network and no published port. Do not change production
+   host firewall, DNS, Caddy, VPN or Docker networks.
+2. Apply and independently validate namespace-specific egress deny rules
+   for all forbidden destinations, including private/reserved A+AAAA DNS
+   results, link-local, metadata, and mixed/rebinding answers.
+3. In that namespace only, start the gateway with
+   `python -m utils.goreecloud_private_socks_gateway --port 19050`.
+   Configure Search using the matching DNS-pinned staging settings, a
+   synthetic per-environment secret, and localhost-only/private ingress.
+4. From a separate authorized test client, use only synthetic searches
+   and controlled HTTPS endpoints. Capture sanitized destination-IP and
+   header evidence to verify both no bypass and server rather than visitor
+   source IP. Do not rely on the offline gateway tests as deployment proof.
+5. Close the staging processes and remove only the staging namespace,
+   routing, temporary secrets and test data. Recheck production containers.
+
+Offline tests cover malformed hostnames and SOCKS requests, direct and
+mixed DNS rebinding records, IPv4 and IPv6 private/metadata addresses, explicit
+non-443 ports, and that connect receives only a validated numeric IP. They do
+**not** perform real external requests. Generic SearXNG, production egress,
+and default GoreeCloud Search configurations are unaffected.
+
 ## Acceptance tests (synthetic fixtures only)
 
 | Test | Required evidence |
