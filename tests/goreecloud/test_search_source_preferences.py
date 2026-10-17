@@ -22,7 +22,7 @@ class BrowserLocalSearchSourcesTests(unittest.TestCase):
         self.assertIsNone(requested_search_source(
             explicit=None, stored='brave', query_specific=True,
         ))
-        self.assertEqual('brave,startpage', requested_search_source(
+        self.assertEqual('brave,startpage,qwant', requested_search_source(
             explicit=None, stored='both', query_specific=False,
         ))
 
@@ -38,7 +38,7 @@ class BrowserLocalSearchSourcesTests(unittest.TestCase):
             self.assertEqual(200, page.status_code)
             doc = html.fromstring(page.data)
             radios = doc.xpath('//input[@type="radio"][@name="goreecloud_sources"]')
-            self.assertEqual(['both', 'brave', 'startpage'], [radio.get('value') for radio in radios])
+            self.assertEqual(['both', 'brave', 'startpage', 'qwant'], [radio.get('value') for radio in radios])
             self.assertEqual(['both'], [radio.get('value') for radio in radios if radio.get('checked') is not None])
             page.close()
 
@@ -49,7 +49,8 @@ class BrowserLocalSearchSourcesTests(unittest.TestCase):
             for value, expected in (
                 ('brave', ['brave']),
                 ('startpage', ['startpage']),
-                ('both', ['brave', 'startpage']),
+                ('qwant', ['qwant']),
+                ('both', ['brave', 'qwant', 'startpage']),
             ):
                 with self.subTest(value=value):
                     saved = client.post('/preferences', data={

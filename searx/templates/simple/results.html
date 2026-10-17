@@ -27,7 +27,7 @@
       {%- include 'simple/elements/corrections.html' -%}
     {%- endif -%}
 
-    <div id="urls" aria-label="Search results">
+    <div id="urls" class="{% if private_query_transport and 'images' in selected_categories %}goreecloud-image-results{% endif %}" aria-label="Search results">
       {% if results %}
       <div class="goreecloud-results-heading">
         <h2>{{ 'Web results' if 'general' in selected_categories else (selected_categories[0]|capitalize if selected_categories else 'Web results') }}</h2>

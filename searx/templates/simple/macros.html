@@ -82,9 +82,9 @@
 
 <!-- iframe that additionally sets some extra feature attrs for videos -->
 {%- macro iframe(iframe_src) -%}
-  <iframe data-src="{{iframe_src}}" frameborder="0" allowfullscreen
+  <iframe data-src="{{iframe_src}}" frameborder="0" allowfullscreen referrerpolicy="no-referrer"
     {% if result.parsed_url.hostname in ("www.youtube.com", ) -%}
-    allow="picture-in-picture" referrerpolicy="origin"
+    allow="picture-in-picture"
     {%- endif -%}
     >
   </iframe>

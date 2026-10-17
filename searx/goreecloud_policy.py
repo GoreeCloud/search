@@ -172,6 +172,60 @@ def safe_primary_result_url(url: object) -> bool:
         return False
 
 
+
+def safe_external_media_url(url: object) -> bool:
+    """Reject unsafe image-proxy targets before signing or fetching a URL.
+
+    DNS rebinding requires a separate network/firewall defense. This validation
+    removes direct local-address and malformed-host SSRF paths; it does NOT prove
+    that an arbitrary public-looking domain resolves to a public IP.
+    """
+    import ipaddress
+    import re
+    from urllib.parse import urlsplit
+
+    if (not isinstance(url, str) or not url or len(url) > 4096
+            or '\\' in url or any(ord(ch) <= 32 or ord(ch) == 127 for ch in url)):
+        return False
+    try:
+        target = urlsplit(url)
+        host = target.hostname
+        port = target.port
+        if (target.scheme.lower() != 'https' or not host
+                or port not in (None, 443)
+                or target.username is not None or target.password is not None
+                or target.fragment or '%' in target.netloc):
+            return False
+        # Disallow IP literals (including IPv6) and numeric/ambiguous hostname
+        # forms. Image URLs should be resolved by the restricted egress firewall.
+        try:
+            ipaddress.ip_address(host)
+            return False
+        except ValueError:
+            pass
+        ascii_host = host.encode('idna').decode('ascii').lower()
+        if (ascii_host.endswith('.') or len(ascii_host) > 253
+                or '.' not in ascii_host or ascii_host.startswith('.')):
+            return False
+        labels = ascii_host.split('.')
+        if any(
+            not 1 <= len(label) <= 63
+            or not re.fullmatch(r'[a-z0-9](?:[a-z0-9-]*[a-z0-9])?', label)
+            for label in labels
+        ):
+            return False
+        if labels[-1] in ('local', 'localhost', 'internal', 'lan', 'invalid',
+                          'test', 'example', 'onion', 'arpa'):
+            return False
+        # Reject ambiguous nonstandard numeric host encodings such as 127.1.
+        if not re.fullmatch(r'[a-z]{2,63}|xn--[a-z0-9-]+', labels[-1]):
+            return False
+        return True
+    except (UnicodeError, TypeError, ValueError):
+        return False
+
+
+
 def represented_result_sources(results: Iterable[object], selected_names: Iterable[str]) -> dict[str, int]:
     """Count selected provider labels attached to *displayed* primary results.
 
@@ -208,22 +262,24 @@ BUILTIN_SEARCH_SOURCES = frozenset({
     'brave', 'startpage',
     'brave.images', 'brave.videos', 'brave.news',
     'startpage images', 'startpage news',
+    'qwant', 'qwant images', 'qwant videos', 'qwant news',
 })
 SEARCH_SOURCE_FAMILIES = {
-    'general': {'brave': 'brave', 'startpage': 'startpage'},
-    'images': {'brave': 'brave.images', 'startpage': 'startpage images'},
-    'videos': {'brave': 'brave.videos'},
-    'news': {'brave': 'brave.news', 'startpage': 'startpage news'},
+    'general': {'brave': 'brave', 'startpage': 'startpage', 'qwant': 'qwant'},
+    'images': {'brave': 'brave.images', 'startpage': 'startpage images', 'qwant': 'qwant images'},
+    'videos': {'brave': 'brave.videos', 'qwant': 'qwant videos'},
+    'news': {'brave': 'brave.news', 'startpage': 'startpage news', 'qwant': 'qwant news'},
 }
 SEARCH_CATEGORIES = tuple(SEARCH_SOURCE_FAMILIES)
 
 
-# Browser-local source preference. Only these two approved engines are allowed.
+# Browser-local choice: legacy 'both' now means all three approved providers.
 SEARCH_SOURCE_COOKIE = 'goreecloud_search_sources'
 SEARCH_SOURCE_OPTIONS = {
-    'both': 'brave,startpage',
+    'both': 'brave,startpage,qwant',
     'brave': 'brave',
     'startpage': 'startpage',
+    'qwant': 'qwant',
 }
 
 
@@ -236,8 +292,8 @@ def selected_engines_for_category(category: str, choice: str = 'both') -> str:
     if category not in SEARCH_SOURCE_FAMILIES:
         raise SearchPolicyViolation('That search category is unavailable.', 422)
     available = SEARCH_SOURCE_FAMILIES[category]
-    # "Both" means all supported approved providers for this category;
-    # the Videos adapter exists only on Brave (no Startpage video adapter).
+    # The legacy "both" choice now means every supported provider for the
+    # category. Videos has Brave and Qwant, but no Startpage adapter.
     wanted = tuple(available) if choice == 'both' else (choice,)
     if any(family not in available for family in wanted):
         raise SearchPolicyViolation('The selected search provider does not support this category.', 422)
@@ -245,7 +301,7 @@ def selected_engines_for_category(category: str, choice: str = 'both') -> str:
 
 
 def stored_search_source(raw: str | None) -> str:
-    """Accept only canonical provider choices; fall back to two-source default."""
+    """Accept only canonical provider choices; default to all three families."""
     return raw if raw in SEARCH_SOURCE_OPTIONS else 'both'
 
 
@@ -273,14 +329,14 @@ def validate_builtin_sources(provider_names: Iterable[str], *, submitted_engines
     if submitted_engines is not None:
         supplied = [name.strip() for name in submitted_engines.split(',')]
         if not supplied or any(name not in BUILTIN_SEARCH_SOURCES for name in supplied):
-            raise SearchPolicyViolation('Only Brave Search and Startpage are available.', 422)
+            raise SearchPolicyViolation('Only Brave Search, Startpage and Qwant are available.', 422)
     names = list(provider_names)
     if not names or any(not isinstance(name, str) or name not in BUILTIN_SEARCH_SOURCES for name in names):
-        raise SearchPolicyViolation('Only Brave Search and Startpage are available.', 422)
+        raise SearchPolicyViolation('Only Brave Search, Startpage and Qwant are available.', 422)
     return len(set(names))
 
 
-ALLOWED_SEARCH_BANGS = frozenset({'brave', 'br', 'startpage', 'sp', 'general', 'web'})
+ALLOWED_SEARCH_BANGS = frozenset({'brave', 'br', 'startpage', 'sp', 'qwant', 'qw', 'general', 'web'})
 
 
 def validate_builtin_search_bangs(raw_query: str) -> None:
@@ -293,7 +349,7 @@ def validate_builtin_search_bangs(raw_query: str) -> None:
     for token in raw_query.split():
         if token.startswith('!'):
             if token.startswith('!!') or token[1:].lower().replace('-', ' ').replace('_', ' ') not in ALLOWED_SEARCH_BANGS:
-                raise SearchPolicyViolation('Only Brave Search and Startpage search shortcuts are supported.', 422)
+                raise SearchPolicyViolation('Only Brave Search, Startpage and Qwant search shortcuts are supported.', 422)
 
 
 def restrict_explicit_private_engines(enginerefs: Iterable[object], selected: str | None) -> list[object]:

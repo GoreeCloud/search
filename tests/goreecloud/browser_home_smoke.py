@@ -92,6 +92,56 @@ class SyntheticBrowserResultsCollection(SyntheticBrowserSearch):
         return response
 
 
+class SyntheticBrowserImageResultsCollection(SyntheticBrowserSearch):
+    """Real image-result templates backed only by inline PNG fixture bytes."""
+
+    def search(self):
+        import base64
+        import struct
+        import zlib
+
+        response = super().search()
+
+        def sample_png(index: int) -> str:
+            # A locally generated 4x3 RGB PNG; never fetches a remote asset.
+            color = ((index * 39) % 205 + 35, (index * 71) % 205 + 35, (index * 101) % 205 + 35)
+            scanline = b"\x00" + bytes(color) * 4
+            pixels = scanline * 3
+
+            def chunk(kind: bytes, payload: bytes) -> bytes:
+                return (struct.pack(">I", len(payload)) + kind + payload +
+                        struct.pack(">I", zlib.crc32(kind + payload) & 0xffffffff))
+
+            png = (b"\x89PNG\r\n\x1a\n" +
+                   chunk(b"IHDR", struct.pack(">IIBBBBB", 4, 3, 8, 2, 0, 0, 0)) +
+                   chunk(b"IDAT", zlib.compress(pixels)) + chunk(b"IEND", b""))
+            return "data:image/png;base64," + base64.b64encode(png).decode("ascii")
+
+        images = []
+        for i in range(1, 13):
+            img = sample_png(i)
+            result = LegacyResult(
+                title=f"Synthetic gallery image {i}",
+                url=f"https://example.org/offline-image-{i}",
+                template="images.html",
+                img_src=img,
+                thumbnail_src=img,
+                resolution="4 x 3",
+                img_format="PNG",
+                engine="qwant images",
+                category="images",
+                source="Offline fixture",
+                content="Locally generated pixels; no external image request.",
+                author="GoreeCloud test",
+                filesize="",
+                formats=[],
+            )
+            result.normalize_result_fields()
+            images.append(result)
+        response.get_ordered_results = lambda: images
+        return response
+
+
 def main() -> None:
     # Record only request-boundary metadata from this synthetic browser fixture.
     # Never collect query text or request bodies in CI diagnostics.
@@ -217,7 +267,7 @@ def main() -> None:
         assert settings_link.get_attribute('href').endswith('/preferences')
         driver.get(url + 'preferences')
         options = driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')
-        assert sorted(option.get_attribute('value') for option in options) == ['both', 'brave', 'startpage']
+        assert sorted(option.get_attribute('value') for option in options) == ['both', 'brave', 'qwant', 'startpage']
         brave_choice = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="brave"]')
         driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", brave_choice)
         brave_choice.click()
@@ -248,7 +298,7 @@ def main() -> None:
             driver.get(url + 'preferences')
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-preferences-intro h1').text == 'Settings'
             assert not driver.find_elements(By.CSS_SELECTOR, '#main_preferences > a img.logo')
-            assert len(driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')) == 3
+            assert len(driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')) == 4
             prefs_geom = driver.execute_script("""
               return {width:document.documentElement.clientWidth,
                 scroll:document.documentElement.scrollWidth,
@@ -302,7 +352,7 @@ def main() -> None:
             retry = driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry button')
             assert retry.is_displayed() and retry.rect['height'] >= 44, 'Mobile error retry inaccessible'
             assert 'reported an error' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').text
-            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry input[name="engines"]').get_attribute('value') == 'brave,startpage'
+            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry input[name="engines"]').get_attribute('value') == 'brave,qwant,startpage'
             driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", retry)
             WebDriverWait(driver, 8).until(lambda page: page.execute_script(
                 "const r=arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;",
@@ -312,7 +362,7 @@ def main() -> None:
             WebDriverWait(driver, 12).until(lambda page: failed.call_count == 2)
             assert driver.current_url.endswith('/search'), 'Retry left the private result route'
             assert not driver.execute_script('return location.search'), 'Retry leaked search terms into URL'
-            assert driver.find_element(By.CSS_SELECTOR, 'form#search input[name="engines"]').get_attribute('value') == 'brave,startpage'
+            assert driver.find_element(By.CSS_SELECTOR, 'form#search input[name="engines"]').get_attribute('value') == 'brave,qwant,startpage'
         print('PASS mobile explicit same-source retry, no fallback, and POST URL privacy')
 
         # Layout contract with eight real template cards but NO provider
@@ -375,6 +425,90 @@ def main() -> None:
             rich.assert_called_once()
         print('PASS desktop 2-column results and mobile stacked cards, 8 synthetic results, no provider traffic')
 
+
+        # Render actual image-result cards (not generic search results), checking
+        # the responsive thumbnail grid and upstream detail viewer without
+        # real search or image network traffic.
+        with patch('searx.search.SearchWithPlugins', SyntheticBrowserImageResultsCollection):
+            for width, height, label in ((1440, 900, 'desktop'), (390, 844, 'phone'), (320, 760, 'phone-small')):
+                driver.set_window_size(width, height)
+                driver.get(url)
+                driver.find_element(By.ID, 'q').send_keys('synthetic offline image gallery')
+                driver.find_element(By.ID, 'send_search').click()
+                WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
+                    lambda page: page.current_url.endswith('/search') and
+                    bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-category-form'))
+                )
+                driver.find_element(By.XPATH,
+                    "//nav[contains(@class,'goreecloud-category-tabs')]//button[normalize-space()='Images']").click()
+                WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
+                    lambda page: len(page.find_elements(By.CSS_SELECTOR, '#urls.goreecloud-image-results article.result-images')) == 12
+                )
+                geometry = driver.execute_script("""
+                    const root=document.querySelector('#urls');
+                    const cards=[...root.querySelectorAll('article.result-images')];
+                    const image=cards[0].querySelector('img.image_thumbnail');
+                    const css=getComputedStyle(root);
+                    const cr=cards.map(c=>c.getBoundingClientRect());
+                    const widths=new Set(cr.map(r=>Math.round(r.left)));
+                    return {display:css.display, columns:css.gridTemplateColumns.split(' ').length,
+                        distinctX:widths.size, viewport:document.documentElement.clientWidth,
+                        scroll:document.documentElement.scrollWidth,
+                        cardWidth:cr[0].width, imageWidth:image.getBoundingClientRect().width,
+                        inlineImages:cards.every(c=>c.querySelector('img.image_thumbnail').src.startsWith('data:image/png;base64,')),
+                        tileTitles:cards.every(c=>!!c.querySelector('span.title')?.textContent?.trim()),
+                        captionsBelow:cards.every(c=>{
+                            let i=c.querySelector('img.image_thumbnail').getBoundingClientRect();
+                            let t=c.querySelector('span.title').getBoundingClientRect();
+                            let s=c.querySelector('span.source').getBoundingClientRect();
+                            let card=c.getBoundingClientRect();
+                            return t.top >= i.bottom-1 && s.top >= t.bottom-1 && card.bottom >= s.bottom-1;
+                        }),
+                        categoryTabsFit:(()=>{
+                            const tabNav=document.querySelector('.goreecloud-category-tabs');
+                            const r=tabNav.getBoundingClientRect();
+                            const tabRects=[...tabNav.querySelectorAll('.goreecloud-category-tab')].map(t=>t.getBoundingClientRect());
+                            return tabRects.length===4 && tabNav.scrollWidth<=tabNav.clientWidth+1 &&
+                                tabRects.every(x=>x.left>=r.left-1 && x.right<=r.right+1);
+                        })(),
+                        badgesCompact:cards.every(c=>{
+                            let b=c.querySelector('.image_resolution').getBoundingClientRect();
+                            let i=c.querySelector('img.image_thumbnail').getBoundingClientRect();
+                            return b.height <= 32 && b.top >= i.top && b.bottom <= i.bottom+1;
+                        })};
+                """)
+                print('IMAGE GRID', label, geometry, flush=True)
+                assert geometry['display'] == 'grid', (label, geometry)
+                assert geometry['inlineImages'], (label, geometry)
+                WebDriverWait(driver, 5).until(
+                    lambda page: page.execute_script(
+                        "return [...document.querySelectorAll('#urls article.result-images img.image_thumbnail')].slice(0,2).every(img => img.complete && img.naturalWidth > 0)"
+                    )
+                )
+                assert geometry['tileTitles'], (label, geometry)
+                assert geometry['captionsBelow'] and geometry['badgesCompact'], (label, geometry)
+                if label != 'desktop':
+                    assert geometry['categoryTabsFit'], (label, geometry)
+                assert geometry['scroll'] <= geometry['viewport'] + 1, (label, geometry)
+                assert geometry['cardWidth'] >= 120 and geometry['imageWidth'] >= 100, (label, geometry)
+                if label == 'desktop':
+                    assert geometry['distinctX'] >= 4, (label, geometry)
+                else:
+                    assert geometry['distinctX'] == 2, (label, geometry)
+                driver.save_screenshot(str(artifacts / f'{label}-image-gallery.png'))
+                first = driver.find_element(By.CSS_SELECTOR, '#urls article.result-images')
+                first.find_element(By.CSS_SELECTOR, 'a').click()
+                WebDriverWait(driver, 5).until(
+                    lambda page: 'image-detail-open' in page.find_element(By.ID, 'results').get_attribute('class')
+                )
+                assert driver.current_url.endswith('#image-viewer'), 'Image viewer should open in page'
+                assert not driver.execute_script('return location.search'), 'Image viewer leaked search query'
+                driver.find_element(By.CSS_SELECTOR, '.result-images[data-vim-selected] .result-detail-close').click()
+                WebDriverWait(driver, 5).until(
+                    lambda page: 'image-detail-open' not in page.find_element(By.ID, 'results').get_attribute('class')
+                )
+        print('PASS desktop and phone image grid, 12 loaded offline PNGs, image details and POST privacy')
+
         # Category tabs must really submit POST, preserve the original query,
         # and never send it through the browser URL.
         with patch('searx.search.SearchWithPlugins', SyntheticBrowserResultsCollection):
@@ -391,7 +525,7 @@ def main() -> None:
             driver.save_screenshot(str(artifacts / 'desktop-category-tabs.png'))
             driver.find_element(By.XPATH,
                 "//nav[contains(@class,'goreecloud-category-tabs')]//button[normalize-space()='Images']").click()
-            WebDriverWait(driver, 12).until(
+            WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
                 lambda page: len(page.find_elements(
                     By.CSS_SELECTOR, '.goreecloud-category-tab[aria-current="page"]')) == 1
                 and page.find_element(
@@ -400,7 +534,7 @@ def main() -> None:
             assert not driver.execute_script('return location.search'), 'Category switch leaked query'
             assert driver.find_element(By.CSS_SELECTOR, '#q').get_attribute('value') == 'synthetic category navigation'
             assert driver.find_element(By.CSS_SELECTOR,
-                '.goreecloud-category-form input[name="engines"][value="brave.images,startpage images"]')
+                '.goreecloud-category-form input[name="engines"][value="brave.images,startpage images,qwant images"]')
             driver.set_window_size(390, 844)
             driver.save_screenshot(str(artifacts / 'phone-category-tabs.png'))
             overflow = driver.execute_script(
@@ -432,7 +566,7 @@ def main() -> None:
             selected = driver.find_element(
                 By.CSS_SELECTOR, '.goreecloud-partial-retry input[name="engines"]'
             ).get_attribute('value')
-            assert selected == 'brave,startpage', f'Partial retry selected unexpected sources: {selected}'
+            assert selected == 'brave,qwant,startpage', f'Partial retry selected unexpected sources: {selected}'
             assert not driver.execute_script('return location.search'), 'Partial-result search leaked query'
             driver.save_screenshot(str(artifacts / 'desktop-partial-retry.png'))
             driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", retry)
@@ -467,7 +601,7 @@ def main() -> None:
             previous = driver.find_element(By.CSS_SELECTOR, '.goreecloud-previous-results button')
             assert previous.is_displayed() and previous.rect['height'] >= 44, 'Previous page touch action is too small'
             assert driver.find_element(By.CSS_SELECTOR,
-                '.goreecloud-previous-results input[name="engines"]').get_attribute('value') == 'brave,startpage'
+                '.goreecloud-previous-results input[name="engines"]').get_attribute('value') == 'brave,qwant,startpage'
             assert driver.find_element(By.CSS_SELECTOR,
                 '.goreecloud-previous-results input[name="pageno"]').get_attribute('value') == '1'
             assert not driver.execute_script('return location.search'), 'Later-page query entered URL'
@@ -482,7 +616,7 @@ def main() -> None:
             assert not driver.execute_script('return location.search'), 'Previous page leaked query into URL'
             assert not driver.find_elements(By.CSS_SELECTOR, '.goreecloud-previous-results')
             assert driver.find_element(By.CSS_SELECTOR,
-                'form#search input[name="engines"]').get_attribute('value') == 'brave,startpage'
+                'form#search input[name="engines"]').get_attribute('value') == 'brave,qwant,startpage'
         print('PASS phone previous-page POST recovery and exact saved-source continuity')
 
         # Exercise a synthetic denied URL without dispatching a search.

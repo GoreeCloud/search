@@ -11,7 +11,9 @@ from collections.abc import Generator
 import atexit
 import asyncio
 import ipaddress
+import os
 from itertools import cycle
+from urllib.parse import urlsplit
 
 from curl_cffi import CurlHttpVersion
 from curl_cffi.requests.exceptions import (
@@ -21,6 +23,7 @@ from curl_cffi.requests.exceptions import (
 )
 
 from searx import logger, sxng_debug
+from searx.goreecloud_policy import safe_external_media_url
 from searx.extended_types import SXNG_Response
 from .client import DEFAULT_IMPERSONATE, AsyncClient, new_client, get_loop
 from .raise_for_httperror import raise_for_httperror
@@ -57,6 +60,9 @@ class Network:
         'local_addresses',
         'proxies',
         'using_tor_proxy',
+        'privacy_proxy_required',
+        'privacy_egress_mode',
+        'server_masked_acknowledged',
         'max_redirects',
         'retries',
         'retry_on_http_error',
@@ -66,7 +72,6 @@ class Network:
         '_logger',
     )
 
-    _TOR_CHECK_RESULT = {}
     _CLIENT_KWARGS = ('verify', 'max_redirects', 'impersonate', 'curl_options', 'enable_http3')
 
     def __init__(
@@ -79,6 +84,9 @@ class Network:
         max_connections: int = None,  # pyright: ignore[reportArgumentType]
         proxies: str | dict[str, str] | None = None,
         using_tor_proxy: bool = False,
+        privacy_proxy_required: bool = False,
+        privacy_egress_mode: str = 'gateway',
+        server_masked_acknowledged: bool = False,
         local_addresses: str | list[str] | None = None,
         retries: int = 0,
         retry_on_http_error: bool = False,
@@ -93,6 +101,9 @@ class Network:
         self.max_connections = max_connections
         self.proxies = proxies
         self.using_tor_proxy = using_tor_proxy
+        self.privacy_proxy_required = privacy_proxy_required
+        self.privacy_egress_mode = privacy_egress_mode
+        self.server_masked_acknowledged = server_masked_acknowledged
         self.local_addresses = local_addresses
         self.retries = retries
         self.retry_on_http_error = retry_on_http_error
@@ -168,28 +179,77 @@ class Network:
 
     async def log_response(self, response: SXNG_Response):
         request = response.request
-        http_version = self._HTTP_VERSION.get(response.http_version, str(response.http_version))
-        status = f"{response.status_code} {response.reason}"
-        response_line = f"{http_version} {status}"
-        content_type = response.headers.get("Content-Type")
-        content_type = f' ({content_type})' if content_type else ''
         method = request.method if request else "?"
-        url = request.url if request else response.url
-        self._logger.debug(f'HTTP Request: {method} {url} "{response_line}"{content_type}')
+        # Do not log the upstream URL: its query string may contain user searches.
+        self._logger.debug("HTTP Response: %s status=%s", method, response.status_code)
 
     @staticmethod
     async def check_tor_proxy(client: AsyncClient, proxies) -> bool:
-        if proxies in Network._TOR_CHECK_RESULT:
-            return Network._TOR_CHECK_RESULT[proxies]
-
+        """Attest this client through its relay, never relying on a cached verdict."""
         if not proxies or not all(url.startswith('socks5h://') for _, url in proxies):
-            Network._TOR_CHECK_RESULT[proxies] = False
+            return False
+        try:
+            response = await client.get("https://check.torproject.org/api/ip", timeout=8, allow_redirects=False)
+            if response.status_code != 200:
+                return False
+            payload = response.json()
+            return isinstance(payload, dict) and payload.get("IsTor") is True
+        except (RequestException, OSError, ValueError, TypeError, AttributeError):
+            # An unavailable or malformed attestation is a hard privacy failure.
             return False
 
-        response = await client.get("https://check.torproject.org/api/ip", timeout=60)
-        result = bool(response.json()["IsTor"])
-        Network._TOR_CHECK_RESULT[proxies] = result
-        return result
+    @staticmethod
+    def valid_private_proxy(proxies: tuple[tuple[str, str], ...]) -> bool:
+        """Only a single local SOCKS5H gateway can carry private Search traffic.
+
+        SOCKS5H delegates DNS lookup to the gateway. It may be an owner-approved
+        non-Tor privacy network; protocol syntax alone does not prove masking.
+        """
+        if len(proxies) != 1 or proxies[0][0] != 'all://':
+            return False
+        url = proxies[0][1]
+        if not isinstance(url, str) or not url or url != url.strip():
+            return False
+        try:
+            parsed = urlsplit(url)
+            port = parsed.port
+        except ValueError:
+            return False
+        return (
+            parsed.scheme == 'socks5h'
+            and parsed.hostname in ('127.0.0.1', '::1')
+            and port is not None and port > 0
+            and not parsed.username and not parsed.password
+            and not parsed.path and not parsed.query and not parsed.fragment
+            and '#' not in url and '?' not in url
+        )
+
+    def private_egress_configured(self) -> bool:
+        """Offline transport preflight for readiness; does not make connections.
+
+        Valid settings are not proof of an active gateway, remote IP masking,
+        public DNS resolution, or service-scoped firewall isolation.
+        """
+        if not self.privacy_proxy_required:
+            return True
+        if self.verify is not True or self.enable_http or self.enable_http3:
+            return False
+        if self.privacy_egress_mode == 'server_masked':
+            return (
+                not self.proxies
+                and self.server_masked_acknowledged is True
+                and os.environ.get('GOREECLOUD_SERVER_MASKED_EGRESS') == '1'
+                and not self.using_tor_proxy
+            )
+        if self.privacy_egress_mode == 'gateway':
+            entries = list(self.iter_proxies())
+            if len(entries) != 1:
+                return False
+            pattern, urls = entries[0]
+            return bool(urls) and all(
+                self.valid_private_proxy(((pattern, url),)) for url in urls
+            )
+        return False
 
     async def get_client(
         self,
@@ -205,6 +265,23 @@ class Network:
         enable_http3 = self.enable_http3 if enable_http3 is None else enable_http3
         local_address = next(self._local_addresses_cycle)
         proxies = next(self._proxies_cycle)  # is a tuple so it can be part of the key
+        if self.privacy_proxy_required:
+            if verify is not True or self.enable_http or curl_options or enable_http3:
+                raise ProxyError('Private Search egress blocked: insecure transport override')
+            if self.privacy_egress_mode == 'gateway':
+                if not self.valid_private_proxy(proxies):
+                    raise ProxyError('Private Search egress blocked: approved local SOCKS5H gateway required')
+            elif self.privacy_egress_mode == 'server_masked':
+                # The provider sees the host IP, never the visitor's IP. Only a
+                # separately verified remote host may activate this mode.
+                if (
+                    proxies or not self.server_masked_acknowledged
+                    or os.environ.get('GOREECLOUD_SERVER_MASKED_EGRESS') != '1'
+                    or self.using_tor_proxy
+                ):
+                    raise ProxyError('Private Search egress blocked: unverified server-masked mode')
+            else:
+                raise ProxyError('Private Search egress blocked: unknown egress mode')
         curl_key = tuple(sorted((int(k), v) for k, v in (curl_options or {}).items()))
         key = (verify, max_redirects, local_address, proxies, impersonate, curl_key, enable_http3)
         if key not in self._clients or self._clients[key].is_closed:
@@ -219,12 +296,18 @@ class Network:
                 max_redirects,
                 impersonate=impersonate,
                 curl_options=curl_options,
+                disable_env_proxy=bool(self.privacy_proxy_required and self.privacy_egress_mode == 'server_masked'),
             )
-            if self.using_tor_proxy and not await self.check_tor_proxy(client, proxies):
-                await client.aclose()
-                raise ProxyError('Network configuration problem: not using Tor')
             self._clients[key] = client
-        return self._clients[key]
+        client = self._clients[key]
+        # Tor is optional and is checked ONLY when explicitly configured.
+        # Trusted non-Tor gateways and approved server-masked egress do not use Tor.
+        if self.using_tor_proxy:
+            if not await self.check_tor_proxy(client, proxies):
+                await client.aclose()
+                self._clients.pop(key, None)
+                raise ProxyError('Private Search egress blocked: Tor exit verification failed')
+        return client
 
     async def aclose(self):
         async def close_client(client):
@@ -253,8 +336,8 @@ class Network:
                 raise_for_httperror(response)
             except:
                 method = response.request.method if response.request else "?"
-                url = response.request.url if response.request else response.url
-                self._logger.warning(f"HTTP Request failed: {method} {url}")
+                # Upstream URLs can contain search terms, tokens or private parameters.
+                self._logger.warning("HTTP Request failed: %s status=%s", method, response.status_code)
                 raise
         return response
 
@@ -273,6 +356,37 @@ class Network:
         was_disconnected = False
         do_raise_for_httperror = Network.extract_do_raise_for_httperror(kwargs)
         kwargs_clients = Network.extract_kwargs_clients(kwargs)
+        if self.privacy_proxy_required:
+            if any(key in kwargs for key in ('proxy', 'proxies', 'interface', 'curl_options')):
+                raise ProxyError('Private Search egress blocked: per-request proxy override')
+            # Reuse the strict HTTPS hostname/authority policy used for image
+            # fetches. DNS rebinding still requires a staging egress firewall.
+            if not safe_external_media_url(url):
+                raise ProxyError('Private Search egress blocked: unsafe HTTPS destination')
+            # Private upstream redirects are never followed.
+            kwargs['allow_redirects'] = False
+            # Do not forward upstream cookies or client-identifying headers.
+            # Provider challenges might need cookies; privacy takes precedence.
+            kwargs.pop('cookies', None)
+            if kwargs.get('headers'):
+                identifying = {
+                    'cookie', 'authorization', 'proxy-authorization', 'x-api-key',
+                    'forwarded', 'x-forwarded-for', 'x-real-ip', 'x-client-ip',
+                    'cf-connecting-ip', 'true-client-ip', 'x-forwarded-host',
+                    'x-forwarded-proto', 'x-original-forwarded-for',
+                    'x-original-ip', 'x-cluster-client-ip', 'x-proxyuser-ip',
+                    'referer', 'referrer', 'origin', 'x-requested-with',
+                    'x-amzn-trace-id', 'x-cloud-trace-context',
+                    'traceparent', 'tracestate', 'baggage', 'b3',
+                }
+                identifying_prefixes = (
+                    'x-forwarded-', 'x-b3-', 'sec-ch-', 'sec-fetch-',
+                )
+                kwargs['headers'] = {
+                    name: value for name, value in kwargs['headers'].items()
+                    if name.lower() not in identifying
+                    and not name.lower().startswith(identifying_prefixes)
+                }
         while retries >= 0:  # pragma: no cover
             client = await self.get_client(**kwargs_clients)
             try:
@@ -334,6 +448,18 @@ def check_network_configuration():
         raise RuntimeError("Invalid network configuration")
 
 
+def requires_private_egress(config: dict[str, t.Any]) -> bool:
+    """Every branded GoreeCloud Search profile requires an outbound privacy relay.
+
+    No application privacy toggle can authorize direct provider or image traffic.
+    Generic upstream SearXNG profiles remain unaffected.
+    """
+    if 'goreecloud' in config:
+        return True
+    general = config.get('general', {})
+    return isinstance(general, dict) and general.get('instance_name') == 'GoreeCloud Search'
+
+
 def initialize(
     settings_engines: list[dict[str, t.Any]] = None,  # pyright: ignore[reportArgumentType]
     settings_outgoing: dict[str, t.Any] = None,  # pyright: ignore[reportArgumentType]
@@ -355,6 +481,11 @@ def initialize(
         'max_connections': settings_outgoing['pool_connections'],
         'local_addresses': settings_outgoing['source_ips'],
         'using_tor_proxy': settings_outgoing['using_tor_proxy'],
+        'privacy_proxy_required': requires_private_egress(settings),
+        'privacy_egress_mode': settings.get('goreecloud', {}).get('egress_mode', 'gateway')
+        if isinstance(settings.get('goreecloud'), dict) else 'gateway',
+        'server_masked_acknowledged': settings.get('goreecloud', {}).get('server_masked_acknowledged', False)
+        if isinstance(settings.get('goreecloud'), dict) else False,
         'proxies': settings_outgoing['proxies'],
         'max_redirects': settings_outgoing['max_redirects'],
         'retries': settings_outgoing['retries'],
@@ -366,6 +497,15 @@ def initialize(
         result = {}
         result.update(default_params)  # pyright: ignore[reportUnknownMemberType]
         result.update(params)  # pyright: ignore[reportUnknownMemberType]
+        # Engine-specific network overrides cannot downgrade the private egress policy.
+        result['privacy_proxy_required'] = default_params['privacy_proxy_required']
+        result['privacy_egress_mode'] = default_params['privacy_egress_mode']
+        result['server_masked_acknowledged'] = default_params['server_masked_acknowledged']
+        if result['privacy_proxy_required']:
+            # Brave adapters set enable_http3 at the engine level. Private
+            # Search forbids HTTP/3, so normalize this inherited upstream
+            # preference instead of making every Brave request fail closed.
+            result['enable_http3'] = False
         if logger_name:
             result['logger_name'] = logger_name
         return Network(**result)  # type: ignore

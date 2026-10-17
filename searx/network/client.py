@@ -73,8 +73,13 @@ def new_client(
     max_redirects: int,
     impersonate: str = DEFAULT_IMPERSONATE,
     curl_options: dict[int, t.Any] | None = None,
+    disable_env_proxy: bool = False,
 ) -> AsyncClient:
     extra_curl = dict(curl_options or {})
+    if disable_env_proxy and not proxies:
+        # A server-masked deployment must not silently honor host HTTP_PROXY,
+        # HTTPS_PROXY or ALL_PROXY inherited from the service environment.
+        extra_curl[CurlOpt.PROXY] = ""
     if not enable_http:
         extra_curl.setdefault(CurlOpt.PROTOCOLS_STR, "https")
         extra_curl.setdefault(CurlOpt.REDIR_PROTOCOLS_STR, "https")

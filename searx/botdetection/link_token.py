@@ -46,6 +46,7 @@ import random
 import flask
 
 from searx.valkeylib import secret_hash
+from searx import settings
 
 from ._helpers import (
     get_network,
@@ -80,13 +81,19 @@ def is_suspicious(network: IPv4Network | IPv6Network, request: flask.Request, re
     valkey_client = valkeydb.get_valkey_client()
     ping_key = get_ping_key(network, request)
     if not valkey_client.get(ping_key):
-        logger.info("missing ping (IP: %s) / request: %s", network.compressed, ping_key)
+        if settings.get("goreecloud", {}).get("private_search"):
+            logger.info("Private Search limiter ping missing")
+        else:
+            logger.info("missing ping (IP: %s) / request: %s", network.compressed, ping_key)
         return True
 
     if renew:
         valkey_client.set(ping_key, 1, ex=PING_LIVE_TIME)
 
-    logger.debug("found ping for (client) network %s -> %s", network.compressed, ping_key)
+    if settings.get('goreecloud', {}).get('private_search'):
+        logger.debug("Private Search limiter ping found")
+    else:
+        logger.debug("found ping for (client) network %s -> %s", network.compressed, ping_key)
     return False
 
 
@@ -106,9 +113,12 @@ def ping(request: flask.Request, token: str):
     network = get_network(real_ip, cfg)
 
     ping_key = get_ping_key(network, request)
-    logger.debug(
-        "store ping_key for (client) network %s (IP %s) -> %s", network.compressed, real_ip.compressed, ping_key
-    )
+    if settings.get('goreecloud', {}).get('private_search'):
+        logger.debug("Private Search limiter ping stored")
+    else:
+        logger.debug(
+            "store ping_key for (client) network %s (IP %s) -> %s", network.compressed, real_ip.compressed, ping_key
+        )
     valkey_client.set(ping_key, 1, ex=PING_LIVE_TIME)
 
 

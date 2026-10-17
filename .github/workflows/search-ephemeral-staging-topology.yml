@@ -1,0 +1,32 @@
+name: GoreeCloud Search ephemeral staging topology
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+permissions:
+  contents: read
+
+jobs:
+  disposable-network-topology:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Verify Docker runner availability
+        run: docker version
+      - name: Run disposable synthetic ingress and egress separation
+        run: python3 tests/goreecloud/ci_ephemeral_staging_topology.py
+      - name: Confirm no staging fixture containers or networks remain
+        if: always()
+        run: |
+          if docker ps -a --format '{{.Names}}' | grep -E '^gc-search-ci-|^fixture-(provider|gateway)$'; then
+            echo 'Disposable Search fixture containers remain' >&2
+            exit 1
+          fi
+          if docker network ls --format '{{.Name}}' | grep -E '^gc-search-ci-'; then
+            echo 'Disposable Search fixture networks remain' >&2
+            exit 1
+          fi
+          echo 'Disposable fixture teardown verified'

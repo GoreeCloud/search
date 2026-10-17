@@ -1,6 +1,6 @@
 # GoreeCloud Search — Settings and category navigation
 
-**Scope:** Development-only visual and category capability enhancement, stacked on Search draft PR #16. The owner approved the uncluttered homepage direction but rejected the upstream Settings visual treatment and requested Web, Images, Videos and News choices.
+**Scope:** Development-only category and Settings capability. First introduced by Search draft PR #17 and expanded by stacked PR #18 to three approved provider families. The owner approved the uncluttered homepage direction but rejected the upstream Settings visual treatment and requested Web, Images, Videos and News choices.
 
 ## Settings
 
@@ -8,14 +8,14 @@ The private Settings page uses the GoreeCloud Search identity, without the inher
 
 ## Supported categories and source ownership
 
-- **Web:** Brave Search and Startpage.
-- **Images:** Brave Search Images and Startpage Images.
-- **Videos:** Brave Search Videos only.
-- **News:** Brave Search News and Startpage News.
+- **Web:** Brave Search, Startpage and Qwant.
+- **Images:** Brave Search Images, Startpage Images and Qwant Images.
+- **Videos:** Brave Search Videos and Qwant Videos.
+- **News:** Brave Search News, Startpage News and Qwant News.
 
-Only seven named SearXNG adapter *instances* from the same two approved provider families are enabled. No Google, Bing, alternative engine, third-party media API, Maps or Shopping adapter is authorized. The category menu submits query, category and mapped engine names via same-origin POST. No query is placed in a GET URL. Category fanout remains at most two adapter instances per search.
+Only eleven approved SearXNG adapter instances from **three provider families** are enabled. Other inherited engines and separate Google/Bing/Maps/Shopping sources are excluded. Web, Images, Videos and News navigation submits query and engine selections via same-origin POST; query terms never enter a GET URL. Fanout is capped at three selected provider families.
 
-The user preference Both searches all available approved sources for that category, meaning Brave alone for Videos. A Startpage-only preference disables Videos in the UI and rejects a direct Startpage-only video request with HTTP 422; this is not an automatic substitution. The empty unsupported selector is not executable. No live provider viability is implied.
+The default **All sources** preference selects all available approved sources for the chosen category. Videos includes Brave and Qwant only; Startpage-only disables Videos and a direct Startpage-only video request is rejected rather than silently substituted. Saved source choices remain distinct from per-query explicit selections. This is source-contract behavior, not proof that providers are reachable.
 
 ## Verification
 

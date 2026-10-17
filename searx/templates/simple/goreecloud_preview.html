@@ -8,7 +8,7 @@
   <p><strong>{{ selected_sources|length }} source(s) selected.</strong> Categories: {{ selected_categories_preview|join(', ') or 'None' }}. Language: {{ selected_locale_preview }}. Safe search: {{ selected_safesearch }}.</p>
   {% if selected_sources %}
   <details open><summary>Selected providers</summary>
-    <ul>{% for source in selected_sources %}<li>{{ 'Brave Search' if source == 'brave' else 'Startpage' }}</li>{% endfor %}</ul>
+    <ul>{% for source in selected_sources %}<li>{{ 'Brave Search' if source == 'brave' else ('Qwant' if source == 'qwant' else 'Startpage') }}</li>{% endfor %}</ul>
   </details>
   <p>Continuing will send your search terms to the configured providers under their own policies. Their availability and handling of your terms have not been verified by this preview.</p>
   {% if 'startpage' in selected_sources %}
@@ -28,7 +28,7 @@
       <label for="goreecloud-provider-choice">Choose a provider</label>
       <select id="goreecloud-provider-choice" name="engines" required>
         <option value="">Select a provider</option>
-        {% for source in selected_sources %}<option value="{{ source }}">{{ 'Brave Search' if source == 'brave' else 'Startpage' }}</option>{% endfor %}
+        {% for source in selected_sources %}<option value="{{ source }}">{{ 'Brave Search' if source == 'brave' else ('Qwant' if source == 'qwant' else 'Startpage') }}</option>{% endfor %}
       </select>
       <button class="goreecloud-preview-continue" type="submit">Search this provider</button>
     </form>
