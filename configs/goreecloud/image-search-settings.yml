@@ -12,7 +12,7 @@ engines:
   - name: brave.images
     # Its upstream named network points to a filtered-out general Brave engine.
     # Give the isolated image engine its own default network instead.
-    network: default
+    network: __DEFAULT__
     disabled: false
     inactive: false
   - name: bing images
