@@ -32,7 +32,10 @@ footer{text-align:center;color:#536780;font-size:12px;padding:25px}
 <p class="note">Transparency about what this local Development build does and does not protect.</p>
 <h2>Which providers receive searches?</h2>
 <p>Brave Search, Startpage, and Qwant are the only approved provider families. The default sends search terms to all three, or you can choose one provider in Settings. Web, Images and News have adapters for all three; Videos uses Brave Search and Qwant. A blocked provider is never silently replaced by a different one.</p>
-<p>These external services may retain or process submitted searches and connection metadata under their own privacy policies. This local service does not promise anonymity. Search engines may rate-limit, challenge, or reject requests.</p>
+<p>External providers can read the terms you search for, even when the network route masks the Search server's IP address. They can still process queries, timing and metadata under their own privacy policies. Do not enter personal identifiers if you need to keep them from providers.</p>
+<h2>IP masking and fail-closed search</h2>
+<p>This private Development version requires a verified Tor SOCKS5h relay for outbound provider and image-proxy requests. It resolves provider names through the relay instead of local DNS and never falls back to direct network traffic. If the relay is missing, unverified or blocked, live searches may be unavailable. Tor is not installed automatically with Search.</p>
+<p>Tor routes can hide the server's public IP from providers, but the provider still receives the query itself. Tor exits can be refused or rate-limited; this does not promise complete anonymity, unlinkable searches, or that following result links in your browser will be masked.</p>
 <h2>What stays on your device?</h2>
 <p>The chosen search-provider preference and other preferences are stored in your browser's cookies. There is no GoreeCloud personal profile, hosted AI transmission, or independent search index in this Development build.</p>
 <h2>Search transport and content</h2>
