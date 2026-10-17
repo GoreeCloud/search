@@ -65,7 +65,8 @@ from searx.settings_loader import DEFAULT_SETTINGS_FILE
 from searx.exceptions import SearxParameterException
 from searx.goreecloud_policy import (
     SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
-    distinct_selected_sources, safe_primary_result_url, represented_result_sources, validate_builtin_sources,
+    distinct_selected_sources, safe_primary_result_url, safe_external_media_url,
+    represented_result_sources, validate_builtin_sources,
     validate_builtin_search_bangs, restrict_explicit_private_engines, validate_private_request_context,
     SEARCH_SOURCE_COOKIE, SEARCH_SOURCE_OPTIONS, SEARCH_SOURCE_FAMILIES,
     stored_search_source, requested_search_source, selected_engines_for_category,
@@ -321,6 +322,10 @@ def image_proxify(url: str):
             and partial_base64[1].startswith('base64,')
         ):
             return url
+        return None
+
+    # Never sign an unsafe link for later server-side fetching.
+    if settings['goreecloud']['private_search'] and not safe_external_media_url(url):
         return None
 
     h = new_hmac(settings['server']['secret_key'], url.encode())
@@ -1286,6 +1291,9 @@ def image_proxy():
     if not url:
         return '', 400
 
+    if settings['goreecloud']['private_search'] and not safe_external_media_url(url):
+        return '', 400
+
     if not is_hmac_of(settings['server']['secret_key'], url.encode(), sxng_request.args.get('h', '')):
         return '', 400
 
@@ -1300,7 +1308,8 @@ def image_proxy():
             'DNT': '1',
         }
         set_context_network_name('image_proxy')
-        resp, stream = http_stream(method='GET', url=url, headers=request_headers, allow_redirects=True)
+        # Never follow a provider-controlled redirect into internal hostnames.
+        resp, stream = http_stream(method='GET', url=url, headers=request_headers, allow_redirects=False)
         content_length = resp.headers.get('Content-Length')
         if content_length and content_length.isdigit() and int(content_length) > maximum_size:
             return 'Max size', 400
