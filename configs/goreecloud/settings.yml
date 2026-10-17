@@ -77,6 +77,11 @@ search:
   formats:
     - html
     - json
+outgoing:
+  proxies:
+    all://: socks5h://127.0.0.1:9050
+  using_tor_proxy: true
+  extra_proxy_timeout: 10
 server:
   bind_address: "127.0.0.1"
   public_instance: false
