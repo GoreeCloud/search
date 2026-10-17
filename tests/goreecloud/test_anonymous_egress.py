@@ -60,6 +60,35 @@ class AnonymousSearchEgressTests(unittest.TestCase):
                 )
             construct.assert_not_called()
 
+    def test_non_tor_proxy_never_reaches_search_provider(self):
+        from types import SimpleNamespace
+
+        class UntrustedRelay:
+            is_closed = False
+
+            def __init__(self):
+                self.urls = []
+
+            async def get(self, url, timeout):
+                self.urls.append(url)
+                return SimpleNamespace(json=lambda: {'IsTor': False})
+
+            async def aclose(self):
+                self.is_closed = True
+
+        fake = UntrustedRelay()
+        network = Network(
+            proxies={'all://': 'socks5h://127.0.0.1:9050'},
+            using_tor_proxy=True,
+        )
+        with patch.dict(Network._TOR_CHECK_RESULT, {}, clear=True), patch(
+            'searx.network.network.new_client', return_value=fake
+        ):
+            with self.assertRaises(ProxyError):
+                asyncio.run(network.get_client())
+        self.assertEqual(['https://check.torproject.org/api/ip'], fake.urls)
+        self.assertTrue(fake.is_closed)
+
     def test_named_network_cannot_disable_tor_verification(self):
         network = Network(
             proxies={'all://': 'socks5h://127.0.0.1:9050'},
