@@ -1320,10 +1320,20 @@ def image_proxy():
                 return '', resp.status_code
             return '', 400
 
-        if not resp.headers.get('Content-Type', '').startswith('image/') and not resp.headers.get(
-            'Content-Type', ''
-        ).startswith('binary/octet-stream'):
-            logger.debug('image-proxy: wrong content-type: %s', resp.headers.get('Content-Type', ''))
+        # Reject active SVG/XML and ambiguous octet-stream payloads. Only
+        # raster image MIME types are accepted from untrusted third parties.
+        mime = resp.headers.get('Content-Type', '').split(';', 1)[0].strip().lower()
+        permitted = {
+            'image/png', 'image/jpeg', 'image/gif', 'image/webp',
+            'image/avif', 'image/bmp', 'image/apng', 'image/tiff',
+            'image/x-icon', 'image/vnd.microsoft.icon',
+        }
+        if settings['goreecloud']['private_search']:
+            allowed_media_type = mime in permitted
+        else:
+            allowed_media_type = mime.startswith('image/') or mime == 'binary/octet-stream'
+        if not allowed_media_type:
+            logger.debug('image-proxy: rejected untrusted media type')
             return '', 400
 
         forward_resp = True
