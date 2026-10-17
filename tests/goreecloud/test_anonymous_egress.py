@@ -207,6 +207,34 @@ class AnonymousEgressTests(unittest.TestCase):
         self.assertEqual(2, client.get.await_count)
         self.assertEqual(2, client.request.await_count)
 
+    def test_tor_attestation_revocation_blocks_reused_session(self):
+        network = Network(
+            enable_http=False,
+            proxies={'all://': 'socks5h://127.0.0.1:9050'},
+            privacy_proxy_required=True,
+        )
+        verdicts = [
+            SimpleNamespace(status_code=200, json=lambda: {'IsTor': True}),
+            SimpleNamespace(status_code=200, json=lambda: {'IsTor': False}),
+        ]
+        client = Mock(is_closed=False)
+        client.get = AsyncMock(side_effect=verdicts)
+        client.aclose = AsyncMock()
+        client.request = AsyncMock(return_value=SimpleNamespace(status_code=200))
+        with patch('searx.network.network.new_client', return_value=client) as factory:
+            asyncio.run(network.request(
+                'GET', 'https://search.example/?q=public',
+                raise_for_httperror=False))
+            with self.assertRaises(ProxyError):
+                asyncio.run(network.request(
+                    'GET', 'https://search.example/?q=public',
+                    raise_for_httperror=False))
+        factory.assert_called_once()
+        self.assertEqual(2, client.get.await_count)
+        self.assertEqual(1, client.request.await_count)
+        client.aclose.assert_awaited_once()
+        self.assertFalse(network._clients)
+
     def test_private_profile_has_strict_egress_policy(self):
         import test_runtime_smoke as smoke
         from searx.network.network import NETWORKS
