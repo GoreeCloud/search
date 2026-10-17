@@ -238,7 +238,7 @@ html[data-glaze-consumer] body.results_endpoint #results:has(#urls.goreecloud-im
 html[data-glaze-consumer] body.results_endpoint #results:has(#urls.goreecloud-image-results) > #sidebar > * {
   flex: 1 1 220px;
 }
-html[data-glaze-consumer] body.results_endpoint #results > #urls.goreecloud-image-results {
+html[data-glaze-consumer] body.results_endpoint #main_results #results > #urls.goreecloud-image-results {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
   align-content: start; align-items: start;
@@ -288,7 +288,7 @@ html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results a
   outline: 3px solid var(--gc-accent-strong); outline-offset: 2px;
 }
 @media (max-width: 410px) {
-  html[data-glaze-consumer] body.results_endpoint #results > #urls.goreecloud-image-results {
+  html[data-glaze-consumer] body.results_endpoint #main_results #results > #urls.goreecloud-image-results {
     grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px;
   }
   html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results > article.result-images { padding: 5px; }

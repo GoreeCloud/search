@@ -238,8 +238,8 @@ def selected_engines_for_category(category: str, choice: str = 'both') -> str:
     if category not in SEARCH_SOURCE_FAMILIES:
         raise SearchPolicyViolation('That search category is unavailable.', 422)
     available = SEARCH_SOURCE_FAMILIES[category]
-    # "Both" means all supported approved providers for this category;
-    # the Videos adapter exists only on Brave (no Startpage video adapter).
+    # The legacy "both" choice now means every supported provider for the
+    # category. Videos has Brave and Qwant, but no Startpage adapter.
     wanted = tuple(available) if choice == 'both' else (choice,)
     if any(family not in available for family in wanted):
         raise SearchPolicyViolation('The selected search provider does not support this category.', 422)
@@ -247,7 +247,7 @@ def selected_engines_for_category(category: str, choice: str = 'both') -> str:
 
 
 def stored_search_source(raw: str | None) -> str:
-    """Accept only canonical provider choices; fall back to two-source default."""
+    """Accept only canonical provider choices; default to all three families."""
     return raw if raw in SEARCH_SOURCE_OPTIONS else 'both'
 
 
@@ -295,7 +295,7 @@ def validate_builtin_search_bangs(raw_query: str) -> None:
     for token in raw_query.split():
         if token.startswith('!'):
             if token.startswith('!!') or token[1:].lower().replace('-', ' ').replace('_', ' ') not in ALLOWED_SEARCH_BANGS:
-                raise SearchPolicyViolation('Only Brave Search and Startpage search shortcuts are supported.', 422)
+                raise SearchPolicyViolation('Only Brave Search, Startpage and Qwant search shortcuts are supported.', 422)
 
 
 def restrict_explicit_private_engines(enginerefs: Iterable[object], selected: str | None) -> list[object]:

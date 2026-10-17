@@ -38,7 +38,7 @@ class SelectedSourcesTests(unittest.TestCase):
                     self.assertNotIn(b'id="search_url"', response.data)
                     self.assertIn(b'goreecloud-wordmark', response.data)
                     self.assertIn(b'goreecloud-empty-state', response.data)
-                    self.assertIn(b'No displayed web matches are available for this search.', response.data)
+                    self.assertIn(b'No matches were returned by the selected sources.', response.data)
                     self.assertNotIn(b'goreecloud-empty-retry', response.data)
                     self.assertNotIn(b'https://searx.space', response.data)
                     create_search.assert_called_once()
