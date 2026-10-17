@@ -10,8 +10,14 @@ The GoreeCloud private Development profile uses
 gateway: `socks5h://127.0.0.1:9050`. **Every outbound SearXNG network
 client**, including the Brave, Startpage, Qwant and image-proxy clients, must
 have a validated local SOCKS5H gateway. SOCKS5H requests DNS resolution through
-the gateway rather than the user's DNS resolver. No HTTPS or HTTP direct
-fallback is permitted if a gateway is missing, closed, malformed, or rejected.
+the gateway rather than the user's DNS resolver. Before every outbound use,
+including reused provider and image-proxy connections, Search now requests a
+fresh HTTPS Tor-exit attestation through that same client from
+`check.torproject.org/api/ip` with an 8-second timeout. Only HTTP 200 with a
+JSON boolean `IsTor: true` is accepted; strings, errors, timeouts, non-Tor
+exits and malformed results block that outbound use. Failed clients are closed
+and discarded, and no earlier Tor verdict is cached or trusted. No HTTPS or
+HTTP direct fallback is permitted if the gateway is missing or rejected.
 
 All registered networks inherit this requirement, even if an engine specifies
 its own network override. The network layer rejects external proxy addresses,
@@ -20,8 +26,9 @@ per-request proxy/interface overrides and custom cURL settings. Incoming
 cookies are **not passed** to search providers, and common identity-carrying
 headers including `Forwarded`, `X-Forwarded-For`, `X-Real-IP`,
 `Authorization` and `Cookie` are removed. Query-bearing upstream URL
-logging was separately disabled; the remaining exception and telemetry paths
-still need a comprehensive privacy review.
+logging was separately disabled, and the locale-selection debug log no longer
+records the incoming request URL. Remaining application exception, proxy,
+reverse-proxy and telemetry paths still need a comprehensive privacy review.
 
 If the local SOCKS5H gateway is not running, the user can open the private
 homepage and preview source selection, but external provider searches will
@@ -32,9 +39,10 @@ deliberate privacy default, not a reason to bypass the gateway.
 
 A SOCKS5H protocol and a loopback listener do **not** prove that the proxy is
 Tor, that the exit IP is shared, that the provider cannot correlate searches,
-or that queries are end-to-end anonymous. The operator must independently
-verify that the listening gateway is an approved privacy network, such as Tor,
-with its own identity and DNS-leak checks before claiming anonymity. A
+or that queries are end-to-end anonymous. The Tor-exit attestation is a useful technical control, not a proof of full
+anonymity. The operator must independently verify the listening gateway, its
+DNS handling, circuit behavior and identity separation before claiming
+anonymity. A
 malicious/misconfigured proxy, upstream network observer, or Tor exit can
 still observe metadata; a search provider receives the **plaintext query**
 over its HTTPS endpoint and can correlate query content and timing. Search
@@ -55,9 +63,11 @@ but external result URLs and third-party embeds require further auditing.
 
 ## Release gates
 
-1. Provision and independently verify a trusted local SOCKS5H privacy gateway
-   in a properly isolated Development/Staging environment; do not assume
-   binding a socket on port 9050 makes the gateway trustworthy.
+1. Provision and independently verify a genuine Tor SOCKS5H privacy gateway
+   in a properly isolated Development/Staging environment. The current
+   implementation's attestation is specifically **Tor-only**; another approved
+   privacy network would require its own independently verified implementation.
+   A process merely binding port 9050 is insufficient.
 2. Verify actual HTTPS provider request delivery through the gateway and
    **no direct traffic** when gateway connections fail, time out, or are
    interrupted. Include DNS resolution and image-proxy requests.
@@ -76,9 +86,12 @@ At this Development checkpoint, **seven anonymous egress regression cases**
 passed on the laptop: allowlist/denylist proxy parsing, no client creation
 without a valid relay, strict cURL/TLS/HTTPS guards, identity header and
 cookie stripping, and all registered network adapters inheriting the policy.
-The local GoreeCloud suite passed **152/152** cases. An actual local Search
-POST while the proxy was absent returned an error and no results; every
-registered network (15/15) reported private egress enforcement. A private
+The earlier local GoreeCloud suite passed **152/152** cases on the previous
+checkpoint. A fresh strict-Tor attestation and repeated-client test suite has
+been committed for CI validation, but no passing new-head CI is claimed here.
+An actual local Search POST while the proxy was absent returned an error and
+no results at the earlier checkpoint; every registered network (15/15)
+reported private egress enforcement. A private
 Granian no-provider listener smoke passed. Those checks do not establish
 production readiness or a functioning Tor relay.
 
