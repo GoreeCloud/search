@@ -16,6 +16,7 @@ os.environ.setdefault('SEARXNG_SECRET', 'synthetic-privacy-non-tor-verification-
 
 from curl_cffi import CurlOpt
 from curl_cffi.requests.exceptions import ProxyError
+from searx import enforce_branded_private_transport
 from searx.network.network import Network
 from searx.network.client import new_client
 
@@ -26,6 +27,22 @@ class NonTorEgressTests(unittest.TestCase):
             enable_http=False, proxies={}, privacy_proxy_required=True,
             privacy_egress_mode='server_masked', server_masked_acknowledged=True,
         )
+
+    def test_goreecloud_brand_cannot_disable_browser_private_transport(self):
+        for profile in ({}, {'private_search': False}, {'private_search': None}):
+            with self.subTest(profile=profile), self.assertRaises(ValueError):
+                enforce_branded_private_transport({
+                    'general': {'instance_name': 'GoreeCloud Search'},
+                    'goreecloud': profile,
+                })
+        enforce_branded_private_transport({
+            'general': {'instance_name': 'GoreeCloud Search'},
+            'goreecloud': {'private_search': True},
+        })
+        enforce_branded_private_transport({
+            'general': {'instance_name': 'Generic SearXNG'},
+            'goreecloud': {},
+        })
 
     def test_development_profiles_do_not_require_tor(self):
         import yaml
