@@ -92,5 +92,40 @@ class ImageProxyPrivacyTests(unittest.TestCase):
             self.assertEqual(target, request.call_args.kwargs['url'])
 
 
+    def test_only_raster_content_types_are_served(self):
+        target = 'https://images.example.org/untrusted'
+        signed = new_hmac(settings['server']['secret_key'], target.encode())
+        samples = (
+            ('image/png', 200),
+            ('image/webp; charset=binary', 200),
+            ('image/svg+xml', 400),
+            ('image/svg+xml; charset=utf-8', 400),
+            ('application/octet-stream', 400),
+            ('binary/octet-stream', 400),
+            ('text/html', 400),
+            ('image/png, text/html', 400),
+        )
+        with app.test_client() as client:
+            for media_type, expected in samples:
+                with self.subTest(media_type=media_type):
+                    upstream = SimpleNamespace(
+                        status_code=200,
+                        headers={'Content-Type': media_type},
+                        close=lambda: None,
+                    )
+                    with patch(
+                        'searx.webapp.http_stream',
+                        return_value=(upstream, iter([b'synthetic-raster-data']))
+                    ) as upstream_fetch:
+                        response = client.get(
+                            '/image_proxy',
+                            query_string={'url': target, 'h': signed},
+                        )
+                    self.assertEqual(expected, response.status_code)
+                    self.assertIs(False, upstream_fetch.call_args.kwargs['allow_redirects'])
+                    response.close()
+
+
+
 if __name__ == '__main__':
     unittest.main()
