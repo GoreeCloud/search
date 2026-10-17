@@ -66,10 +66,13 @@ class AnonymousEgressTests(unittest.TestCase):
             enable_http=False,
             proxies={'all://': 'socks5h://127.0.0.1:9050'},
             privacy_proxy_required=True,
+            using_tor_proxy=True,
         )
         client = Mock()
         client.is_closed = False
-        with patch('searx.network.network.new_client', return_value=client) as factory:
+        with patch('searx.network.network.new_client', return_value=client) as factory, patch.object(
+            Network, 'check_tor_proxy', new_callable=AsyncMock, return_value=True
+        ):
             self.assertIs(asyncio.run(n.get_client()), client)
             args = factory.call_args.args
             self.assertEqual({'all://': 'socks5h://127.0.0.1:9050'}, args[5])
@@ -114,11 +117,14 @@ class AnonymousEgressTests(unittest.TestCase):
             enable_http=False,
             proxies={'all://': 'socks5h://127.0.0.1:9050'},
             privacy_proxy_required=True,
+            using_tor_proxy=True,
         )
         from types import SimpleNamespace
         client = Mock(is_closed=False)
         client.request = AsyncMock(return_value=SimpleNamespace(status_code=200))
-        with patch('searx.network.network.new_client', return_value=client):
+        with patch('searx.network.network.new_client', return_value=client), patch.object(
+            Network, 'check_tor_proxy', new_callable=AsyncMock, return_value=True
+        ):
             asyncio.run(n.request(
                 'GET', 'https://search.example/?q=public',
                 headers={
@@ -139,6 +145,34 @@ class AnonymousEgressTests(unittest.TestCase):
         self.assertEqual('https://search.example/?q=public',
                          client.request.call_args.args[1])
 
+    def test_private_network_never_skips_tor_verification(self):
+        n = Network(
+            enable_http=False,
+            proxies={'all://': 'socks5h://127.0.0.1:9050'},
+            privacy_proxy_required=True, using_tor_proxy=False,
+        )
+        with patch('searx.network.network.new_client') as client:
+            with self.assertRaises(ProxyError):
+                asyncio.run(n.get_client())
+            client.assert_not_called()
+
+    def test_unverified_tor_exit_never_reaches_provider(self):
+        n = Network(
+            enable_http=False,
+            proxies={'all://': 'socks5h://127.0.0.1:9050'},
+            privacy_proxy_required=True, using_tor_proxy=True,
+        )
+        client = Mock(is_closed=False)
+        client.aclose = AsyncMock()
+        with patch('searx.network.network.new_client', return_value=client), patch.object(
+            Network, 'check_tor_proxy', new_callable=AsyncMock, return_value=False
+        ) as checker:
+            with self.assertRaises(ProxyError):
+                asyncio.run(n.get_client())
+        checker.assert_awaited_once()
+        client.aclose.assert_awaited_once()
+        client.request.assert_not_called()
+
     def test_private_profile_has_strict_egress_policy(self):
         import test_runtime_smoke as smoke
         from searx.network.network import NETWORKS
@@ -147,8 +181,9 @@ class AnonymousEgressTests(unittest.TestCase):
             'socks5h://127.0.0.1:9050',
             smoke.settings['outgoing']['proxies']['all://'],
         )
+        self.assertTrue(smoke.settings['outgoing']['using_tor_proxy'])
         self.assertTrue(NETWORKS)
-        self.assertTrue(all(n.privacy_proxy_required for n in NETWORKS.values()))
+        self.assertTrue(all(n.privacy_proxy_required and n.using_tor_proxy for n in NETWORKS.values()))
 
 
 if __name__ == '__main__':
