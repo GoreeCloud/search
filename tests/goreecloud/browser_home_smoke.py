@@ -645,7 +645,12 @@ def main() -> None:
                     assert button.is_displayed(), label
                     assert button.get_attribute('formmethod') == 'post'
                     driver.find_element(By.ID, 'q').send_keys('GoreeCloud')
-                    driver.execute_script("arguments[0].scrollIntoView({block:'center'})", button)
+                    driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", button)
+                    WebDriverWait(driver, 5).until(lambda page: page.execute_script(
+                        "const r=arguments[0].getBoundingClientRect();"
+                        "const el=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);"
+                        "return r.top>=0 && r.bottom<=innerHeight && arguments[0].contains(el);",
+                        button))
                     print('NATIVE_VIEWPORT', label, driver.execute_script('return [innerWidth,innerHeight]'), flush=True)
                     button.click()
                     WebDriverWait(driver, 12).until(lambda page: page.current_url.endswith('/native-search'))
