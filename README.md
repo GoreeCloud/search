@@ -8,11 +8,13 @@ Privacy-focused, configurable federated search rebuilt from the SearXNG source e
 
 The experimental [native Search foundation](docs/goreecloud/NATIVE-SEARCH-FOUNDATION.md)
 provides a separately testable SQLite FTS5 index, an explicitly seeded HTTPS
-crawler, and a loopback-only JSON search service. It **does not** yet replace
-the existing three-provider SearXNG-backed Search application, run any
-scheduled crawl, or expose a native source on search-dev.goreecloud.com.
-Publisher permissions and production/privacy qualification are required
-before broader crawling or rollout.
+crawler, and a loopback-only JSON search service. Its approved-document index
+is available only as a separately enabled Development source: it does **not**
+replace SearXNG, automatically join the seven-family All Sources federation,
+index the general web, or schedule crawling. Whether that opt-in source is
+available depends on the deployed Development configuration. Publisher
+permissions and production/privacy qualification are required before broader
+crawling or rollout.
 
 ## Working implementation
 
@@ -36,6 +38,20 @@ Never use the upstream placeholder key. The profile binds **127.0.0.1**, disable
 ## Private search disclosure safeguards
 
 The local profile now rejects query-bearing GET requests, preserves POST even on Android/WebKit, and disables caching for private search pages. It also refuses non-loopback Host headers and browser cross-origin/cross-site form submissions before any search dispatch (a limited DNS-rebinding/CSRF defense), and caps search/preview form bodies at 64 KiB. Local non-browser clients can omit Origin headers; browser POSTs with opaque `Origin: null` are accepted only when `Sec-Fetch-Site: same-origin` explicitly confirms local origin, matching a verified Chromium form submission. This limited boundary defense is not a substitute for public authentication or abuse prevention. Query-length and distinct-provider limits are set to 512 characters and **seven provider families** respectively; searches exceeding these limits return 413/422 rather than silently expanding disclosure. Private result pages omit query-bearing RSS/share URL metadata, and the private homepage does not advertise OpenSearch GET-query registration; the private server also returns uncached 404 responses for direct OpenSearch and autocomplete endpoints until an appropriately safe browser integration is qualified. The privacy-sensitive preferences for POST transport, title disclosure, autocomplete, favicons, and image proxy are locked against cookie and request overrides. The private profile also rejects external-bang redirects and first-result (double exclamation mark) navigation before dispatch; unexpected provider/plugin redirects are refused instead of navigating the browser to a third-party site. Query length is validated on the submitted value before operator parsing. The explicitly allowlisted provider shortcuts cover Brave, Startpage, Qwant, DuckDuckGo, Ecosia, Bing and Google, plus general/web category shortcuts. Unknown or third-party bangs are rejected rather than silently falling back; unsupported providers cannot be selected or dispatched. Shared serialized-preference GET/POST imports are rejected before parsing because upstream can otherwise change selected providers by following a URL; regular local Preferences forms remain available. Primary HTML/JSON search result links are restricted to well-formed HTTP(S) addresses, rejecting malformed or zero ports and invisible Unicode control characters. These safeguards do not cover all embedded or secondary URLs, cannot prevent configured upstream providers from receiving queries, and do not establish anonymity or production security acceptance.
+
+## Relay and anonymity qualification
+
+All seven configured provider families require the approved local SOCKS5H proxy,
+including image-proxy traffic; there is no authorized direct fallback. **A SOCKS5H
+setting does not prove that the relay is Tor.** On this Development candidate the
+effective `outgoing.using_tor_proxy` setting is false, so the SearXNG Tor-exit
+attestation is **not yet enforced**. Before any promotion, integrate the positive
+Tor-exit guard, qualify fail-closed behavior across provider and image sessions,
+and verify relay identity, DNS isolation, and rollback in the target environment.
+The upstream providers can still receive the plaintext search terms over HTTPS,
+and browser clicks can reveal client details to result destinations. See
+[security boundaries](docs/goreecloud/SECURITY-BOUNDARIES.md) and
+[draft Search PR #29](https://github.com/GoreeCloud/search/pull/29).
 
 ## Search preview (no provider requests)
 
