@@ -1,0 +1,18 @@
+{% if private_query_transport and selected_engine_post %}
+{% set source = 'startpage images' if 'images' in selected_categories else ('startpage news' if 'news' in selected_categories else ('startpage' if 'general' in selected_categories else '')) %}
+{% if source and source in selected_engine_post.split(',') and selected_engine_post.split(',')|length > 1 %}
+<form class="goreecloud-try-startpage goreecloud-empty-retry" method="post" action="{{ url_for('search') }}">
+<input type="hidden" name="q" value="{{ source_switch_query }}">
+<input type="hidden" name="engines" value="{{ source }}">
+{% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}
+<input type="hidden" name="pageno" value="{{ pageno }}">
+<input type="hidden" name="language" value="{{ current_language }}">
+<input type="hidden" name="time_range" value="{{ time_range }}">
+<input type="hidden" name="safesearch" value="{{ safesearch }}">
+<input type="hidden" name="theme" value="{{ theme }}">
+{% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}">{% endif %}
+<button type="submit">Try Startpage only</button>
+</form>
+<p>Optional: searches only Startpage after you click; saved provider preferences do not change.</p>
+{% endif %}
+{% endif %}
