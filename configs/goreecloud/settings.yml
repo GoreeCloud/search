@@ -105,7 +105,7 @@ engines:
   - name: google news
     disabled: false
     inactive: false
-# Only categories backed by approved Brave Search, Startpage or Qwant adapters.
+# Categories are restricted to the approved seven-family adapter allowlist (Web, Images, Videos, News).
 categories_as_tabs:
   general:
   images:
