@@ -18,6 +18,7 @@
     <button type="submit">Retry same sources</button>
   </form>
   {% endif %}
+  {% if unresponsive_engines and (results or answers) %}{% include 'simple/goreecloud_try_startpage.html' %}{% endif %}
   <p>Change default engines in <a href="{{ url_for('preferences') }}">Settings</a>.</p>
 </details>
 {% endif %}

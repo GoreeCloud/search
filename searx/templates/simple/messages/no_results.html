@@ -22,6 +22,7 @@
         <button type="submit">Retry selected sources</button>
       </form>
       <p>Retrying sends the search terms to the same selected providers again. You can also change the query or select another approved source above.</p>
+      {% include 'simple/goreecloud_try_startpage.html' %}
     {% elif pageno == 1 %}
       <p>No matches were returned by the selected sources. Try different search terms, another search category, or choose Brave Search, Startpage, or Qwant in Settings.</p>
     {% else %}

@@ -523,3 +523,25 @@ html[data-glaze-consumer] .goreecloud-settings-link svg {
     background: Canvas; color: CanvasText; border-color: CanvasText;
   }
 }
+
+/* Explicit provider-specific recovery is secondary to retrying the selected
+   sources. Do not style it as an automatic failover or mutate preferences. */
+html[data-glaze-consumer] .goreecloud-try-startpage { margin: 7px 0 3px; }
+html[data-glaze-consumer] .goreecloud-try-startpage button {
+  min-height: 44px; padding: 8px 13px; border-radius: 11px;
+  background: var(--gc-surface); border: 1px solid var(--gc-accent-strong);
+  color: var(--gc-accent-strong); font: inherit; font-size: 13px;
+  font-weight: 650; cursor: pointer;
+}
+html[data-glaze-consumer] .goreecloud-try-startpage button:focus-visible {
+  outline: 3px solid var(--gc-ring); outline-offset: 3px;
+}
+html[data-glaze-consumer] .goreecloud-try-startpage + p {
+  margin: 4px 0 14px; font-size: 12px;
+  color: var(--gc-muted); line-height: 1.5;
+}
+@media (forced-colors: active) {
+  html[data-glaze-consumer] .goreecloud-try-startpage button {
+    background: ButtonFace; border-color: ButtonText; color: ButtonText;
+  }
+}
