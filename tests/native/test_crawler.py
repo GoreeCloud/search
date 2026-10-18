@@ -50,6 +50,21 @@ class CrawlerTests(unittest.TestCase):
         self.assertNotIn('https://example.org/blocked', fetcher.calls)
         self.assertEqual(2, len(self.store.search('native')))
 
+    def test_robots_request_is_counted_for_initial_politeness_delay(self):
+        requests = FixtureFetcher({
+            'https://example.org/robots.txt': response(
+                'User-agent: *\nAllow: /\nCrawl-delay: 2', content_type='text/plain'),
+            'https://example.org/': response('<title>Example</title><p>One indexed page</p>'),
+        })
+        waits = []
+        plan = CrawlPlan(self.host, max_pages=1, max_depth=0)
+        result = Crawler(self.store, plan, fetcher=requests, sleeper=waits.append).crawl(
+            ['https://example.org/'])
+        self.assertEqual(1, result['indexed'])
+        self.assertTrue(waits)
+        self.assertGreater(waits[0], 1.5)
+        self.assertLessEqual(waits[0], 2.0)
+
     def test_noindex_nofollow_and_meta_excluded(self):
         fetcher = FixtureFetcher({
             'https://example.org/robots.txt': response('User-agent: *\nAllow: /', content_type='text/plain'),

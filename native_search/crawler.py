@@ -170,6 +170,9 @@ class Crawler:
                 raise ValueError('Cannot verify text/plain robots.txt; refusing to crawl')
             policy = RobotFileParser()
             policy.parse(response.body.decode('utf-8', errors='replace').splitlines())
+            # robots.txt is itself a host request: apply politeness before the
+            # first HTML fetch, not just between later HTML pages.
+            self.last_request[host] = time.monotonic()
             self.robots[host] = policy
         return self.robots[host]
 

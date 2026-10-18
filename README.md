@@ -4,6 +4,16 @@ Privacy-focused, configurable federated search rebuilt from the SearXNG source e
 
 **Lifecycle:** Development only. The [VPN-only VPS deployment profile](deploy/vps/README.md) is not a public release. **Upstream:** SearXNG `f4822b3`. **Glaze:** V1.7 / 1.7.0 inherited foundation, partial mapping (not formally accepted).
 
+## Native Search foundation (isolated Development)
+
+The experimental [native Search foundation](docs/goreecloud/NATIVE-SEARCH-FOUNDATION.md)
+provides a separately testable SQLite FTS5 index, an explicitly seeded HTTPS
+crawler, and a loopback-only JSON search service. It **does not** yet replace
+the existing three-provider SearXNG-backed Search application, run any
+scheduled crawl, or expose a native source on search-dev.goreecloud.com.
+Publisher permissions and production/privacy qualification are required
+before broader crawling or rollout.
+
 ## Working implementation
 
 The private Development profile allowlists three upstream provider families: **Brave Search, Startpage and Qwant**. All three are selected by default; source selection lives in Settings, rather than the uncluttered homepage. Only the approved general, image, video and news adapters for these families can be dispatched (Videos: Brave and Qwant; there is no Startpage video adapter). Other inherited SearXNG providers, including the Brave API, are excluded. The private profile defaults to SafeSearch **None**, with user-controllable restrictions. Local HTML search and an unauthenticated loopback-only JSON extension remain available; neither provider inclusion nor a green test establishes real provider reachability. GoreeCloud Index, AI answers, business search, and alerting are not part of this implementation.
