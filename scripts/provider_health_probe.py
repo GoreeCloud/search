@@ -15,7 +15,7 @@ from urllib.parse import urlsplit, urlencode
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 QUERY = 'goreecloud synthetic provider verification'
-SOURCES = ('brave', 'startpage')
+SOURCES = ('brave', 'startpage', 'qwant')
 MAX_BYTES = 1024 * 1024
 
 
