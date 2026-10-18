@@ -545,3 +545,31 @@ html[data-glaze-consumer] .goreecloud-try-startpage + p {
     background: ButtonFace; border-color: ButtonText; color: ButtonText;
   }
 }
+
+/* Explicit native Development opt-in; does not alter the default Web search action. */
+html[data-glaze-consumer] .goreecloud-native-choose {
+  min-height: 42px;
+  padding: 7px 12px;
+  border: 1px solid currentColor;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+html[data-glaze-consumer] .goreecloud-native-choose span {
+  font-size: 11px;
+  opacity: .72;
+}
+html[data-glaze-consumer] .goreecloud-native-choose:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 2px;
+}
+@media (forced-colors: active) {
+  html[data-glaze-consumer] .goreecloud-native-choose {
+    background: ButtonFace;
+    color: ButtonText;
+    border-color: ButtonText;
+  }
+}

@@ -63,6 +63,7 @@ from searx.result_types import Answer
 from searx.settings_defaults import OUTPUT_FORMATS
 from searx.settings_loader import DEFAULT_SETTINGS_FILE
 from searx.exceptions import SearxParameterException
+from searx.goreecloud_native_dev import native_dev_available, serve_native_development
 from searx.goreecloud_policy import (
     SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
     distinct_selected_sources, safe_primary_result_url, represented_result_sources, validate_builtin_sources,
@@ -448,6 +449,7 @@ def render(template_name: str, **kwargs):
     # values from settings
     kwargs['search_formats'] = [x for x in settings['search']['formats'] if x != 'html']
     kwargs['private_query_transport'] = settings['goreecloud']['private_search']
+    kwargs['goreecloud_native_dev_enabled'] = native_dev_available()
     if settings['goreecloud']['private_search']:
         chosen_source = stored_search_source(flask.request.cookies.get(SEARCH_SOURCE_COOKIE))
         available_tabs = []
@@ -516,7 +518,7 @@ def pre_request():
             fetch_site=sxng_request.headers.get('Sec-Fetch-Site'),
             allowed_public_host=os.environ.get('GOREECLOUD_SEARCH_PRIVATE_HOST'),
         )
-        if sxng_request.method == 'POST' and sxng_request.path in ('/', '/search', '/preview'):
+        if sxng_request.method == 'POST' and sxng_request.path in ('/', '/search', '/preview', '/native-search'):
             # The user query is capped at 512 characters; other form fields
             # must not enable an unbounded request-body memory allocation.
             sxng_request.max_content_length = 65536
@@ -599,7 +601,7 @@ def add_default_headers(response: flask.Response):
             continue
         response.headers[header] = value
     if settings['goreecloud']['private_search'] and (
-        sxng_request.endpoint in ('index', 'search', 'goreecloud_preview', 'autocompleter', 'opensearch', 'preferences')
+        sxng_request.endpoint in ('index', 'search', 'goreecloud_preview', 'goreecloud_native_search', 'autocompleter', 'opensearch', 'preferences')
         or sxng_request.path == '/preview'
         or 'preferences' in sxng_request.args
         or 'preferences' in sxng_request.__dict__.get('form', ())
@@ -810,6 +812,14 @@ def goreecloud_preview():
         selected_locale_preview=selected_locale, selected_safesearch=query.safesearch,
         replay_fields=replay,
     )
+
+
+@app.route('/native-search', methods=['GET', 'POST'])
+def goreecloud_native_search():
+    """An explicitly chosen native Development source; no provider fanout."""
+    if not native_dev_available():
+        flask.abort(404)
+    return serve_native_development(sxng_request, render)
 
 
 @app.route('/search', methods=['GET', 'POST'])
