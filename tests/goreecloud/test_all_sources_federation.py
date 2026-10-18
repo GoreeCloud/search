@@ -111,6 +111,22 @@ class AllSourcesFederationTests(unittest.TestCase):
         self.assertEqual('First snippet', results[0].content)
         self.assertEqual([], list(goreecloud_ecosia.response(Response('<html><body></body></html>'))))
 
+        current_markup = '''<html><body>
+            <div data-test-id="mainline-result-ad">
+                <a data-test-id="result-link" href="https://ads.example.org/offer">Paid placement</a>
+            </div>
+            <div data-test-id="mainline-result-web">
+                <a data-test-id="result-link" href="https://docs.example.net/source">
+                    <span data-test-id="result-title">Search result title</span>
+                </a>
+                <span data-test-id="result-description">Source description</span>
+            </div></body></html>'''
+        modern = goreecloud_ecosia.response(Response(current_markup))
+        self.assertEqual(1, len(modern))
+        self.assertEqual('Search result title', modern[0].title)
+        self.assertEqual('https://docs.example.net/source', modern[0].url)
+        self.assertEqual('Source description', modern[0].content)
+
 
 if __name__ == '__main__':
     unittest.main()

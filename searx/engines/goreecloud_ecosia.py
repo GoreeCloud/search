@@ -36,20 +36,22 @@ def response(resp):
     """Only publish explicit external HTTPS links from recognizable result cards."""
     page = resp.html()
     if page.xpath(
-        '//*[contains(translate(@id,"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"),"captcha") '
+        '//input[@name="cf-turnstile-response"]'
+        ' | //*[contains(translate(@id,"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"),"captcha") '
         'or contains(translate(@class,"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"),"captcha")]'
     ):
         raise SearxEngineAccessDeniedException(message="Ecosia challenged the private search relay")
     results = EngineResults()
     seen = set()
     cards = page.xpath(
-        '//*[@data-test-id="result" or @data-testid="result"]'
+        '//*[@data-test-id="mainline-result-web" or @data-test-id="result" or @data-testid="result"]'
         ' | //article[contains(concat(" ", normalize-space(@class), " "), " result ")]'
         ' | //div[contains(concat(" ", normalize-space(@class), " "), " result ")]'
     )
     for card in cards:
         links = card.xpath(
-            './/h2//a[@href] | .//h3//a[@href]'
+            './/a[@data-test-id="result-link"][@href]'
+            ' | .//h2//a[@href] | .//h3//a[@href]'
             ' | .//a[contains(@class,"result__link")][@href]'
             ' | .//a[contains(@class,"result-title")][@href]'
         )
@@ -57,7 +59,8 @@ def response(resp):
             continue
         link = links[0]
         target = link.get("href", "")
-        title = extract_text(link).strip()
+        titles = card.xpath('.//*[@data-test-id="result-title"]')
+        title = (extract_text(titles[0]) if titles else extract_text(link)).strip()
         if not title or not safe_primary_result_url(target):
             continue
         # Direct outgoing result links only; never expose Ecosia click trackers.
@@ -68,7 +71,8 @@ def response(resp):
             continue
         seen.add(target)
         descriptions = card.xpath(
-            './/*[contains(@class,"description") or contains(@class,"snippet") or @data-test-id="snippet"]'
+            './/*[contains(@class,"description") or contains(@class,"snippet") '
+            'or @data-test-id="snippet" or @data-test-id="result-description"]'
         )
         content = extract_text(descriptions[0]).strip() if descriptions else ""
         results.add(results.types.MainResult(url=target, title=title, content=content))

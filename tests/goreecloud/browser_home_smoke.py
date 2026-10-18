@@ -354,7 +354,7 @@ def main() -> None:
             retry = driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry button')
             assert retry.is_displayed() and retry.rect['height'] >= 44, 'Mobile error retry inaccessible'
             assert 'reported an error' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').text
-            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry input[name="engines"]').get_attribute('value') == 'brave,qwant,startpage'
+            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry input[name="engines"]').get_attribute('value') == 'bing,brave,duckduckgo,ecosia,google,qwant,startpage'
             driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", retry)
             WebDriverWait(driver, 8).until(lambda page: page.execute_script(
                 "const r=arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;",
@@ -364,7 +364,7 @@ def main() -> None:
             WebDriverWait(driver, 12).until(lambda page: failed.call_count == 2)
             assert driver.current_url.endswith('/search'), 'Retry left the private result route'
             assert not driver.execute_script('return location.search'), 'Retry leaked search terms into URL'
-            assert driver.find_element(By.CSS_SELECTOR, 'form#search input[name="engines"]').get_attribute('value') == 'brave,qwant,startpage'
+            assert driver.find_element(By.CSS_SELECTOR, 'form#search input[name="engines"]').get_attribute('value') == 'bing,brave,duckduckgo,ecosia,google,qwant,startpage'
         print('PASS mobile explicit same-source retry, no fallback, and POST URL privacy')
 
         # Layout contract with eight real template cards but NO provider
@@ -603,7 +603,7 @@ def main() -> None:
             previous = driver.find_element(By.CSS_SELECTOR, '.goreecloud-previous-results button')
             assert previous.is_displayed() and previous.rect['height'] >= 44, 'Previous page touch action is too small'
             assert driver.find_element(By.CSS_SELECTOR,
-                '.goreecloud-previous-results input[name="engines"]').get_attribute('value') == 'brave,qwant,startpage'
+                '.goreecloud-previous-results input[name="engines"]').get_attribute('value') == 'bing,brave,duckduckgo,ecosia,google,qwant,startpage'
             assert driver.find_element(By.CSS_SELECTOR,
                 '.goreecloud-previous-results input[name="pageno"]').get_attribute('value') == '1'
             assert not driver.execute_script('return location.search'), 'Later-page query entered URL'
@@ -618,7 +618,7 @@ def main() -> None:
             assert not driver.execute_script('return location.search'), 'Previous page leaked query into URL'
             assert not driver.find_elements(By.CSS_SELECTOR, '.goreecloud-previous-results')
             assert driver.find_element(By.CSS_SELECTOR,
-                'form#search input[name="engines"]').get_attribute('value') == 'brave,qwant,startpage'
+                'form#search input[name="engines"]').get_attribute('value') == 'bing,brave,duckduckgo,ecosia,google,qwant,startpage'
         print('PASS phone previous-page POST recovery and exact saved-source continuity')
 
         # Exercise a synthetic denied URL without dispatching a search.
