@@ -5,7 +5,11 @@
   </h2>
   {% if private_query_transport %}
     {% if pageno == 1 and unresponsive_engines %}
+      {% if 'images' in selected_categories %}
+      <p>No images were returned by the selected sources. At least one provider reported an error or timed out. Review the source messages for details; no replacement provider was selected automatically.</p>
+      {% else %}
       <p>At least one selected search source reported an error, so results may be incomplete. Review the source messages for details. No replacement provider was selected automatically.</p>
+      {% endif %}
       <form class="goreecloud-empty-retry" method="post" action="{{ url_for('search') }}">
         <input type="hidden" name="q" value="{{ source_switch_query }}">
         <input type="hidden" name="engines" value="{{ selected_engine_post }}">
