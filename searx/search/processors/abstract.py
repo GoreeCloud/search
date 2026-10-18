@@ -182,6 +182,11 @@ class EngineProcessor(ABC):
         exception_or_message: BaseException | str,
         suspend: bool = False,
     ):
+        # The search coordinator has already recorded the timeout at its
+        # deadline. A late worker must not replace that state, inflate error
+        # metrics, or attempt to write into an already-closed result set.
+        if getattr(threading.current_thread(), '_timeout', False):
+            return
         # update result_container
         if isinstance(exception_or_message, BaseException):
             exception_class = exception_or_message.__class__
@@ -228,13 +233,13 @@ class EngineProcessor(ABC):
         search_results: "list[Result | LegacyResult]|None",
     ):
         if getattr(threading.current_thread(), '_timeout', False):
-            # the main thread is not waiting anymore
-            self.handle_exception(result_container, 'timeout', False)
-        else:
-            # check if the engine accepted the request
-            if search_results is not None:
-                self._extend_container_basic(result_container, start_time, search_results)
-            self.suspended_status.resume()
+            # The coordinator has reported this engine as timed out. Discard
+            # late results rather than mutating a closed response container.
+            return
+        # check if the engine accepted the request
+        if search_results is not None:
+            self._extend_container_basic(result_container, start_time, search_results)
+        self.suspended_status.resume()
 
     def extend_container_if_suspended(self, result_container: "ResultContainer") -> bool:
         if self.suspended_status.is_suspended:
