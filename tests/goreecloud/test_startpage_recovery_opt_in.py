@@ -23,9 +23,9 @@ class StartpageRecoveryTests(unittest.TestCase):
 
     def test_explicit_recovery_preserves_query_filters_and_post_only(self):
         for category, names, only in (
-            ('general', 'brave,startpage,qwant', 'startpage'),
-            ('images', 'brave.images,startpage images,qwant images', 'startpage images'),
-            ('news', 'brave.news,startpage news,qwant news', 'startpage news'),
+            ('general', 'brave,startpage,qwant,duckduckgo,ecosia,bing,google', 'startpage'),
+            ('images', 'brave.images,startpage images,qwant images,duckduckgo images,bing images,google images', 'startpage images'),
+            ('news', 'brave.news,startpage news,qwant news,duckduckgo news,bing news,google news', 'startpage news'),
         ):
             with self.subTest(category=category):
                 data = {'q': 'synthetic <private> & "terms"',
@@ -54,7 +54,7 @@ class StartpageRecoveryTests(unittest.TestCase):
             ('brave', 'general'),
             ('startpage', 'general'),
             ('qwant images,brave.images', 'images'),
-            ('brave.videos,qwant videos', 'videos'),
+            ('brave.videos,qwant videos,duckduckgo videos,bing videos,google videos', 'videos'),
         ):
             with self.subTest(engines=engines):
                 response, forms = self._search({
@@ -66,7 +66,7 @@ class StartpageRecoveryTests(unittest.TestCase):
 
     def test_no_recovery_without_provider_errors(self):
         response, forms = self._search({
-            'q': 'synthetic', 'engines': 'brave,startpage,qwant',
+            'q': 'synthetic', 'engines': 'brave,startpage,qwant,duckduckgo,ecosia,bing,google',
         }, mock=OfflineSearch)
         self.assertFalse(forms)
         response.close()

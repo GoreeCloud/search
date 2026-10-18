@@ -18,10 +18,10 @@ class TwoProviderContractTests(unittest.TestCase):
         configured = smoke.settings['engines']
         self.assertEqual(BUILTIN_SEARCH_SOURCES, {engine['name'] for engine in configured})
         self.assertEqual(BUILTIN_SEARCH_SOURCES, set(registered_engines))
-        self.assertEqual(11, len(configured))
+        self.assertEqual(24, len(configured))
         self.assertTrue(all(not engine.get('disabled', False) for engine in configured))
         self.assertTrue(all(not engine.get('inactive', False) for engine in configured))
-        self.assertEqual(3, smoke.settings['goreecloud']['max_provider_fanout'])
+        self.assertEqual(7, smoke.settings['goreecloud']['max_provider_fanout'])
         self.assertEqual(['general','images','videos','news'], list(smoke.settings['categories_as_tabs']))
 
     def test_home_preferences_and_preview_have_only_two_built_in_sources(self):
@@ -34,19 +34,19 @@ class TwoProviderContractTests(unittest.TestCase):
             self.assertEqual(200, preferences.status_code)
             fields = html.fromstring(preferences.data).xpath('//input[starts-with(@name,"engine_")]/@name')
             self.assertTrue({'engine_brave__general','engine_startpage__general','engine_qwant__general'}.issubset(set(fields)))
-            self.assertGreaterEqual(len(fields), 11)
+            self.assertGreaterEqual(len(fields), 24)
             preferences.close()
             preview = client.post('/preview', data={'q':'synthetic source preflight','format':'json'}, headers=self.headers)
             self.assertEqual(200, preview.status_code)
-            self.assertEqual(['brave','qwant','startpage'], preview.json['goreecloud']['selected_engines'])
+            self.assertEqual(['bing','brave','duckduckgo','ecosia','google','qwant','startpage'], preview.json['goreecloud']['selected_engines'])
             self.assertIs(False, preview.json['goreecloud']['network_requests_made'])
             preview.close()
             dispatcher.assert_not_called()
 
     def test_unknown_explicit_engine_never_falls_back_to_other_provider(self):
         with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins') as dispatcher:
-            for engine in ('google','duckduckgo','braveapi','brave.goggles','startpage videos',
-                           'brave,startpage,google','', 'BRAVE', 'brave,,startpage'):
+            for engine in ('wikipedia','braveapi','brave.goggles','startpage videos',
+                           'brave,startpage,wikipedia','', 'BRAVE', 'brave,,startpage'):
                 for route in ('/search','/preview'):
                     with self.subTest(engine=engine,route=route):
                         reply = client.post(route, data={'q':'synthetic','engines':engine,'format':'json'},
@@ -60,7 +60,7 @@ class TwoProviderContractTests(unittest.TestCase):
 
     def test_each_approved_engine_can_be_selected_without_others(self):
         with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins', OfflineSearch):
-            for engine in ('brave','startpage','qwant'):
+            for engine in ('brave','startpage','qwant','duckduckgo','ecosia','bing','google'):
                 for route in ('/search','/preview'):
                     with self.subTest(engine=engine, route=route):
                         response=client.post(route,data={'q':'synthetic', 'engines':engine, 'format':'json'},
@@ -70,7 +70,7 @@ class TwoProviderContractTests(unittest.TestCase):
                         response.close()
 
     def test_unsupported_or_empty_parsed_sources_are_rejected(self):
-        for labels in ([], ['brave','google'], ['startpage','braveapi'], ['braveapi']):
+        for labels in ([], ['brave','wikipedia'], ['startpage','braveapi'], ['braveapi']):
             with self.subTest(labels=labels), self.assertRaises(SearchPolicyViolation):
                 validate_builtin_sources(labels)
         self.assertEqual(3,validate_builtin_sources(['brave','startpage','qwant']))
@@ -79,14 +79,14 @@ class TwoProviderContractTests(unittest.TestCase):
         with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins', side_effect=OfflineSearch) as dispatcher:
             for bang, names in (('!br', ['brave']), ('!brave', ['brave']),
                                 ('!sp', ['startpage']), ('!startpage', ['startpage']),
-                                ('!general', ['brave','qwant','startpage'])):
+                                ('!general', ['bing','brave','duckduckgo','ecosia','google','qwant','startpage'])):
                 with self.subTest(approved=bang):
                     reply = client.post('/preview', data={'q':bang+' synthetic', 'format':'json'}, headers=self.headers)
                     self.assertEqual(200,reply.status_code)
                     self.assertEqual(names,reply.json['goreecloud']['selected_engines'])
                     reply.close()
             dispatcher.assert_not_called()
-            for rejected in ('!google', '!ddg', '!bing', '!braveapi', '!brave.images',
+            for rejected in ('!wikipedia', '!braveapi', '!brave.images',
                              '!!g', '!!unknown', '!news'):
                 for route in ('/preview', '/search'):
                     with self.subTest(rejected=rejected,route=route):

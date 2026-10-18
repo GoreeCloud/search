@@ -176,14 +176,14 @@
     {% if private_query_transport %}
     <fieldset class="goreecloud-provider-preferences">
       <legend>Search engines</legend>
-      <p>Choose the sources used for regular searches. All three are selected by default. This preference is saved only in this browser.</p>
-      {% for source_value, source_label in [('both', 'All three providers'), ('brave', 'Brave Search only'), ('startpage', 'Startpage only'), ('qwant', 'Qwant only')] %}
+      <p>Choose the sources used for regular searches. All Sources is selected by default, merging matching URLs across approved search engines. This preference is saved only in this browser.</p>
+      {% for source_value, source_label in [('all', 'All Sources'), ('brave', 'Brave Search'), ('startpage', 'Startpage'), ('qwant', 'Qwant'), ('duckduckgo', 'DuckDuckGo'), ('ecosia', 'Ecosia'), ('bing', 'Bing'), ('google', 'Google')] %}
       <label class="goreecloud-provider-option">
         <input type="radio" name="goreecloud_sources" value="{{ source_value }}" {% if goreecloud_source_choice == source_value %}checked{% endif %}>
         <span>{{ source_label }}</span>
       </label>
       {% endfor %}
-      <p class="goreecloud-preference-note">Search terms go only to the selected sources. Web, Images and News support all three providers. Videos supports Brave and Qwant. Startpage-only disables Videos. Blocked providers are never replaced automatically.</p>
+      <p class="goreecloud-preference-note">All Sources combines available engines per category. Ecosia supports Web only; Startpage has no Videos adapter. Unsupported single-engine categories are disabled. Search terms reach each selected external engine through the required anonymity relay. Blocked engines are not silently replaced. The native crawler/index is a separate development-only opt-in.</p>
     </fieldset>
     {% endif %}
     {%- if 'categories' not in locked_preferences -%}

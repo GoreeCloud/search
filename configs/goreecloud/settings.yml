@@ -1,4 +1,4 @@
-# Private/local GoreeCloud Search: exactly three approved provider families.
+# Private/local GoreeCloud Search: approved federated provider families.
 # Brave Search is the search service (not the Brave Browser executable).
 # Startpage's upstream connector may be challenged by proof-of-work CAPTCHA.
 # Do not use this profile unchanged for an Internet-facing instance.
@@ -16,6 +16,19 @@ use_default_settings:
       - qwant images
       - qwant videos
       - qwant news
+      - duckduckgo
+      - duckduckgo images
+      - duckduckgo videos
+      - duckduckgo news
+      - ecosia
+      - bing
+      - bing images
+      - bing videos
+      - bing news
+      - google
+      - google images
+      - google videos
+      - google news
 engines:
   - name: brave
     disabled: false
@@ -50,6 +63,48 @@ engines:
   - name: qwant news
     disabled: false
     inactive: false
+  - name: duckduckgo
+    disabled: false
+    inactive: false
+  - name: duckduckgo images
+    disabled: false
+    inactive: false
+  - name: duckduckgo videos
+    disabled: false
+    inactive: false
+  - name: duckduckgo news
+    disabled: false
+    inactive: false
+  - name: ecosia
+    engine: goreecloud_ecosia
+    shortcut: eco
+    categories: [general]
+    disabled: false
+    inactive: false
+  - name: bing
+    disabled: false
+    inactive: false
+  - name: bing images
+    disabled: false
+    inactive: false
+  - name: bing videos
+    disabled: false
+    inactive: false
+  - name: bing news
+    disabled: false
+    inactive: false
+  - name: google
+    disabled: false
+    inactive: false
+  - name: google images
+    disabled: false
+    inactive: false
+  - name: google videos
+    disabled: false
+    inactive: false
+  - name: google news
+    disabled: false
+    inactive: false
 # Only categories backed by approved Brave Search, Startpage or Qwant adapters.
 categories_as_tabs:
   general:
@@ -59,7 +114,7 @@ categories_as_tabs:
 goreecloud:
   private_search: true
   max_query_chars: 512
-  max_provider_fanout: 3
+  max_provider_fanout: 7
   # Required for every provider and image-proxy outbound request.
   # The local SOCKS5H gateway must be independently verified as a privacy relay.
   require_anonymous_egress: true

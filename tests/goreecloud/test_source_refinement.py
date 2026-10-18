@@ -52,6 +52,6 @@ class SourceRefinementTests(unittest.TestCase):
                                    headers={'X-Real-IP':'127.0.0.1'})
             self.assertEqual(422, response.status_code)
             self.assertNotIn(risky, response.get_data(as_text=True))
-            self.assertIn(b'Only Brave Search, Startpage and Qwant are available', response.data)
+            self.assertIn(b'Only approved GoreeCloud Search sources are available', response.data)
             fake.assert_not_called()
             response.close()

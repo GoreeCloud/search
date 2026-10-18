@@ -12,13 +12,13 @@ class QwantIntegrationTests(unittest.TestCase):
 
     def test_all_three_are_allowed_and_none_is_default_safesearch(self):
         self.assertEqual(0, smoke.settings['search']['safe_search'])
-        self.assertEqual(3, smoke.settings['goreecloud']['max_provider_fanout'])
-        self.assertEqual('both', stored_search_source(None))
+        self.assertEqual(7, smoke.settings['goreecloud']['max_provider_fanout'])
+        self.assertEqual('all', stored_search_source(None))
         for category, expected in (
-            ('general', 'brave,startpage,qwant'),
-            ('images', 'brave.images,startpage images,qwant images'),
-            ('videos', 'brave.videos,qwant videos'),
-            ('news', 'brave.news,startpage news,qwant news'),
+            ('general', 'brave,startpage,qwant,duckduckgo,ecosia,bing,google'),
+            ('images', 'brave.images,startpage images,qwant images,duckduckgo images,bing images,google images'),
+            ('videos', 'brave.videos,qwant videos,duckduckgo videos,bing videos,google videos'),
+            ('news', 'brave.news,startpage news,qwant news,duckduckgo news,bing news,google news'),
         ):
             with self.subTest(category=category):
                 self.assertEqual(expected, selected_engines_for_category(category))
@@ -27,7 +27,7 @@ class QwantIntegrationTests(unittest.TestCase):
         with smoke.app.test_client() as client, patch('searx.search.SearchWithPlugins', OfflineSearch):
             first = client.post('/search', data={'q': 'synthetic', 'format': 'json'}, headers=self.headers)
             self.assertEqual(200, first.status_code)
-            self.assertEqual(['brave', 'qwant', 'startpage'], first.json['goreecloud']['selected_engines'])
+            self.assertEqual(['bing', 'brave', 'duckduckgo', 'ecosia', 'google', 'qwant', 'startpage'], first.json['goreecloud']['selected_engines'])
             first.close()
             pref = client.post('/preferences', data={'goreecloud_sources': 'qwant', 'preferences': ''}, headers=self.headers)
             self.assertEqual(302, pref.status_code)

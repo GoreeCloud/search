@@ -1,6 +1,6 @@
 # GoreeCloud Search — Settings and category navigation
 
-**Scope:** Development-only category and Settings capability. First introduced by Search draft PR #17 and expanded by stacked PR #18 to three approved provider families. The owner approved the uncluttered homepage direction but rejected the upstream Settings visual treatment and requested Web, Images, Videos and News choices.
+**Scope:** Development-only category and Settings capability. First introduced by Search draft PR #17 and expanded by stacked PR #18 to three provider families; the All Sources feature adds four more. The owner approved the uncluttered homepage direction but rejected the upstream Settings visual treatment and requested Web, Images, Videos and News choices.
 
 ## Settings
 
@@ -8,14 +8,14 @@ The private Settings page uses the GoreeCloud Search identity, without the inher
 
 ## Supported categories and source ownership
 
-- **Web:** Brave Search, Startpage and Qwant.
-- **Images:** Brave Search Images, Startpage Images and Qwant Images.
-- **Videos:** Brave Search Videos and Qwant Videos.
-- **News:** Brave Search News, Startpage News and Qwant News.
+- **Web:** Brave Search, Startpage, Qwant, DuckDuckGo, Ecosia, Bing and Google.
+- **Images:** Brave Search, Startpage, Qwant, DuckDuckGo, Bing and Google.
+- **Videos:** Brave Search, Qwant, DuckDuckGo, Bing and Google.
+- **News:** Brave Search, Startpage, Qwant, DuckDuckGo, Bing and Google.
 
-Only eleven approved SearXNG adapter instances from **three provider families** are enabled. Other inherited engines and separate Google/Bing/Maps/Shopping sources are excluded. Web, Images, Videos and News navigation submits query and engine selections via same-origin POST; query terms never enter a GET URL. Fanout is capped at three selected provider families.
+Only 24 approved SearXNG adapter instances from **seven provider families** are enabled. Unapproved inherited engines, Maps and Shopping sources remain excluded. Web, Images, Videos and News navigation submits query and engine selections via same-origin POST; query terms never enter a GET URL. Fanout is capped at seven selected provider families.
 
-The default **All sources** preference selects all available approved sources for the chosen category. Videos includes Brave and Qwant only; Startpage-only disables Videos and a direct Startpage-only video request is rejected rather than silently substituted. Saved source choices remain distinct from per-query explicit selections. This is source-contract behavior, not proof that providers are reachable.
+The default **All Sources** preference selects all approved adapters available for the chosen category. Videos includes Brave Search, Qwant, DuckDuckGo, Bing and Google; Startpage and Ecosia single-source selections disable Videos and are rejected rather than silently substituted. Ecosia also has no Images or News adapter. Saved source choices remain distinct from per-query explicit selections. This is source-contract behavior, not proof that providers are reachable.
 
 ## Verification
 

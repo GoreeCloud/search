@@ -269,7 +269,7 @@ def main() -> None:
         assert settings_link.get_attribute('href').endswith('/preferences')
         driver.get(url + 'preferences')
         options = driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')
-        assert sorted(option.get_attribute('value') for option in options) == ['both', 'brave', 'qwant', 'startpage']
+        assert sorted(option.get_attribute('value') for option in options) == ['all', 'bing', 'brave', 'duckduckgo', 'ecosia', 'google', 'qwant', 'startpage']
         brave_choice = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="brave"]')
         driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", brave_choice)
         brave_choice.click()
@@ -536,7 +536,7 @@ def main() -> None:
             assert not driver.execute_script('return location.search'), 'Category switch leaked query'
             assert driver.find_element(By.CSS_SELECTOR, '#q').get_attribute('value') == 'synthetic category navigation'
             assert driver.find_element(By.CSS_SELECTOR,
-                '.goreecloud-category-form input[name="engines"][value="brave.images,startpage images,qwant images"]')
+                '.goreecloud-category-form input[name="engines"][value="brave.images,startpage images,qwant images,duckduckgo images,bing images,google images"]')
             driver.set_window_size(390, 844)
             driver.save_screenshot(str(artifacts / 'phone-category-tabs.png'))
             overflow = driver.execute_script(

@@ -206,34 +206,30 @@ def represented_result_sources(results: Iterable[object], selected_names: Iterab
     return {name: counts[name] for name in sorted(counts, key=lambda label: (label.casefold(), label))}
 
 
-# Product-wide private Search provider allowlist; legacy upstream adapters
-# remain in the upstream source tree but are not selectable or executable.
-BUILTIN_SEARCH_SOURCES = frozenset({
-    'brave', 'startpage',
-    'brave.images', 'brave.videos', 'brave.news',
-    'startpage images', 'startpage news',
-    'qwant', 'qwant images', 'qwant videos', 'qwant news',
-})
+# Private-profile approved engine registry. Other SearXNG adapters remain blocked.
 SEARCH_SOURCE_FAMILIES = {
-    'general': {'brave': 'brave', 'startpage': 'startpage', 'qwant': 'qwant'},
-    'images': {'brave': 'brave.images', 'startpage': 'startpage images', 'qwant': 'qwant images'},
-    'videos': {'brave': 'brave.videos', 'qwant': 'qwant videos'},
-    'news': {'brave': 'brave.news', 'startpage': 'startpage news', 'qwant': 'qwant news'},
+    'general': {'brave': 'brave', 'startpage': 'startpage', 'qwant': 'qwant',
+                'duckduckgo': 'duckduckgo', 'ecosia': 'ecosia', 'bing': 'bing', 'google': 'google'},
+    'images': {'brave': 'brave.images', 'startpage': 'startpage images', 'qwant': 'qwant images',
+               'duckduckgo': 'duckduckgo images', 'bing': 'bing images', 'google': 'google images'},
+    'videos': {'brave': 'brave.videos', 'qwant': 'qwant videos', 'duckduckgo': 'duckduckgo videos',
+               'bing': 'bing videos', 'google': 'google videos'},
+    'news': {'brave': 'brave.news', 'startpage': 'startpage news', 'qwant': 'qwant news',
+             'duckduckgo': 'duckduckgo news', 'bing': 'bing news', 'google': 'google news'},
 }
+BUILTIN_SEARCH_SOURCES = frozenset(
+    adapter for category in SEARCH_SOURCE_FAMILIES.values() for adapter in category.values()
+)
 SEARCH_CATEGORIES = tuple(SEARCH_SOURCE_FAMILIES)
-
-
-# Browser-local choice: legacy 'both' now means all three approved providers.
 SEARCH_SOURCE_COOKIE = 'goreecloud_search_sources'
 SEARCH_SOURCE_OPTIONS = {
-    'both': 'brave,startpage,qwant',
-    'brave': 'brave',
-    'startpage': 'startpage',
-    'qwant': 'qwant',
+    'all': ','.join(SEARCH_SOURCE_FAMILIES['general']),
+    'both': ','.join(SEARCH_SOURCE_FAMILIES['general']),  # legacy cookie
+    **{family: family for family in SEARCH_SOURCE_FAMILIES['general']},
 }
 
 
-def selected_engines_for_category(category: str, choice: str = 'both') -> str:
+def selected_engines_for_category(category: str, choice: str = 'all') -> str:
     """Map saved provider families to actual allowed per-category adapter names.
 
     No engine fallback is performed: a Startpage-only video request is
@@ -242,17 +238,17 @@ def selected_engines_for_category(category: str, choice: str = 'both') -> str:
     if category not in SEARCH_SOURCE_FAMILIES:
         raise SearchPolicyViolation('That search category is unavailable.', 422)
     available = SEARCH_SOURCE_FAMILIES[category]
-    # The legacy "both" choice now means every supported provider for the
-    # category. Videos has Brave and Qwant, but no Startpage adapter.
-    wanted = tuple(available) if choice == 'both' else (choice,)
+    # All Sources selects available per-category engines, never substitutes an
+    # unsupported adapter for an explicitly requested single-source category.
+    wanted = tuple(available) if choice in ('all', 'both') else (choice,)
     if any(family not in available for family in wanted):
         raise SearchPolicyViolation('The selected search provider does not support this category.', 422)
     return ','.join(available[family] for family in wanted)
 
 
 def stored_search_source(raw: str | None) -> str:
-    """Accept only canonical provider choices; default to all three families."""
-    return raw if raw in SEARCH_SOURCE_OPTIONS else 'both'
+    """Migrate legacy multi-source cookies and default to All Sources."""
+    return raw if raw in SEARCH_SOURCE_OPTIONS and raw != 'both' else 'all'
 
 
 def requested_search_source(*, explicit: str | None, stored: str | None, query_specific: bool,
@@ -279,14 +275,14 @@ def validate_builtin_sources(provider_names: Iterable[str], *, submitted_engines
     if submitted_engines is not None:
         supplied = [name.strip() for name in submitted_engines.split(',')]
         if not supplied or any(name not in BUILTIN_SEARCH_SOURCES for name in supplied):
-            raise SearchPolicyViolation('Only Brave Search, Startpage and Qwant are available.', 422)
+            raise SearchPolicyViolation('Only approved GoreeCloud Search sources are available.', 422)
     names = list(provider_names)
     if not names or any(not isinstance(name, str) or name not in BUILTIN_SEARCH_SOURCES for name in names):
-        raise SearchPolicyViolation('Only Brave Search, Startpage and Qwant are available.', 422)
+        raise SearchPolicyViolation('Only approved GoreeCloud Search sources are available.', 422)
     return len(set(names))
 
 
-ALLOWED_SEARCH_BANGS = frozenset({'brave', 'br', 'startpage', 'sp', 'qwant', 'qw', 'general', 'web'})
+ALLOWED_SEARCH_BANGS = frozenset({'brave', 'br', 'startpage', 'sp', 'qwant', 'qw', 'duckduckgo', 'ddg', 'ecosia', 'eco', 'bing', 'bi', 'google', 'go', 'general', 'web'})
 
 
 def validate_builtin_search_bangs(raw_query: str) -> None:
@@ -299,7 +295,7 @@ def validate_builtin_search_bangs(raw_query: str) -> None:
     for token in raw_query.split():
         if token.startswith('!'):
             if token.startswith('!!') or token[1:].lower().replace('-', ' ').replace('_', ' ') not in ALLOWED_SEARCH_BANGS:
-                raise SearchPolicyViolation('Only Brave Search, Startpage and Qwant search shortcuts are supported.', 422)
+                raise SearchPolicyViolation('Only approved GoreeCloud Search shortcuts are supported.', 422)
 
 
 def restrict_explicit_private_engines(enginerefs: Iterable[object], selected: str | None) -> list[object]:
