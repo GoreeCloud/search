@@ -92,4 +92,9 @@ def response(resp):
         )
         content = extract_text(descriptions[0]).strip() if descriptions else ""
         results.add(results.types.MainResult(url=target, title=title, content=content))
+    if cards and not results and not page.xpath(
+        '//*[@data-test-id="web-no-results" or @data-testid="web-no-results"]'
+    ):
+        # Unrecognized result cards are a parser failure, not a valid zero-hit search.
+        raise SearxEngineAPIException("Ecosia returned no recognizable organic results")
     return results
