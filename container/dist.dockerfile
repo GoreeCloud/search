@@ -3,6 +3,7 @@ FROM docker.io/searxng/base:searxng AS dist
 
 COPY --chown=977:977 --from=builder /usr/local/searxng/.venv/ ./.venv/
 COPY --chown=977:977 --from=builder /usr/local/searxng/searx/ ./searx/
+COPY --chown=977:977 ./native_search/ ./native_search/
 COPY --chown=977:977 ./container/ ./
 COPY --chown=977:977 ./searx/version_frozen.py ./searx/
 

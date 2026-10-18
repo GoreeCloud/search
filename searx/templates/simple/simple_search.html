@@ -20,6 +20,13 @@
     <a href="#why-goreecloud-search">Why GoreeCloud Search?</a>
     <span class="goreecloud-link-dot" aria-hidden="true">·</span>
     <a href="https://github.com/GoreeCloud/search" rel="noopener noreferrer">View the project <span aria-hidden="true">↗</span></a>
+    {% if goreecloud_native_dev_enabled and 'general' in selected_categories %}
+      <button type="submit" formmethod="post" formaction="{{ url_for('goreecloud_native_search') }}"
+              name="native_source" value="goreecloud-native-index"
+              class="goreecloud-native-choose" aria-label="Search approved native index, Development only">
+        Search native index <span>(Development · GoreeCloud documents only)</span>
+      </button>
+    {% endif %}
   </div>
     </div>
   </div>
