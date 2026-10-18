@@ -44,6 +44,21 @@ class ProviderProbeContractTests(unittest.TestCase):
         self.assertIn(b'engines=brave', seen[0].data)
         self.assertNotIn('verification', str(result))
 
+    def test_qwant_is_checked_independently(self):
+        captured = []
+        def fake_transport(req, timeout):
+            captured.append(req)
+            return BytesIO(json.dumps({
+                'goreecloud': {'selected_engines': ['qwant']},
+                'results': [],
+                'unresponsive_engines': [['qwant', 'blocked']],
+            }).encode())
+        outcome = mod.probe('qwant', 'http://127.0.0.1:8888', transport=fake_transport)
+        self.assertEqual('provider_error', outcome['state'])
+        self.assertEqual(1, outcome['error_count'])
+        self.assertIn(b'engines=qwant', captured[0].data)
+        self.assertNotIn('blocked', str(outcome))
+
     def test_malformed_json_shapes_fail_closed(self):
         for document in ([], 5, {'goreecloud': []}, {'goreecloud': None}):
             def fake_transport(req, timeout):
