@@ -7,6 +7,7 @@ from the federated web application's request worker.
 """
 from __future__ import annotations
 
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 from urllib.parse import quote
@@ -26,7 +27,7 @@ def read_native_results(database: str | Path, query: object, *, limit: int = 10)
     # URI encoding prevents a filename with ? or # from changing SQLite flags.
     address = 'file:' + quote(str(raw), safe='/') + '?mode=ro'
     match = ' AND '.join('"' + term.replace('"', '""') + '"' for term in terms)
-    with sqlite3.connect(address, uri=True, timeout=2.0) as connection:
+    with closing(sqlite3.connect(address, uri=True, timeout=2.0)) as connection:
         connection.row_factory = sqlite3.Row
         connection.execute('PRAGMA query_only=ON')
         rows = connection.execute("""
