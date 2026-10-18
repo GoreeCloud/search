@@ -548,6 +548,10 @@ html[data-glaze-consumer] .goreecloud-try-startpage + p {
 
 /* Native Development is a compact secondary source choice, not a third
    homepage CTA or a replacement for the normal search button. */
+html[data-glaze-consumer] #main_index .goreecloud-home-links {
+  position: relative;
+  z-index: 40;
+}
 html[data-glaze-consumer] .goreecloud-native-choose {
   display: inline-flex; align-items: center; justify-content: center;
   gap: 6px; box-sizing: border-box; min-height: 44px;
