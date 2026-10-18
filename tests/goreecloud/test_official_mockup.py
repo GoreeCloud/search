@@ -28,7 +28,7 @@ class OfficialHomepageTests(unittest.TestCase):
             self.assertEqual(1,len(root.xpath('//body/a[contains(@class,"goreecloud-skip-link")][@href="#goreecloud-content-start"]')))
             self.assertEqual(1,len(root.xpath('//*[@id="goreecloud-content-start"][@tabindex="-1"]')))
             self.assertEqual(1,len(root.xpath('//a[@aria-label="Open source on GitHub"]')))
-            self.assertIn('Brave Search and Startpage',root.text_content())
+            self.assertIn('Brave Search, Startpage, and Qwant',root.text_content())
             self.assertIn('not a production privacy guarantee',root.text_content())
             self.assertNotIn('Homepage concept',root.text_content())
             dispatch.assert_not_called()
