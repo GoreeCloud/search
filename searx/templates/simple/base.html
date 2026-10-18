@@ -21,8 +21,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='goreecloud-search.css') }}" type="text/css" media="screen">
   {% if private_query_transport %}
   <link rel="stylesheet" href="{{ url_for('static', filename='goreecloud-mockup.css') }}" type="text/css" media="screen">
-  <link rel="stylesheet" href="{{ url_for('static', filename='goreecloud-results.css', v='layout1') }}" type="text/css" media="screen">
-  <link rel="stylesheet" href="{{ url_for('static', filename='goreecloud-settings-categories.css', v='rev1') }}" type="text/css" media="screen">
+  <link rel="stylesheet" href="{{ url_for('static', filename='goreecloud-results.css', v='layout2') }}" type="text/css" media="screen">
+  <link rel="stylesheet" href="{{ url_for('static', filename='goreecloud-settings-categories.css', v='rev2') }}" type="text/css" media="screen">
   {% endif %}
   <noscript>
     <link rel="stylesheet" href="{{ url_for('static', filename='sxng-noscript.min.css') }}" type="text/css">
@@ -35,7 +35,7 @@
   {% endblock %}
   <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}?v=search-identity-3" type="image/svg+xml">
   <link rel="manifest" href="{{ url_for('manifest') }}" />
-  {% if private_query_transport %}<script type="module" src="{{ url_for('static', filename='goreecloud-preview.js') }}"></script><script type="module" src="{{ url_for('static', filename='goreecloud-theme.js') }}"></script><script type="module" src="{{ url_for('static', filename='goreecloud-shortcuts.js') }}"></script>{% endif %}
+  {% if private_query_transport %}<script type="module" src="{{ url_for('static', filename='goreecloud-preview.js') }}"></script><script type="module" src="{{ url_for('static', filename='goreecloud-theme.js') }}"></script><script type="module" src="{{ url_for('static', filename='goreecloud-shortcuts.js') }}"></script><script type="module" src="{{ url_for('static', filename='goreecloud-image-previews.js') }}"></script><script type="module" src="{{ url_for('static', filename='goreecloud-native-submit.js') }}"></script>{% endif %}
 </head>
 <body class="{{ endpoint }}_endpoint" >
   {% if private_query_transport %}<a class="goreecloud-skip-link" href="#goreecloud-content-start">Skip to search and content</a>{% endif %}

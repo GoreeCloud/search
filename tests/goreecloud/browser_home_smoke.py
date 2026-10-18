@@ -10,6 +10,7 @@ from pathlib import Path
 import secrets
 import sys
 from threading import Thread
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -23,6 +24,7 @@ os.environ["SEARXNG_SECRET"] = secrets.token_hex(32)
 
 from searx.webapp import app  # noqa: E402
 from searx.result_types import LegacyResult  # noqa: E402
+from native_search.index import SearchIndex  # noqa: E402
 
 from selenium import webdriver  # noqa: E402
 from selenium.webdriver.chrome.options import Options  # noqa: E402
@@ -625,6 +627,38 @@ def main() -> None:
         assert 'synthetic-private-smoke-fixture' not in driver.find_element(By.TAG_NAME, 'body').text
         assert driver.find_element(By.LINK_TEXT, 'Return to GoreeCloud Search').is_displayed()
         print('PASS accessible no-query-reflection policy error view')
+        # Real browser click-through for the opt-in native Development source.
+        # Uses a temporary synthetic GitHub-document index and no providers.
+        with TemporaryDirectory(prefix='goreecloud-native-browser-') as native_dir:
+            native_db = Path(native_dir) / 'approved.sqlite'
+            with SearchIndex(native_db) as idx:
+                idx.add(url='https://github.com/GoreeCloud/search/blob/' +
+                        'a'*40 + '/docs/goreecloud/fixture.md',
+                        title='GoreeCloud reviewed fixture',
+                        body='GoreeCloud native search synthetic browser document')
+            with patch.dict(os.environ, {'GOREECLOUD_NATIVE_SOURCE_ENABLED':'1',
+                                          'GOREECLOUD_NATIVE_INDEX_PATH':str(native_db)}):
+                for width, height, label in ((1440,900,'desktop'),(390,844,'phone'),(320,760,'phone-small')):
+                    driver.set_window_size(width, height)
+                    driver.get(url)
+                    button = driver.find_element(By.CSS_SELECTOR, 'button[name="native_source"]')
+                    assert button.is_displayed(), label
+                    assert button.get_attribute('formmethod') == 'post'
+                    driver.find_element(By.ID, 'q').send_keys('GoreeCloud')
+                    driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", button)
+                    WebDriverWait(driver, 5).until(lambda page: page.execute_script(
+                        "const r=arguments[0].getBoundingClientRect();"
+                        "const el=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);"
+                        "return r.top>=0 && r.bottom<=innerHeight && arguments[0].contains(el);",
+                        button))
+                    print('NATIVE_VIEWPORT', label, driver.execute_script('return [innerWidth,innerHeight]'), flush=True)
+                    button.click()
+                    WebDriverWait(driver, 12).until(lambda page: page.current_url.endswith('/native-search'))
+                    assert not driver.execute_script('return location.search'), label
+                    hits = driver.find_elements(By.CSS_SELECTOR, '.goreecloud-native-hit')
+                    assert len(hits) == 1, (label,len(hits))
+                    assert 'GoreeCloud reviewed fixture' in hits[0].text
+                    print(f'PASS native opt-in real-browser click {label}, no external provider')
         # Verify the readable dark-mode token fallback without a remote asset.
         driver.execute_script("document.documentElement.classList.add('theme-dark')")
         bg = driver.execute_script("return getComputedStyle(document.body).backgroundColor")

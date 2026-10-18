@@ -23,7 +23,7 @@
       {{ image_proxify(result.img_src) }}
       {%- endif -%}
       "
-      alt="{{ result.title | striptags }}" loading="lazy" width="200" height="200"
+      alt="{{ result.title | striptags }}" loading="{% if index|default(99) <= 12 %}eager{% else %}lazy{% endif %}" decoding="async" width="200" height="200"
       {{- "" -}}
     >
     {%- if result.resolution %}
