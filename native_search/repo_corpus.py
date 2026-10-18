@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from pathlib import Path, PurePosixPath
 import re
+import subprocess
 from urllib.parse import quote
 
 from .index import SearchIndex
@@ -78,6 +79,15 @@ def import_approved_repo_docs(
     for name in approved_paths:
         source, rel = _approved_path(root, name)
         data = source.read_bytes()
+        try:
+            previous = subprocess.run(
+                ['git', '-C', str(root), 'show', f'{revision}:{rel}'],
+                check=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=8,
+            ).stdout
+        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            raise ValueError('Cannot authenticate approved Git source') from exc
+        if previous != data:
+            raise ValueError('Approved source differs from supplied Git revision')
         total_bytes += len(data)
         if not data or len(data) > MAX_DOCUMENT_BYTES or total_bytes > MAX_TOTAL_BYTES:
             raise ValueError("Approved document exceeds corpus budget")
