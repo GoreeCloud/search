@@ -1,0 +1,33 @@
+name: Native Search Development
+on:
+  push:
+    paths:
+      - 'native_search/**'
+      - 'tests/native/**'
+      - '.github/workflows/native-search-development.yml'
+  pull_request:
+    paths:
+      - 'native_search/**'
+      - 'tests/native/**'
+      - '.github/workflows/native-search-development.yml'
+permissions:
+  contents: read
+jobs:
+  native-unit:
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.12']
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: SQLite FTS5 and unit tests
+        run: |
+          python -c 'import sqlite3; c=sqlite3.connect(":memory:"); c.execute("CREATE VIRTUAL TABLE f USING fts5(text)")'
+          python -m unittest discover -s tests/native -v
+      - name: Fixture indexing smoke
+        run: |
+          python -m native_search import-json --db /tmp/native-demo.db --input tests/native/fixtures.json
