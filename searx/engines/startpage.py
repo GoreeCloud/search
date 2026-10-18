@@ -102,7 +102,7 @@ import dateutil.parser
 
 from searx.enginelib import EngineCache
 from searx.enginelib.traits import EngineTraits
-from searx.exceptions import SearxEngineCaptchaException, SearxEngineAccessDeniedException
+from searx.exceptions import SearxEngineCaptchaException, SearxEngineAccessDeniedException, SearxEngineXPathException
 from searx.locales import region_tag
 from searx.network import get, post  # see https://github.com/searxng/searxng/issues/762
 from searx.utils import (
@@ -501,12 +501,30 @@ def response(resp):
         raise SearxEngineCaptchaException()
 
     results_json = loads(results_raw)
-    results_obj = results_json.get("render", {}).get("presenter", {}).get("regions", {})
+    # A valid zero-result page explicitly has an empty mainline list.
+    # Missing/malformed React presenter fields indicate upstream markup drift
+    # or a challenge, never an authoritative "no results" response.
+    node = results_json
+    for field in ("render", "presenter", "regions"):
+        if not isinstance(node, dict) or not isinstance(node.get(field), dict):
+            raise SearxEngineXPathException("Startpage presenter", "missing result structure")
+        node = node[field]
+    mainline = node.get("mainline")
+    if not isinstance(mainline, list):
+        raise SearxEngineXPathException("Startpage mainline", "missing result list")
 
     results = []
-    for results_categ in results_obj.get("mainline", []):
-        for item in results_categ.get("results", []):
-            if results_categ["display_type"] == "web-google":
+    for results_categ in mainline:
+        if not isinstance(results_categ, dict):
+            raise SearxEngineXPathException("Startpage mainline", "invalid result group")
+        display_type = results_categ.get("display_type")
+        entries = results_categ.get("results")
+        if not isinstance(display_type, str) or not isinstance(entries, list):
+            raise SearxEngineXPathException("Startpage mainline", "invalid result group")
+        for item in entries:
+            if not isinstance(item, dict):
+                raise SearxEngineXPathException("Startpage mainline", "invalid result")
+            if display_type == "web-google":
                 results.append(_get_web_result(item))
             elif results_categ["display_type"] == "news-bing":
                 results.append(_get_news_result(item))
