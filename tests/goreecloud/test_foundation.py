@@ -74,7 +74,7 @@ class GoreeCloudFoundationTests(unittest.TestCase):
         notice = (ASSETS / "goreecloud/privacy.html").read_text()
         self.assertIn("Brave Search, Startpage, and Qwant", notice)
         self.assertIn("default sends search terms to all three", notice)
-        self.assertIn("does not promise anonymity", notice)
+        self.assertIn("does not promise complete anonymity", notice)
 
     def test_accessibility_fallbacks(self):
         css = (ASSETS / "goreecloud-search.css").read_text()
