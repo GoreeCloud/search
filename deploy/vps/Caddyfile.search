@@ -1,5 +1,5 @@
 # VPN-only Search. Append to the existing VPS Caddyfile after validation.
-search.goreecloud.com {
+search-dev.goreecloud.com {
     tls {
         dns porkbun {
             api_key {$PORKBUN_API_KEY}

@@ -1,10 +1,10 @@
 # GoreeCloud Search — Private VPS deployment
 
-**State:** Development-only; requires live verification before release.
+**State:** Development-only; requires live verification before release. The production hostname `search.goreecloud.com` is reserved for the Stable release and MUST NOT serve this Development deployment.
 
 ## Architecture
 
-- Domain: `search.goreecloud.com`, with Caddy DNS-01 TLS and **NetBird-only HTTP access**.
+- Domain: `search-dev.goreecloud.com`, with Caddy DNS-01 TLS and **NetBird-only HTTP access**.
 - Docker network: external `proxy`; no published Search or Tor ports.
 - Application source: pinned GoreeCloud Search commit. Runtime secret in a protected, untracked env file on the VPS.
 - Tor: local SOCKS5H relay with application process in the same network namespace. The Search application must refuse direct provider egress if that proxy is unavailable or misconfigured.

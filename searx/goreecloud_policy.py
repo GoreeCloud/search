@@ -33,7 +33,7 @@ def validate_private_request_context(
 
     # An explicitly configured VPS hostname may be accepted only behind the
     # separate VPN-only TLS reverse proxy. Local mode remains loopback-only.
-    vps_host_allowed = allowed_public_host == 'search.goreecloud.com' and host == allowed_public_host
+    vps_host_allowed = allowed_public_host == 'search-dev.goreecloud.com' and host == allowed_public_host
     try:
         target = urlsplit('http://' + host)
         valid_host = (

@@ -28,7 +28,7 @@ services:
     environment:
       SEARXNG_SECRET: ${SEARCH_SECRET:?Set the private runtime secret}
       SEARXNG_SETTINGS_PATH: /usr/local/searxng/private-settings.yml
-      GOREECLOUD_SEARCH_PRIVATE_HOST: search.goreecloud.com
+      GOREECLOUD_SEARCH_PRIVATE_HOST: search-dev.goreecloud.com
       GRANIAN_HOST: 0.0.0.0
       GRANIAN_PORT: "8080"
       GRANIAN_WORKERS: "1"
