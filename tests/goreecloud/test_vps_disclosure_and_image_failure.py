@@ -28,7 +28,7 @@ class VPSDisclosureAndImageFailureTests(unittest.TestCase):
         with smoke.app.test_client() as client:
             response = client.get('/', headers=self.headers)
             self.assertEqual(200, response.status_code)
-            self.assertIn(b'Brave Search, Startpage, and Qwant', response.data)
+            self.assertIn(b'Brave Search, Startpage, Qwant, DuckDuckGo, Ecosia, Bing and Google', response.data)
             self.assertIn(b'private VPS Development service', response.data)
             self.assertNotIn(b'local Development build', response.data)
             response.close()

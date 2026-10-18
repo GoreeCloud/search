@@ -287,9 +287,9 @@ def main() -> None:
         driver.get(url + 'preferences')
         selected = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="brave"]')
         assert selected.is_selected(), 'Saved Brave-only choice not persisted'
-        both_choice = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="both"]')
-        driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", both_choice)
-        both_choice.click()
+        all_choice = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="all"]')
+        driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", all_choice)
+        all_choice.click()
         save_button = driver.find_element(By.CSS_SELECTOR, 'form#search_form input[type="submit"]')
         driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", save_button)
         save_button.click()
@@ -300,7 +300,7 @@ def main() -> None:
             driver.get(url + 'preferences')
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-preferences-intro h1').text == 'Settings'
             assert not driver.find_elements(By.CSS_SELECTOR, '#main_preferences > a img.logo')
-            assert len(driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')) == 4
+            assert len(driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')) == 8
             prefs_geom = driver.execute_script("""
               return {width:document.documentElement.clientWidth,
                 scroll:document.documentElement.scrollWidth,
@@ -568,7 +568,7 @@ def main() -> None:
             selected = driver.find_element(
                 By.CSS_SELECTOR, '.goreecloud-partial-retry input[name="engines"]'
             ).get_attribute('value')
-            assert selected == 'brave,qwant,startpage', f'Partial retry selected unexpected sources: {selected}'
+            assert selected == 'bing,brave,duckduckgo,ecosia,google,qwant,startpage', f'Partial retry selected unexpected sources: {selected}'
             assert not driver.execute_script('return location.search'), 'Partial-result search leaked query'
             driver.save_screenshot(str(artifacts / 'desktop-partial-retry.png'))
             driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", retry)
