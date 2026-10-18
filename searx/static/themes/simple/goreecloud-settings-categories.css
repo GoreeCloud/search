@@ -350,3 +350,25 @@ html[data-glaze-consumer] body.info_endpoint .goreecloud-info-lead {
 html[data-glaze-consumer] body.info_endpoint .goreecloud-info-article a {
   color: var(--gc-accent-strong); text-underline-offset: 3px;
 }
+
+
+/* Failed image requests are a status view, not a gallery. Keep the source
+   messages beside the retry panel on desktop and below it on narrow screens. */
+html[data-glaze-consumer] body.results_endpoint #main_results #results:has(#urls.goreecloud-image-results .goreecloud-empty-state) {
+  grid-template-columns: minmax(0, 1fr) minmax(245px, 285px);
+}
+html[data-glaze-consumer] body.results_endpoint #results:has(#urls.goreecloud-image-results .goreecloud-empty-state) > #sidebar {
+  grid-column: 2; grid-row: 1 / span 2;
+  flex-direction: column; flex-wrap: nowrap;
+}
+html[data-glaze-consumer] body.results_endpoint #results:has(#urls.goreecloud-image-results .goreecloud-empty-state) > #sidebar > * {
+  flex: 0 1 auto;
+}
+html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results .goreecloud-empty-state {
+  width: 100%; max-width: none; box-sizing: border-box;
+}
+@media (max-width: 900px) {
+  html[data-glaze-consumer] body.results_endpoint #results:has(#urls.goreecloud-image-results .goreecloud-empty-state) > #sidebar {
+    flex-direction: column; width: 100%;
+  }
+}
