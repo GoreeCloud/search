@@ -9,6 +9,7 @@ from pathlib import Path
 from .api import run_loopback
 from .crawler import Crawler, CrawlPlan
 from .index import SearchIndex
+from .repo_corpus import import_approved_repo_docs, load_approved_manifest
 
 
 def main() -> None:
@@ -17,6 +18,11 @@ def main() -> None:
     ingest = commands.add_parser('import-json', help='Import explicitly approved document fixtures')
     ingest.add_argument('--db', required=True)
     ingest.add_argument('--input', required=True)
+    approved = commands.add_parser('import-approved-repo')
+    approved.add_argument('--db', required=True)
+    approved.add_argument('--repo-root', required=True)
+    approved.add_argument('--manifest', required=True)
+    approved.add_argument('--revision', required=True)
     remove = commands.add_parser('remove-url', help='Remove a URL and its full-text index entries')
     remove.add_argument('--db', required=True)
     remove.add_argument('--url', required=True)
@@ -38,6 +44,11 @@ def main() -> None:
                          max_pages=args.max_pages, max_depth=args.max_depth)
         with SearchIndex(args.db) as index:
             print(json.dumps(Crawler(index, plan).crawl(args.seed)))
+    elif args.command == 'import-approved-repo':
+        paths = load_approved_manifest(args.manifest)
+        with SearchIndex(args.db) as index:
+            print(json.dumps(import_approved_repo_docs(index, args.repo_root, revision=args.revision,
+                                                approved_paths=paths)))
     elif args.command == 'remove-url':
         with SearchIndex(args.db) as index:
             print(json.dumps({'removed': index.remove(args.url)}))
