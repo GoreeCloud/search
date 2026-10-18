@@ -63,7 +63,7 @@ class OfficialHomepageTests(unittest.TestCase):
             self.assertEqual(1, len(root.xpath('//script[contains(@src,"goreecloud-preview.js")]')))
             page.close()
 
-            for source in ('brave', 'startpage'):
+            for source in ('brave', 'startpage', 'qwant'):
                 with self.subTest(source=source):
                     response = client.post('/search', data={
                         'q': 'offline single-source request', 'engines': source, 'format': 'json'
