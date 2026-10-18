@@ -546,30 +546,36 @@ html[data-glaze-consumer] .goreecloud-try-startpage + p {
   }
 }
 
-/* Explicit native Development opt-in; does not alter the default Web search action. */
+/* Native Development is a compact secondary source choice, not a third
+   homepage CTA or a replacement for the normal search button. */
 html[data-glaze-consumer] .goreecloud-native-choose {
-  min-height: 42px;
-  padding: 7px 12px;
-  border: 1px solid currentColor;
-  border-radius: 10px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px; box-sizing: border-box; min-height: 44px;
+  padding: 7px 6px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--gc-accent-strong);
+  font: inherit; font-size: inherit; font-weight: 650;
+  text-decoration: none; cursor: pointer; white-space: nowrap;
 }
-html[data-glaze-consumer] .goreecloud-native-choose span {
-  font-size: 11px;
-  opacity: .72;
+html[data-glaze-consumer] .goreecloud-native-choose:hover {
+  text-decoration: underline; text-underline-offset: 3px;
+}
+html[data-glaze-consumer] .goreecloud-native-dev-label {
+  display: inline-block; padding: 2px 6px; border-radius: 5px;
+  background: color-mix(in srgb, var(--gc-accent-strong) 10%, var(--gc-surface));
+  color: var(--gc-accent-strong); font-size: 10px;
+  font-weight: 700; line-height: 1.25; text-decoration: none;
 }
 html[data-glaze-consumer] .goreecloud-native-choose:focus-visible {
-  outline: 3px solid currentColor;
-  outline-offset: 2px;
+  outline: 3px solid var(--gc-accent-strong); outline-offset: 2px;
+}
+@media (max-width: 460px) {
+  html[data-glaze-consumer] .goreecloud-home-links { gap: 3px 8px; }
 }
 @media (forced-colors: active) {
   html[data-glaze-consumer] .goreecloud-native-choose {
-    background: ButtonFace;
-    color: ButtonText;
-    border-color: ButtonText;
+    background: ButtonFace; color: ButtonText;
+  }
+  html[data-glaze-consumer] .goreecloud-native-dev-label {
+    background: ButtonFace; color: ButtonText; border: 1px solid ButtonText;
   }
 }

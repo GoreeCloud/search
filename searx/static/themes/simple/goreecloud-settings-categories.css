@@ -263,6 +263,42 @@ html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results .
   display: block; width: 100%; height: auto; aspect-ratio: 4 / 3;
   object-fit: cover; object-position: center; border-radius: 9px;
   background: color-mix(in srgb, var(--gc-muted) 10%, var(--gc-surface));
+  /* The actual result title is below the preview; browser loading-placeholder
+     alt text otherwise draws clipped duplicates before lazy thumbnails load. */
+  font-size: 0; color: transparent;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-image-tools {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 7px 14px;
+  color: var(--gc-muted); font-size: 12px; line-height: 1.45;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-image-tools button {
+  box-sizing: border-box; min-height: 40px; padding: 6px 12px;
+  border: 1px solid var(--gc-outline); border-radius: 9px;
+  background: var(--gc-surface); color: var(--gc-accent-strong);
+  font: inherit; font-weight: 650; cursor: pointer;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-image-tools button:disabled {
+  cursor: default; opacity: .7;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-image-tools button:focus-visible {
+  outline: 3px solid var(--gc-accent-strong); outline-offset: 2px;
+}
+html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results article.goreecloud-thumbnail-unavailable .image_thumbnail {
+  visibility: hidden;
+}
+html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results article.goreecloud-thumbnail-unavailable > a:first-child::before {
+  content: "Preview unavailable";
+  position: absolute; top: 0; left: 0; right: 0;
+  aspect-ratio: 4 / 3; display: grid; place-items: center;
+  padding: 10px; border-radius: 9px; box-sizing: border-box;
+  color: var(--gc-muted); font-size: 12px; text-align: center;
+  background: color-mix(in srgb, var(--gc-muted) 10%, var(--gc-surface));
+  pointer-events: none;
+}
+@media (forced-colors: active) {
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-image-tools button {
+    background: ButtonFace; color: ButtonText; border-color: ButtonText;
+  }
 }
 html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results .title {
   display: -webkit-box; position: static; width: auto; padding: 0; white-space: normal;

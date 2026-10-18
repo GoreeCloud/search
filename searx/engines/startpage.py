@@ -314,6 +314,12 @@ def request(query, params):
 
     params["headers"]["Origin"] = base_url
     params["headers"]["Referer"] = base_url + "/"
+    # Tor exit geography can disagree with the browser's chosen language.
+    # Give Startpage the same explicit locale hint already sent in its form
+    # and preference cookie. Upstream ranking may still vary by region.
+    requested_locale = params.get("searxng_locale", "")
+    if isinstance(requested_locale, str) and requested_locale.lower() not in ("all", "auto") and re.fullmatch(r"[a-zA-Z]{2,3}(?:[-_][a-zA-Z]{2})?", requested_locale):
+        params["headers"]["Accept-Language"] = requested_locale.replace("_", "-")
 
     # Build form data
     args = {

@@ -36,6 +36,13 @@
       {% if private_query_transport and unresponsive_engines %}
       <p class="goreecloud-results-inline-note" role="status">Some sources reported an error. Results may be incomplete. <a href="#goreecloud-source-diagnostics">Details and retry</a></p>
       {% endif %}
+      {% if private_query_transport and preferences.get_value('image_proxy') and 'images' in selected_categories and results|length > 12 %}
+      <div class="goreecloud-image-tools">
+        <span>More previews load as you scroll.</span>
+        <button type="button" id="goreecloud-image-load-all">Load all previews</button>
+        <span id="goreecloud-image-load-status" role="status" aria-live="polite"></span>
+      </div>
+      {% endif %}
       {% endif %}
     {% for result in results %}
         {% if result.open_group and not only_template %}<div class="template_group_{{ result['template']|replace('.html', '') }}">{% endif %}

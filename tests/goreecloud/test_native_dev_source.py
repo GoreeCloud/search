@@ -20,7 +20,7 @@ class NativeSourceTests(unittest.TestCase):
             with patch.dict(os.environ, {'GOREECLOUD_NATIVE_SOURCE_ENABLED':'0',
                                          'GOREECLOUD_NATIVE_INDEX_PATH':db}):
                 with smoke.app.test_client() as client:
-                    self.assertNotIn(b'Search native index',client.get('/',headers=self.headers).data)
+                    self.assertNotIn(b'Native index',client.get('/',headers=self.headers).data)
                     self.assertEqual(404, client.post('/native-search', data={
                         'q':'GoreeCloud','native_source':'goreecloud-native-index'},
                         headers=self.headers).status_code)
@@ -28,7 +28,7 @@ class NativeSourceTests(unittest.TestCase):
                                          'GOREECLOUD_NATIVE_INDEX_PATH':db}):
                 with smoke.app.test_client() as client, patch(
                     'searx.search.SearchWithPlugins',side_effect=AssertionError('Provider dispatch')):
-                    self.assertIn(b'Search native index',client.get('/',headers=self.headers).data)
+                    self.assertIn(b'Native index',client.get('/',headers=self.headers).data)
                     response=client.post('/native-search',data={
                         'q':'GoreeCloud document', 'native_source':'goreecloud-native-index'
                     },headers=self.headers)
