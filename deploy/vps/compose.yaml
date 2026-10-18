@@ -35,6 +35,21 @@ services:
       GRANIAN_INTERFACE: wsgi
       GRANIAN_WEBSOCKETS: "false"
       GRANIAN_BLOCKING_THREADS: "4"
+    # App readiness only: independent provider smoke checks verify real results.
+    healthcheck:
+      test:
+        - CMD
+        - /usr/local/searxng/.venv/bin/python
+        - -c
+        - >-
+          import urllib.request as u;
+          request=u.Request('http://127.0.0.1:8080/readyz',headers={'Host':'search-dev.goreecloud.com'});
+          response=u.urlopen(request,timeout=3);
+          assert response.status==200 and response.read(16)==b'READY'
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     volumes:
       - ../../configs/goreecloud/settings.yml:/usr/local/searxng/private-settings.yml:ro
       - search-cache:/var/cache/searxng
