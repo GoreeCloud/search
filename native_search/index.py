@@ -72,11 +72,18 @@ class SearchIndex:
     def __exit__(self, *_unused: object) -> None:
         self.close()
 
-    def add(self, *, url: str, title: str, body: str) -> None:
-        parsed = urlsplit(url)
+    @staticmethod
+    def _prepare_document(url: str, title: str, body: str) -> tuple[str, str, str, str, str]:
+        if not isinstance(url, str) or len(url) > 2000:
+            raise ValueError('Invalid canonical document URL')
+        try:
+            parsed = urlsplit(url)
+            port = parsed.port
+        except ValueError as exc:
+            raise ValueError('Malformed canonical document URL') from exc
         if (parsed.scheme != 'https' or not parsed.hostname or parsed.username
                 or parsed.password or parsed.query or parsed.fragment
-                or parsed.port not in (None, 443)):
+                or port not in (None, 443) or any(ord(x) <= 32 for x in url)):
             raise ValueError('Only canonical HTTPS document URLs are indexable')
         try:
             address = ipaddress.ip_address(parsed.hostname)
@@ -92,12 +99,23 @@ class SearchIndex:
         if not title or not body:
             raise ValueError('Documents must have a title and content')
         now = datetime.now(timezone.utc).isoformat(timespec='seconds')
+        return url, parsed.hostname.lower(), title, body, now
+
+    def add_many(self, documents: list[tuple[str, str, str]]) -> int:
+        """Validate bounded batch before mutation, then commit FTS5 writes atomically."""
+        if not isinstance(documents, list) or not 1 <= len(documents) <= 100:
+            raise ValueError('Document batch must contain 1 to 100 items')
+        prepared = [self._prepare_document(*entry) for entry in documents]
         with self.connection:
-            self.connection.execute('''
+            self.connection.executemany('''
               INSERT INTO pages(url,host,title,body,indexed_at) VALUES(?,?,?,?,?)
               ON CONFLICT(url) DO UPDATE SET host=excluded.host,title=excluded.title,
                 body=excluded.body,indexed_at=excluded.indexed_at
-            ''', (url, parsed.hostname.lower(), title, body, now))
+            ''', prepared)
+        return len(prepared)
+
+    def add(self, *, url: str, title: str, body: str) -> None:
+        self.add_many([(url, title, body)])
 
     def remove(self, url: str) -> bool:
         """Immediately remove a document and its full-text entries, e.g. on takedown."""
