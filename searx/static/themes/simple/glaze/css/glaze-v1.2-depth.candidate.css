@@ -1,0 +1,225 @@
+/* GLAZE UI V1.2 Candidate — bounded Depth and Elevation calibration.
+ * Numeric shadows are calibrated from current V1/V1.2 repository shadows.
+ * Depth is structural: broad soft occlusion + restrained upper-edge light + role-aware frost.
+ */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root {
+  --glz12-depth-profile-shadow-scale: 1;
+  --glz12-depth-profile-frost-scale: 1;
+  --glz12-depth-edge-scale: 1;
+  --glz12-depth-embedded-shadow-alpha: 0.05;
+  --glz12-depth-raised-shadow-alpha: 0.08;
+  --glz12-depth-floating-shadow-alpha: 0.11;
+  --glz12-depth-overlay-shadow-alpha: 0.14;
+  --glz12-depth-modal-shadow-alpha: 0.18;
+  --glz12-depth-hero-shadow-alpha: 0.12;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-appearance="dark"]:root {
+  --glz12-depth-embedded-shadow-alpha: 0.12;
+  --glz12-depth-raised-shadow-alpha: 0.20;
+  --glz12-depth-floating-shadow-alpha: 0.30;
+  --glz12-depth-overlay-shadow-alpha: 0.36;
+  --glz12-depth-modal-shadow-alpha: 0.44;
+  --glz12-depth-hero-shadow-alpha: 0.32;
+  --glz12-depth-edge-scale: 0.76;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-appearance="deep-dark"]:root {
+  --glz12-depth-embedded-shadow-alpha: 0.16;
+  --glz12-depth-raised-shadow-alpha: 0.26;
+  --glz12-depth-floating-shadow-alpha: 0.38;
+  --glz12-depth-overlay-shadow-alpha: 0.44;
+  --glz12-depth-modal-shadow-alpha: 0.52;
+  --glz12-depth-hero-shadow-alpha: 0.40;
+  --glz12-depth-edge-scale: 0.64;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-depth] {
+  --glz12-depth-rank: 0;
+  --glz12-depth-shadow-y: 0px;
+  --glz12-depth-shadow-blur: 0px;
+  --glz12-depth-frost-blur: 0px;
+  --glz12-depth-edge-opacity: 0.04;
+  --glz12-depth-motion: 0ms;
+  --glz12-depth-shadow-alpha: 0;
+  position: relative;
+  min-inline-size: 0;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-depth="embedded"] {
+  --glz12-depth-rank: 0;
+  --glz12-depth-shadow-y: 0px;
+  --glz12-depth-shadow-blur: 4px;
+  --glz12-depth-frost-blur: 0px;
+  --glz12-depth-edge-opacity: 0.03;
+  --glz12-depth-motion: 0ms;
+  --glz12-depth-shadow-alpha: var(--glz12-depth-embedded-shadow-alpha);
+  box-shadow:
+    inset 0 1px var(--glz12-depth-shadow-blur) rgb(0 0 0 / calc(var(--glz12-depth-shadow-alpha) * var(--glz12-depth-profile-shadow-scale))),
+    inset 0 1px 0 rgb(255 255 255 / calc(var(--glz12-depth-edge-opacity) * var(--glz12-depth-edge-scale)));
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-depth="base"] {
+  --glz12-depth-rank: 1;
+  --glz12-depth-shadow-y: 0px;
+  --glz12-depth-shadow-blur: 0px;
+  --glz12-depth-frost-blur: 0px;
+  --glz12-depth-edge-opacity: 0.04;
+  --glz12-depth-motion: 0ms;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / calc(var(--glz12-depth-edge-opacity) * var(--glz12-depth-edge-scale)));
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-depth="raised"] {
+  --glz12-depth-rank: 2;
+  --glz12-depth-shadow-y: 8px;
+  --glz12-depth-shadow-blur: 24px;
+  --glz12-depth-frost-blur: 18px;
+  --glz12-depth-edge-opacity: 0.10;
+  --glz12-depth-motion: 140ms;
+  --glz12-depth-shadow-alpha: var(--glz12-depth-raised-shadow-alpha);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / calc(var(--glz12-depth-edge-opacity) * var(--glz12-depth-edge-scale))),
+    0 var(--glz12-depth-shadow-y) var(--glz12-depth-shadow-blur) rgb(0 0 0 / calc(var(--glz12-depth-shadow-alpha) * var(--glz12-depth-profile-shadow-scale)));
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-depth="floating"] {
+  --glz12-depth-rank: 3;
+  --glz12-depth-shadow-y: 14px;
+  --glz12-depth-shadow-blur: 38px;
+  --glz12-depth-frost-blur: 18px;
+  --glz12-depth-edge-opacity: 0.16;
+  --glz12-depth-motion: 160ms;
+  --glz12-depth-shadow-alpha: var(--glz12-depth-floating-shadow-alpha);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / calc(var(--glz12-depth-edge-opacity) * var(--glz12-depth-edge-scale))),
+    0 var(--glz12-depth-shadow-y) var(--glz12-depth-shadow-blur) rgb(0 0 0 / calc(var(--glz12-depth-shadow-alpha) * var(--glz12-depth-profile-shadow-scale)));
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-depth="overlay"] {
+  --glz12-depth-rank: 4;
+  --glz12-depth-shadow-y: 18px;
+  --glz12-depth-shadow-blur: 52px;
+  --glz12-depth-frost-blur: 28px;
+  --glz12-depth-edge-opacity: 0.20;
+  --glz12-depth-motion: 180ms;
+  --glz12-depth-shadow-alpha: var(--glz12-depth-overlay-shadow-alpha);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / calc(var(--glz12-depth-edge-opacity) * var(--glz12-depth-edge-scale))),
+    0 var(--glz12-depth-shadow-y) var(--glz12-depth-shadow-blur) rgb(0 0 0 / calc(var(--glz12-depth-shadow-alpha) * var(--glz12-depth-profile-shadow-scale)));
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-depth="modal"] {
+  --glz12-depth-rank: 5;
+  --glz12-depth-shadow-y: 28px;
+  --glz12-depth-shadow-blur: 80px;
+  --glz12-depth-frost-blur: 0px;
+  --glz12-depth-edge-opacity: 0.22;
+  --glz12-depth-motion: 220ms;
+  --glz12-depth-shadow-alpha: var(--glz12-depth-modal-shadow-alpha);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / calc(var(--glz12-depth-edge-opacity) * var(--glz12-depth-edge-scale))),
+    0 var(--glz12-depth-shadow-y) var(--glz12-depth-shadow-blur) rgb(0 0 0 / calc(var(--glz12-depth-shadow-alpha) * var(--glz12-depth-profile-shadow-scale)));
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-depth="spatial-hero"] {
+  --glz12-depth-rank: 6;
+  --glz12-depth-shadow-y: 36px;
+  --glz12-depth-shadow-blur: 110px;
+  --glz12-depth-frost-blur: 28px;
+  --glz12-depth-edge-opacity: 0.18;
+  --glz12-depth-motion: 260ms;
+  --glz12-depth-shadow-alpha: var(--glz12-depth-hero-shadow-alpha);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / calc(var(--glz12-depth-edge-opacity) * var(--glz12-depth-edge-scale))),
+    0 var(--glz12-depth-shadow-y) var(--glz12-depth-shadow-blur) rgb(0 0 0 / calc(var(--glz12-depth-shadow-alpha) * var(--glz12-depth-profile-shadow-scale)));
+}
+
+/* Frost mapping is explicit and role-aware; high visual depth does not require translucency. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-depth-material="true"] {
+  background-color: var(--glz12-glass-overlay);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  [data-glz-depth="raised"],
+  [data-glz-depth="floating"],
+  [data-glz-depth="overlay"],
+  [data-glz-depth="spatial-hero"]
+)[data-glz-depth-material="true"] {
+  -webkit-backdrop-filter: blur(calc(var(--glz12-depth-frost-blur) * var(--glz12-depth-profile-frost-scale))) saturate(var(--glz12-saturation-standard));
+  backdrop-filter: blur(calc(var(--glz12-depth-frost-blur) * var(--glz12-depth-profile-frost-scale))) saturate(var(--glz12-saturation-standard));
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  [data-glz-depth="embedded"],
+  [data-glz-depth="base"],
+  [data-glz-depth="modal"]
+)[data-glz-depth-material="true"] {
+  background-color: var(--glz1-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Connected depth changes are opt-in and never carry semantic meaning. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-depth-change] {
+  transition:
+    transform var(--glz12-depth-motion) var(--glz1-ease-snap),
+    box-shadow var(--glz12-depth-motion) var(--glz1-ease-snap);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-depth-change="elevated"] {
+  transform: translateY(-2px);
+}
+
+/* One material owner: nested glass does not stack another shadow or backdrop sample. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-depth-owner .glz12-depth-child {
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Reduced profile retains broad ordering while lowering shadow opacity and blur cost. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-material-performance="reduced"]:root {
+  --glz12-depth-profile-shadow-scale: 0.64;
+  --glz12-depth-profile-frost-scale: 0.65;
+}
+
+/* Minimal profile removes optical depth, preserving hierarchy through structure/geometry. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-material-performance="minimal"]:root [data-glz-depth] {
+  box-shadow: none;
+  border-color: var(--glz12-structural-border);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-material-performance="minimal"]:root [data-glz-depth-material="true"] {
+  background-color: var(--glz1-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Reduced Transparency removes backdrop dependence but may retain restrained structural shadow separation. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"]:root [data-glz-depth-material="true"],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-reduced-transparency [data-glz-depth-material="true"] {
+  background-color: var(--glz1-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-mode="reduced-motion"]:root [data-glz-depth-change],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-mode="reduced-motion"] [data-glz-depth-change] {
+  transition: none;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-depth-change] {
+    transition: none;
+    transform: none;
+  }
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-depth] {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    forced-color-adjust: auto;
+  }
+}

@@ -1,0 +1,10 @@
+/* GLAZE UI V1.0 — official web entrypoint. */
+@import url("./glaze-v1.foundation.css");
+@import url("./glaze-v1.components.css");
+@import url("./glaze-v1.components.adaptive.css");
+@import url("./glaze-v1.components.runtime.css");
+@import url("./glaze-v1.structure.css");
+@import url("./glaze-v1.overlay.css");
+@import url("./glaze-v1.advanced.css");
+@import url("./glaze-v1.visual-refinement.css");
+@import url("./glaze-v1.optical-reachability.css");

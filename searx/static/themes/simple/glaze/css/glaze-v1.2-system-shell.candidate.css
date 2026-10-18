@@ -1,0 +1,371 @@
+/*
+ * GLAZE UI V1.2 — Frosted Neutral System Shell Candidate
+ * Activation: html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]
+ *
+ * Specializes the inherited V1 System Shell without changing Stable authority.
+ * One dominant neutral frosted panel is permitted; nested backdrop blur remains off.
+ */
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] {
+  --glz12-shell-bar-min: 52px;
+  --glz12-shell-target: 48px;
+  --glz12-shell-target-assisted: 56px;
+  --glz12-shell-radius: 24px;
+  --glz12-shell-radius-large: 32px;
+  --glz12-shell-gap: 12px;
+  --glz12-shell-control-bg: var(--glz12-glass-raised);
+  --glz12-shell-control-active: color-mix(in srgb, var(--glz1-focus) 24%, var(--glz12-glass-raised));
+  --glz12-shell-control-active-border: color-mix(in srgb, var(--glz1-focus) 42%, var(--glz12-structural-border));
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-touch-assistance="true"] {
+  --glz12-shell-target: var(--glz12-shell-target-assisted);
+}
+
+/* Workspace is intentionally not glassified. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz12-system-shell,
+  [data-glz-shell-region="workspace"]
+) {
+  background: var(--glz1-canvas);
+  color: var(--glz1-text-primary);
+}
+
+/* Floating shell bars and detached navigation use regular neutral Glaze. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz12-shell-bar,
+  .glz12-shell-navigation[data-variant="floating"],
+  [data-glz-shell-region="navigation"][data-variant="floating"]
+) {
+  min-block-size: var(--glz12-shell-bar-min);
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz11-radius-capsule, 999px);
+  background-color: var(--glz12-glass-overlay);
+  -webkit-backdrop-filter: blur(var(--glz12-blur-standard)) saturate(var(--glz12-saturation-standard));
+  backdrop-filter: blur(var(--glz12-blur-standard)) saturate(var(--glz12-saturation-standard));
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-inner-edge), var(--glz12-shadow-soft);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 16px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-bar-spacer {
+  flex: 1 1 auto;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz12-shell-button,
+  .glz12-control-tile,
+  .glz12-shell-status
+) {
+  box-sizing: border-box;
+  min-block-size: var(--glz12-shell-target);
+  min-inline-size: var(--glz12-shell-target);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-inline: 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-button[aria-pressed="true"],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-button[data-state="active"] {
+  background: var(--glz12-shell-control-active);
+  border-color: var(--glz12-shell-control-active-border);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-button:focus-visible,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-tile:focus-visible,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-range:focus-visible {
+  outline: var(--glz1-focus-width) solid var(--glz1-focus);
+  outline-offset: 2px;
+}
+
+/* Control Center is the one dominant Deep Glaze shell panel. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz12-control-center,
+  [data-glz-shell-region="control-center"]
+) {
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-shell-radius-large);
+  background-color: var(--glz12-glass-panel);
+  -webkit-backdrop-filter: blur(var(--glz12-blur-heavy)) saturate(var(--glz12-saturation-standard));
+  backdrop-filter: blur(var(--glz12-blur-heavy)) saturate(var(--glz12-saturation-standard));
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-inner-edge), var(--glz12-shadow-float);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-center {
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-header h2 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-tile {
+  display: grid;
+  align-content: space-between;
+  gap: 8px;
+  min-block-size: max(76px, var(--glz12-shell-target));
+  padding: 12px;
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: 20px;
+  background: var(--glz12-shell-control-bg);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: var(--glz12-inner-highlight);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-tile[aria-pressed="true"],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-tile[data-state="active"] {
+  background: var(--glz12-shell-control-active);
+  border-color: var(--glz12-shell-control-active-border);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-tile strong {
+  font-size: 14px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-tile small {
+  color: var(--glz1-text-secondary);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-slider {
+  display: grid;
+  gap: 8px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-slider-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--glz1-text-secondary);
+  font-size: 13px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-range {
+  inline-size: 100%;
+  min-block-size: var(--glz12-shell-target);
+  accent-color: var(--glz1-focus);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 10px;
+  border-radius: 999px;
+  color: var(--glz1-text-secondary);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-status-dot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-status[data-semantic="online"] {
+  color: var(--glz1-success);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-status[data-semantic="warning"] {
+  color: var(--glz1-warning);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-status[data-semantic="critical"] {
+  color: var(--glz1-critical);
+}
+
+/* Universal Search remains composite: Glaze entry + Deep Glaze result panel. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-shell-region="universal-search"] .glz1-search-entry {
+  background-color: var(--glz12-glass-overlay);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-shell-region="universal-search"] .glz1-search-panel {
+  background-color: var(--glz12-glass-panel);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-shell-region="universal-search"] .glz1-search-result {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Critical System remains high-opacity and never inherits shell blur. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-critical-system,
+  .glz12-critical-system,
+  [data-glz-shell-region="critical-system"]
+) {
+  background: var(--glz1-raised);
+  border: 1px solid var(--glz12-structural-border);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: var(--glz12-shadow-float);
+}
+
+/* Shell-local cards inside Control Center are not separate glass regions. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz12-control-center,
+  [data-glz-shell-region="control-center"]
+) :is(
+  .glz1-card,
+  .glz1-button[data-variant="glaze"],
+  .glz1-icon-button[data-variant="glaze"],
+  .glz1-field-control[data-variant="glaze"],
+  .glz1-select[data-variant="glaze"],
+  .glz1-capsule
+) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Compact layout keeps the same material authority and target floors. */
+@media (max-width: 720px) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-center {
+    border-radius: 28px;
+    padding: 14px;
+  }
+
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1180px) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-center[data-density="wide"] .glz12-control-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* 200% text reflows controls instead of shrinking targets. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"] .glz12-control-grid {
+  grid-template-columns: 1fr;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"] :is(
+  .glz12-shell-bar,
+  .glz12-control-header
+) {
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+/* Reduced Transparency removes shell blur but not hierarchy or state. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] :is(
+  .glz12-shell-bar,
+  .glz12-shell-navigation[data-variant="floating"],
+  [data-glz-shell-region="navigation"][data-variant="floating"],
+  .glz12-control-center,
+  [data-glz-shell-region="control-center"]
+) {
+  background: var(--glz1-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-reduced-transparency :is(
+  .glz12-shell-bar,
+  .glz12-shell-navigation[data-variant="floating"],
+  .glz12-control-center
+) {
+  background: var(--glz1-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+html[data-mode="increased-contrast"][data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz12-shell-bar,
+  .glz12-shell-navigation[data-variant="floating"],
+  .glz12-control-center,
+  .glz12-control-tile,
+  .glz12-critical-system
+) {
+  border-width: 2px;
+}
+
+@media (prefers-contrast: more) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz12-shell-bar,
+    .glz12-shell-navigation[data-variant="floating"],
+    .glz12-control-center,
+    .glz12-control-tile,
+    .glz12-critical-system
+  ) {
+    border-width: 2px;
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz12-shell-bar,
+    .glz12-shell-navigation[data-variant="floating"],
+    [data-glz-shell-region="navigation"][data-variant="floating"],
+    .glz12-control-center,
+    [data-glz-shell-region="control-center"]
+  ) {
+    background: var(--glz1-raised);
+  }
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz12-shell-bar,
+    .glz12-shell-navigation,
+    .glz12-control-center,
+    .glz12-control-tile,
+    .glz12-critical-system,
+    [data-glz-shell-region]
+  ) {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz12-shell-button[aria-pressed="true"],
+    .glz12-control-tile[aria-pressed="true"]
+  ) {
+    background: Highlight;
+    color: HighlightText;
+  }
+}

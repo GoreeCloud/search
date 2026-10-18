@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html data-glaze-consumer="goreecloud-search" class="no-js theme-{{ preferences.get_value('simple_style') or 'auto' }} center-alignment-{{ preferences.get_value('center_alignment') and 'yes' or 'no' }}" lang="{{ locale_rfc5646 }}" {% if rtl %} dir="rtl"{% endif %}>
+<head>
+  <meta charset="UTF-8">
+  <meta name="endpoint" content="{{ endpoint }}">
+  <meta name="description" content="GoreeCloud Search — private, transparent federated discovery">
+  <meta name="keywords" content="GoreeCloud Search, private search, federated search, metasearch">
+  <meta name="generator" content="searxng/{{ searxng_version }}">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noarchive">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %}{{ instance_name }}</title>
+  <script type="module" src="{{ url_for('static', filename='sxng-core.min.js') }}" client_settings="{{ client_settings }}"></script>
+  {% block meta %}{% endblock %}
+  {% if rtl %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='sxng-rtl.min.css') }}" type="text/css" media="screen">
+  {% else %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='sxng-ltr.min.css') }}" type="text/css" media="screen">
+  {% endif %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='glaze/css/glaze-v1.4.1.css') }}" type="text/css" media="screen">
+  <link rel="stylesheet" href="{{ url_for('static', filename='goreecloud-search.css') }}" type="text/css" media="screen">
+  {% if private_query_transport %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='goreecloud-mockup.css') }}" type="text/css" media="screen">
+  <link rel="stylesheet" href="{{ url_for('static', filename='goreecloud-results.css', v='layout1') }}" type="text/css" media="screen">
+  <link rel="stylesheet" href="{{ url_for('static', filename='goreecloud-settings-categories.css', v='rev1') }}" type="text/css" media="screen">
+  {% endif %}
+  <noscript>
+    <link rel="stylesheet" href="{{ url_for('static', filename='sxng-noscript.min.css') }}" type="text/css">
+  </noscript>
+  {% if get_setting('server.limiter') or get_setting('server.public_instance') %}
+  <link rel="stylesheet" href="{{ url_for('client_token', token=link_token) }}" type="text/css">
+  {% endif %}
+  {% block head %}
+  {% if not private_query_transport %}<link title="{{ instance_name }}" type="application/opensearchdescription+xml" rel="search" href="{{ opensearch_url }}">{% endif %}
+  {% endblock %}
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}?v=search-identity-3" type="image/svg+xml">
+  <link rel="manifest" href="{{ url_for('manifest') }}" />
+  {% if private_query_transport %}<script type="module" src="{{ url_for('static', filename='goreecloud-preview.js') }}"></script><script type="module" src="{{ url_for('static', filename='goreecloud-theme.js') }}"></script><script type="module" src="{{ url_for('static', filename='goreecloud-shortcuts.js') }}"></script>{% endif %}
+</head>
+<body class="{{ endpoint }}_endpoint" >
+  {% if private_query_transport %}<a class="goreecloud-skip-link" href="#goreecloud-content-start">Skip to search and content</a>{% endif %}
+  <main data-glaze-semantic-surface="protected" id="main_{{  self._TemplateReference__context.name|replace("simple/", "")|replace(".html", "") }}" class="{{body_class}}">
+    {% if errors %}
+        <div class="dialog-error" role="alert">
+            <a href="#" class="close" aria-label="close" title="close">×</a>
+            <ul>
+            {% for message in errors %}
+                <li>{{ message }}</li>
+            {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    {% if private_query_transport %}{% include 'simple/goreecloud_site_header.html' %}{% else %}
+    <nav id="links_on_top" aria-label="GoreeCloud Search navigation" data-glaze-material="chrome">
+      {%- from 'simple/icons.html' import icon_big -%}
+      {%- block linkto_about -%}
+        <a href="{{ url_for('info', pagename='about') }}" class="link_on_top_about">{{ icon_big('information-circle') }}<span>{{ _('About') }}</span></a>
+      {%- endblock -%}
+      {%- block linkto_donate -%}
+        {%- if donation_url -%}
+        <a href="{{ donation_url }}" class="link_on_top_donate">{{ icon_big('heart') }}<span>{{ _('Donate') }}</span></a>
+        {%- endif -%}
+      {%- endblock -%}
+      {%- block linkto_preferences -%}
+        {%- if not private_query_transport and request.args.get('preferences') -%}
+          <a href="{{ url_for('preferences') }}?preferences={{ request.args.get('preferences') }}&preferences_preview_only=true" class="link_on_top_preferences">{{ icon_big('settings') }}<span>{{ _('Preferences') }}</span></a>
+        {%- else -%}
+          <a href="{{ url_for('preferences') }}" class="link_on_top_preferences">{{ icon_big('settings') }}<span>{{ _('Preferences') }}</span></a>
+        {%- endif -%}
+      {%- endblock -%}
+    </nav>
+    {% endif %}
+    {% if private_query_transport %}<div id="goreecloud-content-start" tabindex="-1" class="goreecloud-content-start"></div>{% endif %}
+    {% block header %}
+    {% endblock %}
+    {% block content %}
+    {% endblock %}
+  </main>
+  {% if private_query_transport %}
+    {% include 'simple/goreecloud_site_footer.html' %}
+  {% else %}
+  <footer data-glaze-semantic-surface="protected">
+    <p>
+    GoreeCloud Search · {{ _('Powered by') }} <a href="https://github.com/searxng/searxng">SearXNG</a> · {{ searxng_version }} — {{ _('a privacy-respecting, open metasearch engine') }}<br>
+        <a href="https://github.com/GoreeCloud/search">{{ _('Source code') }}</a>
+        | <a href="{{ url_for('static', filename='goreecloud/privacy.html') }}">Privacy and source disclosure</a>
+        | <a href="{{ get_setting('brand.issue_url') }}">{{ _('Issue tracker') }}</a>
+        {% if enable_metrics %}| <a href="{{ url_for('stats') }}">{{ _('Engine stats') }}</a>{% endif %}
+        {% if get_setting('brand.public_instances') %}
+        | <a href="{{ get_setting('brand.public_instances') }}">{{ _('Public instances') }}</a>
+        {% endif %}
+        {% if get_setting('general.privacypolicy_url') %}
+        | <a href="{{ get_setting('general.privacypolicy_url') }}">{{ _('Privacy policy') }}</a>
+        {% endif %}
+        {% if get_setting('general.contact_url') %}
+        | <a href="{{ get_setting('general.contact_url') }}">{{ _('Contact instance maintainer') }}</a>
+        {% endif %}
+        {% for title, link in get_setting('brand.custom.links').items() %}
+        | <a href="{{ link }}">{{ _(title) }}</a>
+        {% endfor %}
+    </p>
+  </footer>
+  {% endif %}
+</body>
+</html>

@@ -1,0 +1,38 @@
+{% extends 'simple/page_with_header.html' %}
+{% block title %}{% if private_query_transport %}{{ 'About GoreeCloud Search' if active_pagename == 'about' else 'Search help' }} - {% else %}{{ active_page.title }} - {% endif %}{% endblock %}
+{% block linkto_about %}{% endblock %}
+{% block linkto_donate %}{% endblock %}
+{% block content %}
+{% if private_query_transport %}
+<article class="goreecloud-info-article">
+{% if active_pagename == 'about' %}
+<p class="goreecloud-preferences-eyebrow">GoreeCloud Search</p>
+<h1>Search the web on your terms.</h1>
+<p class="goreecloud-info-lead">A privacy-conscious, open-source search experience using results from Brave Search, Startpage, and Qwant.</p>
+<h2>Choose your sources</h2>
+<p>All three sources are selected by default. You can select just one in <a href="{{ url_for('preferences') }}">Settings</a>. Your selected services receive your search terms; provider access can be blocked or rate-limited. No automatic replacement provider is added.</p>
+<h2>Explore more</h2>
+<p>Use Web, Images, Videos, or News tabs after searching. Some providers offer different types of results; Qwant and Brave provide video searches in this build.</p>
+<h2>Privacy, not anonymity</h2>
+<p>Search queries use POST on this private VPS Development service. Your browser, the Search server, the privacy relay, and selected external search providers may still process connection information. Read the <a href="{{ url_for('static',filename='goreecloud/privacy.html') }}">Privacy and source disclosure</a>.</p>
+<h2>Open source foundations</h2>
+<p>GoreeCloud Search is built on the open-source SearXNG engine, distributed under the AGPL-3.0-or-later license. We recognize its developers and contributors. See the <a href="https://github.com/GoreeCloud/search" rel="noreferrer">GoreeCloud Search source repository</a> for code and attribution.</p>
+{% else %}
+<p class="goreecloud-preferences-eyebrow">GoreeCloud Search</p>
+<h1>Search help</h1>
+<p class="goreecloud-info-lead">Type a phrase and search, then use the Web, Images, Videos, or News tabs to focus the results.</p>
+<h2>Search shortcuts</h2>
+<p><code>!br</code> searches Brave Search, <code>!sp</code> uses Startpage, and <code>!qw</code> uses Qwant. These are explicit requests; no unapproved provider is selected automatically.</p>
+<h2>Search preferences</h2>
+<p>Adjust SafeSearch, language and your preferred sources in <a href="{{ url_for('preferences') }}">Settings</a>. A saved setting may override a new installation's defaults.</p>
+{% endif %}
+</article>
+{% else %}
+<ul class="tabs">
+{% for pagename, locale, page in all_pages %}
+  <li><a href="{{ url_for('info', pagename=pagename, locale=locale) }}" {% if pagename == active_pagename %}class="active"{% endif %}>{{page.title}}</a></li>
+{% endfor %}
+</ul>
+<div class="info-page {{pagename}}">{{ active_page.html | safe }}</div>
+{% endif %}
+{% endblock %}

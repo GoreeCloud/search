@@ -1,0 +1,374 @@
+/* GoreeCloud Search · private Settings and supported category tabs.
+   Preserve SearXNG form semantics, privacy rules, and keyboard access. */
+html[data-glaze-consumer] body.preferences_endpoint #main_preferences {
+  box-sizing: border-box; display: block; position: relative;
+  width: 100%; max-width: 1160px; min-width: 0;
+  margin: 0 auto; padding: 12px clamp(18px, 4vw, 48px) 72px;
+  color: var(--gc-ink);
+}
+html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-intro {
+  margin: 22px 0 24px; max-width: 780px;
+}
+html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-eyebrow {
+  color: var(--gc-accent-strong); font-weight: 700;
+  font-size: 13px; letter-spacing: .055em; text-transform: uppercase;
+}
+html[data-glaze-consumer] body.preferences_endpoint #main_preferences h1 {
+  font-size: clamp(29px, 3.6vw, 42px); font-weight: 760;
+  color: var(--gc-ink); letter-spacing: -.045em; margin: 8px 0 8px;
+  line-height: 1.16; text-align: left;
+}
+html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-intro p {
+  color: var(--gc-muted); font-size: 15px; line-height: 1.55; margin: 0;
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form {
+  box-sizing: border-box; width: 100%; max-width: none;
+  display: block; margin: 0;
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs {
+  box-sizing: border-box; display: flex; flex-wrap: wrap;
+  gap: 0 7px; align-items: flex-start;
+  width: 100%; padding: 7px 8px 0;
+  background: var(--gc-surface); border: 1px solid var(--gc-outline);
+  border-radius: 18px; box-shadow: 0 8px 30px rgba(31,65,116,.05);
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > input[type="radio"] {
+  position: absolute; width: 1px; height: 1px; opacity: 0;
+  pointer-events: none;
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > label[role="tab"] {
+  box-sizing: border-box; display: inline-flex; align-items: center;
+  min-height: 45px; padding: 9px 15px; margin: 0;
+  border: 0; border-bottom: 3px solid transparent;
+  color: var(--gc-muted); background: transparent;
+  font-size: 13px; font-weight: 650; line-height: 1.3;
+  border-radius: 9px 9px 0 0; cursor: pointer;
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > input[type="radio"]:checked + label {
+  color: var(--gc-accent-strong);
+  background: color-mix(in srgb, var(--gc-accent-strong) 7%, var(--gc-surface));
+  border-bottom-color: var(--gc-accent-strong);
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > input[type="radio"]:focus-visible + label {
+  outline: 3px solid var(--gc-ring); outline-offset: -3px;
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > section[role="tabpanel"] {
+  box-sizing: border-box; width: 100%; flex: 1 0 100%;
+  min-width: 0; margin: 0; padding: clamp(18px, 2.6vw, 28px);
+  border-top: 1px solid var(--gc-outline); background: var(--gc-surface);
+  border-radius: 0 0 18px 18px;
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form fieldset {
+  box-sizing: border-box; min-width: 0; max-width: none; width: 100%;
+  margin: 0 0 10px; padding: 15px 16px;
+  border: 1px solid var(--gc-outline); border-radius: 12px;
+  background: var(--gc-surface); color: var(--gc-ink);
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form fieldset legend {
+  box-sizing: border-box; width: auto; max-width: 100%; float: none;
+  padding: 0 7px; margin: 0;
+  color: var(--gc-ink); font-weight: 700; font-size: 14px;
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form fieldset :is(.value,.description) {
+  box-sizing: border-box; min-width: 0; max-width: 100%;
+  margin: 4px 0; line-height: 1.55;
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form fieldset .description,
+html[data-glaze-consumer] body.preferences_endpoint #search_form fieldset > p {
+  color: var(--gc-muted); font-size: 13px;
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form select,
+html[data-glaze-consumer] body.preferences_endpoint #search_form input:is([type="text"],[type="search"]) {
+  box-sizing: border-box; max-width: 100%; min-height: 42px;
+  padding: 8px 10px; border: 1px solid var(--gc-outline);
+  border-radius: 9px; background: var(--gc-surface); color: var(--gc-ink);
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form .goreecloud-provider-preferences {
+  padding: 20px 22px; margin-bottom: 20px;
+  border-radius: 14px; background: color-mix(in srgb, var(--gc-accent-strong) 3%, var(--gc-surface));
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form .goreecloud-provider-preferences legend {
+  font-size: 18px; padding-inline: 7px;
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form .goreecloud-provider-preferences p {
+  max-width: 620px; margin: 4px 0 14px;
+  color: var(--gc-muted); font-size: 14px; line-height: 1.55;
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form .goreecloud-provider-option {
+  display: flex; box-sizing: border-box; align-items: center;
+  width: 100%; max-width: 450px; min-height: 48px;
+  gap: 12px; padding: 11px 14px; margin-bottom: 6px;
+  border: 1px solid transparent; border-radius: 10px;
+  color: var(--gc-ink); font-size: 14px;
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form .goreecloud-provider-option:has(input:checked) {
+  background: color-mix(in srgb, var(--gc-accent-strong) 9%, var(--gc-surface));
+  border-color: color-mix(in srgb, var(--gc-accent-strong) 24%, var(--gc-outline));
+}
+html[data-glaze-consumer] body.preferences_endpoint #search_form .goreecloud-provider-option input {
+  accent-color: var(--gc-accent-strong); min-width: 18px; min-height: 18px;
+}
+html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-actions {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 12px; margin-top: 18px;
+  padding: 18px 20px; border: 1px solid var(--gc-outline);
+  border-radius: 14px; background: var(--gc-surface);
+}
+html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-actions > .small_font {
+  width: 100%; margin: 0 0 4px; color: var(--gc-muted);
+  font-size: 12px; line-height: 1.5;
+}
+html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-actions > input[type="submit"] {
+  box-sizing: border-box; min-height: 44px;
+  padding: 8px 24px; background: #1c51b0; color: #fff;
+  border: 1px solid transparent; border-radius: 10px; cursor: pointer;
+  font-weight: 700; font-size: 14px;
+}
+html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-actions .preferences_back {
+  float: none; margin: 0; display: inline-flex; align-items: center;
+}
+html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-actions .preferences_back a {
+  display: inline-flex; align-items: center; min-height: 44px;
+  padding: 8px 13px; border: 1px solid var(--gc-outline);
+  border-radius: 10px; background: var(--gc-surface);
+  color: var(--gc-ink); text-decoration: none; font-size: 13px; font-weight: 600;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tabs {
+  box-sizing: border-box; width: 100%; min-width: 0;
+  display: flex; flex-wrap: nowrap; align-items: center;
+  overflow-x: auto; overscroll-behavior-inline: contain;
+  border-bottom: 1px solid var(--gc-outline);
+  margin: 0 0 9px; padding: 0 2px;
+  scrollbar-width: thin;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-category-form {
+  box-sizing: border-box; margin: 0; padding: 0; flex: 0 0 auto;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tab {
+  box-sizing: border-box; display: inline-flex; justify-content: center;
+  align-items: center; flex: 0 0 auto; gap: 5px;
+  min-height: 46px; padding: 10px 21px; margin: 0;
+  background: transparent; border: 0; border-bottom: 3px solid transparent;
+  color: var(--gc-muted); text-decoration: none;
+  font-size: 14px; font-weight: 650; cursor: pointer;
+  white-space: nowrap;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tab.selected,
+html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tab[aria-current="page"] {
+  color: var(--gc-accent-strong); border-bottom-color: var(--gc-accent-strong);
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tab.unavailable {
+  color: var(--gc-muted); opacity: .56; cursor: not-allowed;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-tab-unavailable-note {
+  font-size: 10px; font-weight: 500;
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-category-form button:hover {
+  background: color-mix(in srgb, var(--gc-accent-strong) 5%, var(--gc-surface));
+}
+html[data-glaze-consumer] body.results_endpoint .goreecloud-category-form button:focus-visible {
+  outline: 3px solid var(--gc-ring); outline-offset: -3px;
+}
+@media (max-width: 650px) {
+  html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0 2px;
+  }
+  html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > label[role="tab"] {
+    display: flex; width: 100%; min-width: 0;
+    justify-content: center; text-align: center;
+    white-space: normal; overflow-wrap: anywhere;
+    font-size: 11px;
+  }
+  html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > section[role="tabpanel"] {
+    grid-column: 1 / -1; grid-row: 3;
+    width: 100%; min-width: 0;
+  }
+  html[data-glaze-consumer] body.preferences_endpoint #main_preferences {
+    padding: 2px 12px 42px;
+  }
+  html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs {
+    padding: 6px 5px 0; gap: 0 2px;
+  }
+  html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > label[role="tab"] {
+    font-size: 12px; padding: 8px 10px; min-height: 44px;
+  }
+  html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > section[role="tabpanel"] {
+    padding: 14px 10px;
+  }
+  html[data-glaze-consumer] body.preferences_endpoint #search_form fieldset {
+    padding: 14px 12px;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tab {
+    padding-inline: 16px; min-height: 44px;
+  }
+}
+@media (forced-colors: active) {
+  html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs,
+  html[data-glaze-consumer] body.preferences_endpoint #search_form fieldset,
+  html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-actions {
+    background: Canvas; color: CanvasText; border-color: CanvasText;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tab[aria-current="page"] {
+    border-bottom-color: Highlight; color: LinkText;
+  }
+}
+
+html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-actions > :is(.goreecloud-back-action,.goreecloud-reset-action) {
+  display: inline-flex !important; align-items: center; justify-content: center;
+  box-sizing: border-box; min-height: 44px; min-width: 108px;
+  padding: 9px 14px; border: 1px solid var(--gc-outline);
+  border-radius: 10px; background: var(--gc-surface);
+  color: var(--gc-ink) !important; font: 600 13px/1.4 system-ui,sans-serif !important;
+  text-decoration: none !important; text-indent: 0 !important; opacity: 1 !important;
+}
+html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-actions > :is(.goreecloud-back-action,.goreecloud-reset-action):focus-visible {
+  outline: 3px solid var(--gc-accent-strong); outline-offset: 2px;
+}
+
+/* Media-specific GoreeCloud gallery. The original SearXNG image detail
+   interaction, source links, and image proxy remain intact. */
+html[data-glaze-consumer] body.results_endpoint #main_results #results:has(#urls.goreecloud-image-results) {
+  grid-template-columns: minmax(0, 1fr);
+}
+html[data-glaze-consumer] body.results_endpoint #results:has(#urls.goreecloud-image-results) > #sidebar {
+  grid-column: 1; grid-row: 3;
+  display: flex; flex-direction: row; flex-wrap: wrap;
+}
+html[data-glaze-consumer] body.results_endpoint #results:has(#urls.goreecloud-image-results) > #sidebar > * {
+  flex: 1 1 220px;
+}
+html[data-glaze-consumer] body.results_endpoint #main_results #results > #urls.goreecloud-image-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
+  align-content: start; align-items: start;
+  column-gap: clamp(10px, 1.5vw, 18px);
+  row-gap: clamp(10px, 1.5vw, 18px);
+}
+html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results > :not(.result-images) {
+  grid-column: 1 / -1;
+}
+html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results > article.result-images {
+  display: flex; flex-direction: column; box-sizing: border-box;
+  width: 100%; min-width: 0; max-width: none; height: auto; flex-grow: 0;
+  padding: 7px; margin: 0; border: 1px solid var(--gc-outline); border-radius: 14px;
+  background: var(--gc-surface); overflow: hidden;
+  box-shadow: 0 3px 14px rgba(25,55,100,.06);
+}
+html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results > article.result-images > a:first-child {
+  display: flex; flex-direction: column; min-width: 0; width: 100%;
+  color: var(--gc-ink); text-decoration: none; position: relative;
+}
+html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results .image_thumbnail {
+  display: block; width: 100%; height: auto; aspect-ratio: 4 / 3;
+  object-fit: cover; object-position: center; border-radius: 9px;
+  background: color-mix(in srgb, var(--gc-muted) 10%, var(--gc-surface));
+}
+html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results .title {
+  display: -webkit-box; position: static; width: auto; padding: 0; white-space: normal;
+  -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden; margin: 9px 6px 3px; min-height: 2.6em;
+  color: var(--gc-ink); font-size: 13px; line-height: 1.3;
+  font-weight: 650; overflow-wrap: anywhere;
+}
+html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results .source {
+  display: block; position: static; width: auto; padding: 0;
+  margin: 0 6px 7px; color: var(--gc-muted); font-size: 11px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results .image_resolution {
+  position: absolute; top: 8px; right: 8px; bottom: auto; left: auto;
+  width: auto; height: auto; padding: 3px 7px;
+  background: rgba(10,18,32,.78); color: #fff;
+  border-radius: 6px; font-size: 11px; line-height: 1.4;
+}
+html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results article.result-images:hover {
+  border-color: var(--gc-accent-strong);
+  box-shadow: 0 6px 18px rgba(24,55,98,.12);
+}
+html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results article.result-images a:focus-visible {
+  outline: 3px solid var(--gc-accent-strong); outline-offset: 2px;
+}
+/* All four categories must fit a 320px phone without a visible scrollbar.
+   Disabled categories remain discoverable through aria-disabled and title. */
+@media (max-width: 410px) {
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tabs {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow: visible; gap: 0; padding-inline: 0;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-category-form {
+    width: 100%; min-width: 0;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tab {
+    box-sizing: border-box; width: 100%; min-width: 0;
+    min-height: 44px; padding: 8px 2px; font-size: 12px;
+    text-align: center; justify-content: center;
+  }
+  html[data-glaze-consumer] body.results_endpoint .goreecloud-tab-unavailable-note {
+    display: none;
+  }
+}
+
+@media (max-width: 410px) {
+  html[data-glaze-consumer] body.results_endpoint #main_results #results > #urls.goreecloud-image-results {
+    grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px;
+  }
+  html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results > article.result-images { padding: 5px; }
+}
+@media (forced-colors: active) {
+  html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results > article.result-images {
+    border-color: CanvasText; box-shadow: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results > article.result-images { transition: none; }
+}
+
+html[data-glaze-consumer] body.info_endpoint #main_info,
+html[data-glaze-consumer] body.info_endpoint #main_info.page_with_header {
+  box-sizing: border-box; width: 100%; min-width: 0;
+  max-width: 1160px; margin-inline: auto; padding: 14px clamp(18px,4vw,48px) 76px;
+}
+html[data-glaze-consumer] body.info_endpoint .goreecloud-info-article {
+  box-sizing: border-box; max-width: 860px; margin: 27px auto 0;
+  padding: clamp(20px,3vw,40px); background: var(--gc-surface);
+  border: 1px solid var(--gc-outline); border-radius: 18px;
+  color: var(--gc-ink); line-height: 1.7;
+}
+html[data-glaze-consumer] body.info_endpoint .goreecloud-info-article h1 {
+  font-size: clamp(27px,4vw,40px); letter-spacing: -.035em; margin: 8px 0 12px;
+}
+html[data-glaze-consumer] body.info_endpoint .goreecloud-info-article h2 {
+  font-size: 19px; margin: 25px 0 8px;
+}
+html[data-glaze-consumer] body.info_endpoint .goreecloud-info-article p {
+  font-size: 15px; color: var(--gc-ink); line-height: 1.7;
+}
+html[data-glaze-consumer] body.info_endpoint .goreecloud-info-lead {
+  color: var(--gc-muted); font-size: 17px;
+}
+html[data-glaze-consumer] body.info_endpoint .goreecloud-info-article a {
+  color: var(--gc-accent-strong); text-underline-offset: 3px;
+}
+
+
+/* Failed image requests are a status view, not a gallery. Keep the source
+   messages beside the retry panel on desktop and below it on narrow screens. */
+html[data-glaze-consumer] body.results_endpoint #main_results #results:has(#urls.goreecloud-image-results .goreecloud-empty-state) {
+  grid-template-columns: minmax(0, 1fr) minmax(245px, 285px);
+}
+html[data-glaze-consumer] body.results_endpoint #results:has(#urls.goreecloud-image-results .goreecloud-empty-state) > #sidebar {
+  grid-column: 2; grid-row: 1 / span 2;
+  flex-direction: column; flex-wrap: nowrap;
+}
+html[data-glaze-consumer] body.results_endpoint #results:has(#urls.goreecloud-image-results .goreecloud-empty-state) > #sidebar > * {
+  flex: 0 1 auto;
+}
+html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results .goreecloud-empty-state {
+  width: 100%; max-width: none; box-sizing: border-box;
+}
+@media (max-width: 900px) {
+  html[data-glaze-consumer] body.results_endpoint #results:has(#urls.goreecloud-image-results .goreecloud-empty-state) > #sidebar {
+    flex-direction: column; width: 100%;
+  }
+}

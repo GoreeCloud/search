@@ -1,0 +1,256 @@
+/*
+ * GLAZE UI V1.2 — Frosted Neutral Material Candidate
+ * Preview activation: html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]
+ *
+ * This layer intentionally does not change Stable version authority. It previews the
+ * next material direction on top of V1.1 while preserving semantic and accessibility
+ * contracts. Neutral glass is the material. Color is an accent.
+ */
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] {
+  --glz12-glass-base: rgba(255, 255, 255, 0.58);
+  --glz12-glass-raised: rgba(255, 255, 255, 0.72);
+  --glz12-glass-overlay: rgba(250, 250, 250, 0.82);
+  --glz12-glass-panel: rgba(255, 255, 255, 0.76);
+  --glz12-specular-border: rgba(255, 255, 255, 0.52);
+  --glz12-structural-border: rgba(80, 80, 80, 0.10);
+  --glz12-blur-soft: 24px;
+  --glz12-blur-standard: 28px;
+  --glz12-blur-heavy: 44px;
+  --glz12-saturation-soft: 1.08;
+  --glz12-saturation-standard: 1.10;
+  --glz12-saturation-live: 1.15;
+  --glz12-shadow-soft: 0 14px 38px rgba(0, 0, 0, 0.11), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --glz12-shadow-float: 0 28px 76px rgba(0, 0, 0, 0.16), 0 8px 22px rgba(0, 0, 0, 0.08);
+  --glz12-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.64);
+  --glz12-inner-edge: inset 1px 1px 0 rgba(255, 255, 255, 0.34);
+
+  /* Override the inherited substrate itself, not semantic/accent colors. */
+  --glz1-overlay-bg: var(--glz12-glass-overlay);
+  --glz1-panel-bg: var(--glz12-glass-panel);
+  --glz1-overlay-blur: var(--glz12-blur-standard);
+  --glz1-panel-blur: var(--glz12-blur-heavy);
+  --glz1-line: var(--glz12-structural-border);
+
+  /* V1.1 atmosphere becomes optional environmental accent, not material pigment. */
+  --glz11-tint-soft-teal: transparent;
+  --glz11-tint-soft-amber: transparent;
+  --glz11-tint-glaze-teal: transparent;
+  --glz11-tint-glaze-amber: transparent;
+  --glz11-tint-deep-teal: transparent;
+  --glz11-tint-deep-amber: transparent;
+  --glz11-tint-live-teal: transparent;
+  --glz11-tint-live-amber: transparent;
+  --glz11-aura-teal-max: transparent;
+  --glz11-aura-amber-max: transparent;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-appearance="dark"] {
+  --glz12-glass-base: rgba(25, 25, 27, 0.62);
+  --glz12-glass-raised: rgba(38, 38, 41, 0.72);
+  --glz12-glass-overlay: rgba(42, 42, 45, 0.82);
+  --glz12-glass-panel: rgba(34, 34, 37, 0.76);
+  --glz12-specular-border: rgba(255, 255, 255, 0.12);
+  --glz12-structural-border: rgba(255, 255, 255, 0.10);
+  --glz12-shadow-soft: 0 18px 48px rgba(0, 0, 0, 0.30), 0 4px 12px rgba(0, 0, 0, 0.18);
+  --glz12-shadow-float: 0 30px 86px rgba(0, 0, 0, 0.44), 0 9px 26px rgba(0, 0, 0, 0.24);
+  --glz12-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.13);
+  --glz12-inner-edge: inset 1px 1px 0 rgba(255, 255, 255, 0.09);
+  --glz11-aura-teal-max: transparent;
+  --glz11-aura-amber-max: transparent;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-appearance="deep-dark"] {
+  --glz12-glass-base: rgba(14, 14, 16, 0.72);
+  --glz12-glass-raised: rgba(22, 22, 25, 0.78);
+  --glz12-glass-overlay: rgba(24, 24, 27, 0.86);
+  --glz12-glass-panel: rgba(18, 18, 21, 0.82);
+  --glz12-specular-border: rgba(255, 255, 255, 0.11);
+  --glz12-structural-border: rgba(255, 255, 255, 0.09);
+  --glz12-shadow-soft: 0 20px 54px rgba(0, 0, 0, 0.38), 0 5px 14px rgba(0, 0, 0, 0.24);
+  --glz12-shadow-float: 0 34px 96px rgba(0, 0, 0, 0.52), 0 10px 30px rgba(0, 0, 0, 0.30);
+  --glz12-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.11);
+  --glz12-inner-edge: inset 1px 1px 0 rgba(255, 255, 255, 0.08);
+  --glz11-aura-teal-max: transparent;
+  --glz11-aura-amber-max: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:not([data-glz-appearance="light"]) {
+    --glz12-glass-base: rgba(25, 25, 27, 0.62);
+    --glz12-glass-raised: rgba(38, 38, 41, 0.72);
+    --glz12-glass-overlay: rgba(42, 42, 45, 0.82);
+    --glz12-glass-panel: rgba(34, 34, 37, 0.76);
+    --glz12-specular-border: rgba(255, 255, 255, 0.12);
+    --glz12-structural-border: rgba(255, 255, 255, 0.10);
+    --glz12-shadow-soft: 0 18px 48px rgba(0, 0, 0, 0.30), 0 4px 12px rgba(0, 0, 0, 0.18);
+    --glz12-shadow-float: 0 30px 86px rgba(0, 0, 0, 0.44), 0 9px 26px rgba(0, 0, 0, 0.24);
+    --glz12-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.13);
+    --glz12-inner-edge: inset 1px 1px 0 rgba(255, 255, 255, 0.09);
+    --glz11-aura-teal-max: transparent;
+    --glz11-aura-amber-max: transparent;
+  }
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz11-atmosphere {
+  background:
+    linear-gradient(145deg,
+      color-mix(in srgb, var(--glz1-canvas) 99%, white 1%),
+      var(--glz1-canvas) 58%,
+      color-mix(in srgb, var(--glz1-canvas) 99%, black 1%));
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz11-soft-glaze,
+  .glz11-glaze,
+  .glz11-deep-glaze,
+  .glz11-live-glaze,
+  .glz1-system-overlay,
+  .glz1-system-panel,
+  .glz1-capsule,
+  .glz1-search-entry,
+  .glz1-smart-rail,
+  .glz1-aurora
+) {
+  background-image: none;
+  border-color: var(--glz12-structural-border);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz11-soft-glaze,
+  .glz12-soft-glaze
+) {
+  background-color: var(--glz12-glass-base);
+  -webkit-backdrop-filter: blur(var(--glz12-blur-soft)) saturate(var(--glz12-saturation-soft));
+  backdrop-filter: blur(var(--glz12-blur-soft)) saturate(var(--glz12-saturation-soft));
+  box-shadow: var(--glz12-inner-highlight), 0 10px 28px rgba(0, 0, 0, 0.08);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz11-glaze,
+  .glz1-system-overlay,
+  .glz1-capsule,
+  .glz1-search-entry,
+  .glz1-smart-rail,
+  .glz12-glaze
+) {
+  background-color: var(--glz12-glass-overlay);
+  -webkit-backdrop-filter: blur(var(--glz12-blur-standard)) saturate(var(--glz12-saturation-standard));
+  backdrop-filter: blur(var(--glz12-blur-standard)) saturate(var(--glz12-saturation-standard));
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-inner-edge), var(--glz12-shadow-soft);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz11-deep-glaze,
+  .glz1-system-panel,
+  .glz12-deep-glaze
+) {
+  background-color: var(--glz12-glass-panel);
+  -webkit-backdrop-filter: blur(var(--glz12-blur-heavy)) saturate(var(--glz12-saturation-standard));
+  backdrop-filter: blur(var(--glz12-blur-heavy)) saturate(var(--glz12-saturation-standard));
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-inner-edge), var(--glz12-shadow-float);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz11-live-glaze,
+  .glz1-aurora,
+  .glz12-live-glaze
+) {
+  background-color: color-mix(in srgb, var(--glz12-glass-base) 90%, transparent);
+  -webkit-backdrop-filter: blur(var(--glz12-blur-standard)) saturate(var(--glz12-saturation-live));
+  backdrop-filter: blur(var(--glz12-blur-standard)) saturate(var(--glz12-saturation-live));
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-shadow-soft);
+}
+
+/* Header and reference chrome must not reintroduce V1.1 teal/amber substrate tint. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz11-reference-header {
+  background: var(--glz12-glass-overlay);
+  background-image: none;
+  border-color: var(--glz12-structural-border);
+  -webkit-backdrop-filter: blur(var(--glz12-blur-standard)) saturate(var(--glz12-saturation-standard));
+  backdrop-filter: blur(var(--glz12-blur-standard)) saturate(var(--glz12-saturation-standard));
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-shadow-soft);
+}
+
+/* Active states retain intentional accent color; inactive surfaces stay neutral. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-accent-control {
+  background: color-mix(in srgb, var(--glz1-focus) 16%, var(--glz12-glass-raised));
+  border-color: color-mix(in srgb, var(--glz1-focus) 28%, var(--glz12-structural-border));
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-accent-control[aria-pressed="true"],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-accent-control[data-state="active"] {
+  background: color-mix(in srgb, var(--glz1-focus) 28%, var(--glz12-glass-raised));
+  border-color: color-mix(in srgb, var(--glz1-focus) 46%, var(--glz12-structural-border));
+}
+
+/* Reduced Transparency: neutral opacity replaces backdrop-dependent presentation. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-reduced-transparency {
+  --glz12-glass-base: color-mix(in srgb, var(--glz1-raised) 98%, white 2%);
+  --glz12-glass-raised: var(--glz1-raised);
+  --glz12-glass-overlay: var(--glz1-raised);
+  --glz12-glass-panel: var(--glz1-raised);
+  --glz12-blur-soft: 0px;
+  --glz12-blur-standard: 0px;
+  --glz12-blur-heavy: 0px;
+  --glz11-aura-teal-max: transparent;
+  --glz11-aura-amber-max: transparent;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] :is(
+  .glz11-soft-glaze,
+  .glz11-glaze,
+  .glz11-deep-glaze,
+  .glz11-live-glaze,
+  .glz1-system-overlay,
+  .glz1-system-panel,
+  .glz1-capsule,
+  .glz1-search-entry,
+  .glz1-smart-rail,
+  .glz1-aurora
+),
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-reduced-transparency :is(
+  .glz11-soft-glaze,
+  .glz11-glaze,
+  .glz11-deep-glaze,
+  .glz11-live-glaze,
+  .glz1-system-overlay,
+  .glz1-system-panel,
+  .glz1-capsule,
+  .glz1-search-entry,
+  .glz1-smart-rail,
+  .glz1-aurora
+) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz11-soft-glaze,
+    .glz11-glaze,
+    .glz11-deep-glaze,
+    .glz11-live-glaze,
+    .glz1-system-overlay,
+    .glz1-system-panel,
+    .glz1-capsule,
+    .glz1-search-entry,
+    .glz1-smart-rail,
+    .glz1-aurora,
+    .glz11-reference-header
+  ) {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] {
+    --glz12-structural-border: color-mix(in srgb, currentColor 24%, transparent);
+  }
+}

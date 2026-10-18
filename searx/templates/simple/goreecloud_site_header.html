@@ -1,0 +1,15 @@
+<header class="goreecloud-site-header" aria-label="GoreeCloud Search header">
+  <a class="goreecloud-site-brand" href="{{ url_for('index') }}" aria-label="GoreeCloud Search home">
+    <span class="goreecloud-mark goreecloud-mark-small" aria-hidden="true"><img src="{{ url_for('static', filename='img/favicon.svg') }}?v=search-identity-3" width="64" height="64" alt="" decoding="async"></span>
+    <span class="goreecloud-brand-name">Goree<span>Cloud</span></span>
+    <span class="goreecloud-brand-divider" aria-hidden="true"></span>
+    <span class="goreecloud-brand-product">Search</span>
+  </a>
+  <nav class="goreecloud-site-nav" aria-label="Site navigation">
+    <a class="goreecloud-nav-secondary" href="{{ url_for('info', pagename='about') }}">About</a>
+    <a class="goreecloud-nav-secondary" href="{{ url_for('static', filename='goreecloud/privacy.html') }}">Privacy</a>
+    <a href="https://github.com/GoreeCloud/search" rel="noopener noreferrer" aria-label="Open source on GitHub"><span class="goreecloud-open-source-text">Open source</span> <span aria-hidden="true">↗</span></a>
+    <a class="goreecloud-settings-link" href="{{ url_for('preferences') }}" aria-label="Search settings"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6l1.4 1.4m10 10 1.4 1.4m0-12.8L17 7m-10 10-1.4 1.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/></svg><span>Settings</span></a>
+    <button type="button" class="goreecloud-theme-toggle" aria-label="Switch to dark mode" aria-pressed="false" title="Toggle light and dark appearance"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20.3 15.1A8.5 8.5 0 0 1 8.9 3.7 8.7 8.7 0 1 0 20.3 15.1Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </nav>
+</header>

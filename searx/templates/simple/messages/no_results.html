@@ -1,0 +1,69 @@
+<section class="goreecloud-empty-state" role="status" aria-labelledby="goreecloud-no-results-title">
+  <h2 id="goreecloud-no-results-title">
+    {% if private_query_transport and unresponsive_engines %}Search results unavailable
+    {% elif pageno == 1 %}{{ _('No results found') }}{% else %}{{ _('No more results') }}{% endif %}
+  </h2>
+  {% if private_query_transport %}
+    {% if pageno == 1 and unresponsive_engines %}
+      {% if 'images' in selected_categories %}
+      <p>No images were returned by the selected sources. At least one provider reported an error or timed out. Review the source messages for details; no replacement provider was selected automatically.</p>
+      {% else %}
+      <p>At least one selected search source reported an error, so results may be incomplete. Review the source messages for details. No replacement provider was selected automatically.</p>
+      {% endif %}
+      <form class="goreecloud-empty-retry" method="post" action="{{ url_for('search') }}">
+        <input type="hidden" name="q" value="{{ source_switch_query }}">
+        <input type="hidden" name="engines" value="{{ selected_engine_post }}">
+        {% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}
+        <input type="hidden" name="language" value="{{ current_language }}">
+        <input type="hidden" name="time_range" value="{{ time_range }}">
+        <input type="hidden" name="safesearch" value="{{ safesearch }}">
+        <input type="hidden" name="theme" value="{{ theme }}">
+        {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}">{% endif %}
+        <button type="submit">Retry selected sources</button>
+      </form>
+      <p>Retrying sends the search terms to the same selected providers again. You can also change the query or select another approved source above.</p>
+      {% include 'simple/goreecloud_try_startpage.html' %}
+    {% elif pageno == 1 %}
+      <p>No matches were returned by the selected sources. Try different search terms, another search category, or choose Brave Search, Startpage, or Qwant in Settings.</p>
+    {% else %}
+      {% if unresponsive_engines %}
+      <p>At least one selected source reported an error, so results for this page could not be confirmed. <a href="#engines_msg-title">Review source messages</a>. No replacement provider was selected automatically.</p>
+      <form class="goreecloud-page-error-retry goreecloud-empty-retry" method="post" action="{{ url_for('search') }}">
+        <input type="hidden" name="q" value="{{ source_switch_query }}">
+        <input type="hidden" name="engines" value="{{ selected_engine_post }}">
+        {% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}
+        <input type="hidden" name="pageno" value="{{ pageno }}">
+        <input type="hidden" name="language" value="{{ current_language }}">
+        <input type="hidden" name="time_range" value="{{ time_range }}">
+        <input type="hidden" name="safesearch" value="{{ safesearch }}">
+        <input type="hidden" name="theme" value="{{ theme }}">
+        {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}">{% endif %}
+        <button type="submit">Retry this results page</button>
+      </form>
+      <p>Retrying sends these terms to the same selected sources again on this page.</p>
+      {% else %}
+      <p>No more displayed web matches on this page. You can request the previous results page from the same selected sources.</p>
+      {% endif %}
+      <form class="goreecloud-previous-results goreecloud-empty-retry" method="post" action="{{ url_for('search') }}">
+        <input type="hidden" name="q" value="{{ source_switch_query }}">
+        <input type="hidden" name="engines" value="{{ selected_engine_post }}">
+        {% for category in selected_categories %}<input type="hidden" name="category_{{ category }}" value="1">{% endfor %}
+        <input type="hidden" name="pageno" value="{{ pageno - 1 }}">
+        <input type="hidden" name="language" value="{{ current_language }}">
+        <input type="hidden" name="time_range" value="{{ time_range }}">
+        <input type="hidden" name="safesearch" value="{{ safesearch }}">
+        <input type="hidden" name="theme" value="{{ theme }}">
+        {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}">{% endif %}
+        <button type="submit">Previous results page</button>
+      </form>
+      <p>Returning to an earlier page makes another search request to the same selected providers.</p>
+    {% endif %}
+  {% else %}
+    {% if pageno == 1 %}
+      <p>{{ _('This search did not return matches from the enabled providers. Try different words or choose another category.') }}</p>
+      <p><a href="{{ url_for('preferences') }}">{{ _('Review enabled search providers') }}</a></p>
+    {% else %}
+      <p>{{ _('Try a different search or return to an earlier results page.') }}</p>
+    {% endif %}
+  {% endif %}
+</section>

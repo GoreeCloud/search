@@ -1,0 +1,142 @@
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glaze-surface,
+  .glaze-overlay {
+    background: var(--glaze-surface-strong);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glaze-surface,
+  .glaze-overlay {
+    background: var(--glaze-surface-strong);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+
+  .glaze-button:active:not(:disabled),
+  .glaze-icon-button:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --glaze-line: color-mix(in srgb, currentColor 34%, transparent);
+    --glaze-surface: var(--glaze-surface-strong);
+  }
+
+  .glaze-surface,
+  .glaze-surface-raised,
+  .glaze-surface-solid,
+  .glaze-overlay,
+  .glaze-button,
+  .glaze-input,
+  .glaze-select,
+  .glaze-textarea,
+  .glaze-icon-button,
+  .glaze-switch-track,
+  .glaze-segmented,
+  .glaze-banner {
+    border-width: 2px;
+  }
+
+  .glaze-progress {
+    outline: 1px solid currentColor;
+    outline-offset: 1px;
+  }
+}
+
+@media (forced-colors: active) {
+  .glaze-canvas,
+  .glaze-surface,
+  .glaze-surface-raised,
+  .glaze-surface-solid,
+  .glaze-overlay,
+  .glaze-button,
+  .glaze-input,
+  .glaze-select,
+  .glaze-textarea,
+  .glaze-icon-button,
+  .glaze-chip,
+  .glaze-switch-track,
+  .glaze-segmented,
+  .glaze-banner,
+  .glaze-progress {
+    background: Canvas;
+    color: CanvasText;
+    border-color: ButtonText;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .glaze-button[data-variant="primary"] {
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .glaze-button[data-variant="danger"] {
+    color: CanvasText;
+    border-style: double;
+  }
+
+  .glaze-switch > input:checked + .glaze-switch-track,
+  .glaze-segmented > [aria-selected="true"],
+  .glaze-segmented > [aria-pressed="true"],
+  .glaze-segmented > [data-selected="true"] {
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+    forced-color-adjust: none;
+  }
+
+  .glaze-switch > input:checked + .glaze-switch-track::after {
+    background: HighlightText;
+  }
+
+  .glaze-progress > span {
+    background: Highlight;
+    forced-color-adjust: none;
+  }
+
+  .glaze-banner[data-state="error"],
+  .glaze-banner[data-state="destructive"] {
+    border-style: double;
+  }
+
+  .glaze-button:focus-visible,
+  .glaze-icon-button:focus-visible,
+  .glaze-input:focus-visible,
+  .glaze-select:focus-visible,
+  .glaze-textarea:focus-visible,
+  .glaze-nav-item:focus-visible,
+  .glaze-focusable:focus-visible,
+  .glaze-choice:has(input:focus-visible),
+  .glaze-switch > input:focus-visible + .glaze-switch-track,
+  .glaze-segmented > button:focus-visible,
+  .glaze-segmented > [role="tab"]:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+}
+
+.glaze-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0,0,0,0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}

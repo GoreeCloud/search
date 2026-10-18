@@ -1,0 +1,17 @@
+{% extends "simple/base.html" %}
+{% block content %}
+<div class="index goreecloud-home">
+  <section class="goreecloud-hero" aria-labelledby="goreecloud-home-title">
+    <div class="goreecloud-mark goreecloud-mark-hero" aria-hidden="true"><img src="{{ url_for('static', filename='img/favicon.svg') }}?v=search-identity-3" width="64" height="64" alt="" decoding="async"></div>
+    <div class="title">
+      <h1 id="goreecloud-home-title"><span class="goreecloud-hero-brand">Goree<span>Cloud</span></span> <span class="goreecloud-hero-product">Search</span></h1>
+      <p class="goreecloud-tagline">Explore the web. Not your personal data.</p>
+    </div>
+    {% include 'simple/simple_search.html' %}
+  </section>
+  <section class="goreecloud-why" id="why-goreecloud-search" aria-labelledby="goreecloud-why-heading">
+    <h2 id="goreecloud-why-heading">Find more. Give away less.</h2>
+    <p class="goreecloud-source-disclosure" role="note">GoreeCloud Search can query Brave Search, Startpage, and Qwant. Availability varies by provider and search category. Queries are sent to your selected providers through the configured privacy relay, and those providers may process the search terms. This private VPS Development service is not a production privacy guarantee.</p>
+  </section>
+</div>
+{% endblock %}
