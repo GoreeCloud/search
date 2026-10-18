@@ -76,12 +76,17 @@ With SearXNG's pinned requirements installed (including the Python 3.10 compatib
 ```sh
 python -m compileall -q searx
 python -m unittest discover -s tests/goreecloud -v
+# Independent native-index, bounded crawler and approved-corpus tests:
+python -m compileall -q native_search
+python -m unittest discover -s tests/native -p 'test_*.py' -v
 python -m pip install nose2==0.16.0 aiounittest==1.5.0 parameterized==0.9.0 mock==5.2.0
 export SEARXNG_SECRET="$(python -c 'import secrets;print(secrets.token_hex(32))')"
 python -m nose2 -s tests/unit test_query test_webadapter test_settings_loader test_webapp -v
 ```
 
-At Development commit `6cb1830c2d04269e0be2dbb5c0bb54c777743063`, the authorized laptop passed **142 GoreeCloud tests** and **72 targeted upstream SearXNG tests** with isolated Python 3.10 dependencies on October 16, 2026. Exact-head GitHub Actions for `6cb1830c2d04269e0be2dbb5c0bb54c777743063` passed in both the [pull-request run](https://github.com/GoreeCloud/search/actions/runs/39002740258) and [push run](https://github.com/GoreeCloud/search/actions/runs/39002738206); later commits require fresh exact-head CI. At that earlier commit, the private registered adapters included Brave, Startpage and Qwant. This feature branch adds DuckDuckGo, Ecosia, Bing and Google; current-head validation is separate. Local SQLite threading warnings and missing limiter configuration remain unqualified. Synthetic tests make no real upstream search requests; they do not establish provider availability, public authentication, Valkey rate limiting, full upstream regression coverage, device acceptance, or production readiness.
+At current seven-family Development commit `934d3fbef4ab2eb9740c13292d4ebc4b486bf1cd`, [exact-head GitHub Actions 39168628801](https://github.com/GoreeCloud/search/actions/runs/39168628801) passed all four jobs. Both Python 3.10 and 3.12 runtime jobs passed **185 GoreeCloud contract tests and 72 upstream targeted SearXNG tests**; the browser and private Granian listener jobs passed. The authorized laptop also passed 185 GoreeCloud tests at that commit. This verifies bounded offline contracts, not real upstream search availability, Tor anonymity, or production readiness. The latest Ecosia adapter fix treats unparseable organic cards as provider errors; the dedicated negative regression fixture is still uncommitted.
+
+The experimental native index has an independent six-file, **23-test** suite under `tests/native`. It passed offline on an earlier implementation commit `3ded646`, **not on the current exact head**. The regular GitHub CI workflow currently **does not run the native suite**. Integrating it into the Python 3.10/3.12 matrix is an open acceptance requirement; the attempted workflow edit was blocked and was not committed. Python 3.10 shows SQLite threading diagnostics while Python 3.12 does not; passing tests do not establish target SQLite concurrency safety. The Development configuration does not include a public rate limiter. Real seven-source compatibility, provider challenges/429s, Tor exit/DNS leak and relay recovery, Glaze accessibility/device checks, and deployment rollback qualification remain open.
 
 Git version metadata now resolves local branches without upstream tracking (including detached-HEAD checkouts) instead of assuming an upstream `master` branch. This is a diagnostic reliability fix; it does not affect network requests or provider selection.
 
