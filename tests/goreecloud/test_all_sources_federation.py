@@ -7,6 +7,7 @@ from lxml import html
 import test_runtime_smoke as smoke
 from test_search_preview import OfflineSearch
 from searx.engines import goreecloud_ecosia
+from searx.exceptions import SearxEngineAPIException
 from searx.goreecloud_policy import (
     BUILTIN_SEARCH_SOURCES, SEARCH_SOURCE_FAMILIES, SEARCH_SOURCE_OPTIONS,
     SearchPolicyViolation, selected_engines_for_category, stored_search_source,
@@ -109,7 +110,9 @@ class AllSourcesFederationTests(unittest.TestCase):
         self.assertEqual('https://example.org/one', results[0].url)
         self.assertEqual('First result', results[0].title)
         self.assertEqual('First snippet', results[0].content)
-        self.assertEqual([], list(goreecloud_ecosia.response(Response('<html><body></body></html>'))))
+        with self.assertRaises(SearxEngineAPIException):
+            goreecloud_ecosia.response(Response('<html><body></body></html>'))
+        self.assertEqual([], list(goreecloud_ecosia.response(Response('<html><div data-test-id="web-no-results"></div></html>'))))
 
         current_markup = '''<html><body>
             <div data-test-id="mainline-result-ad">
