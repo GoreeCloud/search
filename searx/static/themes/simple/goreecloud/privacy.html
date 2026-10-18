@@ -29,15 +29,15 @@ footer{text-align:center;color:#536780;font-size:12px;padding:25px}
 <div class="links"><a href="/info/en/about">About</a><a aria-current="page" href="/static/themes/simple/goreecloud/privacy.html">Privacy</a><a href="/preferences">Settings</a></div>
 </nav></header>
 <main><p class="eyebrow">GoreeCloud Search</p><h1>Privacy and sources</h1>
-<p class="note">Transparency about what this local Development build does and does not protect.</p>
+<p class="note">Transparency about what this private VPS Development service does and does not protect.</p>
 <h2>Which providers receive searches?</h2>
 <p>Brave Search, Startpage, and Qwant are the only approved provider families. The default sends search terms to all three, or you can choose one provider in Settings. Web, Images and News have adapters for all three; Videos uses Brave Search and Qwant. A blocked provider is never silently replaced by a different one.</p>
-<p>These external services may retain or process submitted searches and connection metadata under their own privacy policies. This local service does not promise anonymity. Search engines may rate-limit, challenge, or reject requests.</p>
+<p>These external services may retain or process submitted searches and connection metadata under their own privacy policies. This Development service does not promise complete anonymity. Search engines may rate-limit, challenge, or reject requests.</p>
 <h2>What stays on your device?</h2>
 <p>The chosen search-provider preference and other preferences are stored in your browser's cookies. There is no GoreeCloud personal profile, hosted AI transmission, or independent search index in this Development build.</p>
 <h2>Search transport and content</h2>
-<p>Search terms are submitted by POST instead of being put in the local address-bar URL. Remote autocomplete and anonymous metrics are disabled in this local profile, and images are proxied. Browser clicks on search results can still send you to third-party sites. Other privacy and security limitations remain.</p>
+<p>Search terms are submitted by POST instead of being put in the local address-bar URL. Remote autocomplete and anonymous metrics are disabled in this Development profile, and images are proxied. Browser clicks on search results can still send you to third-party sites. Other privacy and security limitations remain.</p>
 <h2>Development limitations</h2>
-<p>The application is bound to loopback for local testing. A public service needs separate authentication, security, abuse protection, privacy review, logging and retention controls. The full public security/privacy audit has not been completed.</p>
+<p>This Development service is hosted at <strong>search-dev.goreecloud.com</strong> on a VPS behind NetBird-only HTTPS access. Public clients are denied by the reverse proxy, and the Search containers publish no host ports. External provider requests use a Tor SOCKS5H relay. These measures do not guarantee anonymity or provider availability. Abuse protection, provider compatibility, recovery validation, and the full production security/privacy review are still incomplete.</p>
 <div class="detail"><strong>Technology attribution.</strong> GoreeCloud Search builds upon SearXNG, an open-source metasearch project available under AGPL-3.0-or-later. <a href="https://github.com/GoreeCloud/search">Explore GoreeCloud Search source code</a>. The upstream contributors remain acknowledged; this is not an independent crawler or index.</div>
 </main><footer>© GoreeCloud · A privacy-first way to search</footer></body></html>
