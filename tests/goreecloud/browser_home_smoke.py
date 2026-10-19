@@ -238,6 +238,25 @@ def main() -> None:
                 skip.send_keys(Keys.ENTER)
                 assert driver.current_url.endswith('#goreecloud-content-start'), 'Keyboard skip did not reach content'
                 print('PASS keyboard-accessible skip to content')
+            # Privacy is a separate user-facing page: verify usable navigation
+            # and keyboard focus at the same responsive viewports.
+            driver.get(url + 'static/themes/simple/goreecloud/privacy.html')
+            assert driver.find_element(By.CSS_SELECTOR, '#privacy-content h1').text.strip() == 'Privacy and sources'
+            privacy_skip = driver.find_element(By.CSS_SELECTOR, 'a.skip-link[href="#privacy-content"]')
+            driver.execute_script('arguments[0].focus()', privacy_skip)
+            assert driver.execute_script('return document.activeElement === arguments[0]', privacy_skip)
+            assert driver.execute_script(
+                'return arguments[0].getBoundingClientRect().top >= 0', privacy_skip
+            ), f'{label}: privacy skip link not visible when focused'
+            privacy_skip.send_keys(Keys.ENTER)
+            assert driver.current_url.endswith('#privacy-content'), f'{label}: skip target not navigable'
+            privacy_overflow = driver.execute_script(
+                'return document.documentElement.scrollWidth - document.documentElement.clientWidth'
+            )
+            assert privacy_overflow <= 2, f'{label}: privacy page overflow of {privacy_overflow}px'
+            for nav_link in driver.find_elements(By.CSS_SELECTOR, 'header nav .links a'):
+                assert nav_link.is_displayed(), f'{label}: privacy navigation link hidden'
+            print(f'PASS privacy page responsive and keyboard navigation: {label}')
         # Official mockup moon button is an actual local appearance control.
         driver.set_window_size(390, 844)
         driver.get(url)
