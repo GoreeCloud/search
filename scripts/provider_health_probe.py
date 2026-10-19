@@ -17,6 +17,20 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 QUERY = 'goreecloud synthetic provider verification'
 LEGACY_SOURCES = ('brave', 'startpage', 'qwant')
 SOURCES = LEGACY_SOURCES + ('duckduckgo', 'ecosia', 'bing', 'google')
+# Keep these identifiers aligned with the approved per-category engine registry.
+# Standalone CLI must not need to load the running Search application.
+CATEGORY_ENGINES = {
+    'general': {family: family for family in SOURCES},
+    'images': {'brave': 'brave.images', 'startpage': 'startpage images',
+               'qwant': 'qwant images', 'duckduckgo': 'duckduckgo images',
+               'bing': 'bing images', 'google': 'google images'},
+    'videos': {'brave': 'brave.videos', 'qwant': 'qwant videos',
+               'duckduckgo': 'duckduckgo videos', 'bing': 'bing videos',
+               'google': 'google videos'},
+    'news': {'brave': 'brave.news', 'startpage': 'startpage news',
+             'qwant': 'qwant news', 'duckduckgo': 'duckduckgo news',
+             'bing': 'bing news', 'google': 'google news'},
+}
 MAX_BYTES = 1024 * 1024
 
 
@@ -71,12 +85,17 @@ def classify_provider_error(message: str) -> str:
     return 'other_error'
 
 
-def probe(source: str, origin: str, *, transport=None, timeout: float = 30.0) -> dict:
-    """Send synthetic terms to exactly one source and return aggregate state."""
-    if source not in SOURCES:
-        raise ValueError('Unsupported provider')
+def probe(source: str, origin: str, *, category: str = 'general',
+          transport=None, timeout: float = 30.0) -> dict:
+    """Send a fixed synthetic query to one approved category/source adapter."""
+    if category not in CATEGORY_ENGINES or source not in CATEGORY_ENGINES[category]:
+        raise ValueError('Unsupported provider/category combination')
+    engine = CATEGORY_ENGINES[category][source]
     base = require_private_origin(origin)
-    payload = urlencode({'q': QUERY, 'engines': source, 'format': 'json'}).encode('ascii')
+    fields = {'q': QUERY, 'engines': engine, 'format': 'json'}
+    if category != 'general':
+        fields['category_' + category] = '1'
+    payload = urlencode(fields).encode('ascii')
     request = Request(base + '/search', data=payload, method='POST', headers={
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json',
@@ -92,7 +111,7 @@ def probe(source: str, origin: str, *, transport=None, timeout: float = 30.0) ->
         metadata = doc.get('goreecloud')
         if not isinstance(metadata, dict):
             return {'provider': source, 'state': 'invalid_response_contract'}
-        if metadata.get('selected_engines') != [source]:
+        if metadata.get('selected_engines') != [engine]:
             return {'provider': source, 'state': 'selection_mismatch'}
         errors = doc.get('unresponsive_engines')
         if not isinstance(errors, list):
@@ -100,7 +119,7 @@ def probe(source: str, origin: str, *, transport=None, timeout: float = 30.0) ->
         types = set()
         for error in errors:
             if (not isinstance(error, (list, tuple)) or len(error) < 2
-                    or error[0] != source or not isinstance(error[1], str)):
+                    or error[0] != engine or not isinstance(error[1], str)):
                 # Do not trust malformed or other-provider error attribution.
                 return {'provider': source, 'state': 'invalid_error_contract'}
             types.add(classify_provider_error(error[1]))
@@ -125,6 +144,8 @@ def main(argv=None) -> int:
     # Keep 'both' as the legacy three-provider sweep; require explicit 'all'
     # for the expanded seven-provider diagnostic to avoid new implicit egress.
     parser.add_argument('--provider', choices=(*SOURCES, 'both', 'all'), default='both')
+    parser.add_argument('--category', choices=tuple(CATEGORY_ENGINES), default='general',
+                        help='Search category; non-Web probes require explicit selection')
     parser.add_argument('--allow-provider-egress', action='store_true',
                         help='Send fixed synthetic terms to selected provider(s)')
     args = parser.parse_args(argv)
@@ -135,10 +156,16 @@ def main(argv=None) -> int:
     if not args.allow_provider_egress:
         print('No requests sent. Re-run with --allow-provider-egress for a loopback Development instance.')
         return 64
+    approved = CATEGORY_ENGINES[args.category]
     selected = (LEGACY_SOURCES if args.provider == 'both' else
-                SOURCES if args.provider == 'all' else (args.provider,))
-    outcomes = [probe(source, args.url) for source in selected]
-    print(json.dumps({'development_only': True, 'results': outcomes}, sort_keys=True))
+                tuple(family for family in SOURCES if family in approved)
+                if args.provider == 'all' else (args.provider,))
+    if any(source not in approved for source in selected):
+        parser.error('Provider is not approved in this category; choose a supported provider or all')
+    outcomes = ([probe(source, args.url) for source in selected] if args.category == 'general'
+                else [probe(source, args.url, category=args.category) for source in selected])
+    print(json.dumps({'development_only': True, 'category': args.category,
+                      'results': outcomes}, sort_keys=True))
     return 0 if all(item['state'] == 'results_observed' for item in outcomes) else 1
 
 
