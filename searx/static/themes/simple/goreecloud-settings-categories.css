@@ -408,3 +408,13 @@ html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results .
     flex-direction: column; width: 100%;
   }
 }
+
+/* Keep narrow Settings labels legible without allowing mid-word wrapping. */
+@media (max-width: 360px) {
+  html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > label[role="tab"] {
+    padding-inline: 3px;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+  }
+}
