@@ -15,7 +15,8 @@ from urllib.parse import urlsplit, urlencode
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 QUERY = 'goreecloud synthetic provider verification'
-SOURCES = ('brave', 'startpage', 'qwant')
+LEGACY_SOURCES = ('brave', 'startpage', 'qwant')
+SOURCES = LEGACY_SOURCES + ('duckduckgo', 'ecosia', 'bing', 'google')
 MAX_BYTES = 1024 * 1024
 
 
@@ -94,7 +95,9 @@ def probe(source: str, origin: str, *, transport=None, timeout: float = 30.0) ->
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--url', default='http://127.0.0.1:8888')
-    parser.add_argument('--provider', choices=(*SOURCES, 'both'), default='both')
+    # Keep 'both' as the legacy three-provider sweep; require explicit 'all'
+    # for the expanded seven-provider diagnostic to avoid new implicit egress.
+    parser.add_argument('--provider', choices=(*SOURCES, 'both', 'all'), default='both')
     parser.add_argument('--allow-provider-egress', action='store_true',
                         help='Send fixed synthetic terms to selected provider(s)')
     args = parser.parse_args(argv)
@@ -105,7 +108,8 @@ def main(argv=None) -> int:
     if not args.allow_provider_egress:
         print('No requests sent. Re-run with --allow-provider-egress for a loopback Development instance.')
         return 64
-    selected = SOURCES if args.provider == 'both' else (args.provider,)
+    selected = (LEGACY_SOURCES if args.provider == 'both' else
+                SOURCES if args.provider == 'all' else (args.provider,))
     outcomes = [probe(source, args.url) for source in selected]
     print(json.dumps({'development_only': True, 'results': outcomes}, sort_keys=True))
     return 0 if all(item['state'] == 'results_observed' for item in outcomes) else 1
