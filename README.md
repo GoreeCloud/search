@@ -53,6 +53,29 @@ and browser clicks can reveal client details to result destinations. See
 [security boundaries](docs/goreecloud/SECURITY-BOUNDARIES.md) and
 [draft Search PR #29](https://github.com/GoreeCloud/search/pull/29).
 
+## Controlled provider diagnostic (Development only)
+
+`scripts/provider_health_probe.py` is an explicitly opt-in, HTTP loopback-only
+**Web-provider diagnostic**, not a live availability or Tor anonymity monitor.
+Without the egress flag, every mode performs **zero requests**:
+
+```sh
+python scripts/provider_health_probe.py --provider all
+```
+
+The expanded `all` mode names Brave, Startpage, Qwant, DuckDuckGo, Ecosia,
+Bing and Google. The original `both` mode/default remains the **legacy
+three-provider** Brave/Startpage/Qwant sweep to avoid silently increasing
+previously authorized requests. A single provider can be selected by name.
+
+**Do not run with `--allow-provider-egress` until a trusted Development
+loopback listener and independently verified Tor exit/DNS safeguards exist.**
+With that explicit opt-in, the tool sends fixed synthetic terms by POST, refuses
+redirects, validates selected-source metadata, and reports only provider states
+and counts. It does not save query terms or response bodies. Running it cannot
+establish all-category availability, privacy, publisher permission, or release
+acceptance. No real-provider tests were executed for this feature.
+
 ## Search preview (no provider requests)
 
 The loopback-only **POST /preview** contract inspects selected sources, categories, language and SafeSearch without dispatching a provider request. The homepage does not expose source picker or preview controls; the saved source preference is managed in Settings. Results prioritize web matches and keep provider attribution, failure details, retry and source refinement in secondary controls. Follow-up POST actions preserve validated provider selection and query context without placing terms in URLs. The preview and execution policies enforce the same 512-character input limit and seven-family fanout cap. Preview metadata is not evidence of provider contact, availability, or consent.
