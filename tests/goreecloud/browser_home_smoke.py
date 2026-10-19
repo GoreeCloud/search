@@ -210,6 +210,69 @@ def main() -> None:
                 assert selected.get_attribute('value') == source, f'{source}: quick provider selection lost'
                 assert not driver.execute_script('return location.search'), 'Provider shortcut leaked query in URL'
         print('PASS homepage provider shortcuts retain POST-only single-source selection')
+        # The home-page preview must also work without typing a query first.
+        # Opening the preview must not dispatch, and the browser must require
+        # new terms before a later, separately consented POST to the providers.
+        with patch('searx.search.SearchWithPlugins', side_effect=SyntheticBrowserSearch) as no_terms_search:
+            driver.set_window_size(390, 844)
+            driver.get(url)
+            empty_preview = driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-trigger')
+            assert empty_preview.get_attribute('type') == 'button', 'Preview is still treated as search submit'
+            assert empty_preview.is_enabled(), 'Upstream disabled query-free preview'
+            driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", empty_preview)
+            WebDriverWait(driver, 8).until(lambda page: page.execute_script(
+                "const r=arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;",
+                empty_preview
+            ))
+            driver.execute_script(
+                "window.__goreecloudTestPreviewClicks=0;"
+                "window.addEventListener('click', e => {if(e.target.closest?.('.goreecloud-preview-trigger')) window.__goreecloudTestPreviewClicks++}, true);"
+            )
+            preview_hit_target = driver.execute_script(
+                "const r=arguments[0].getBoundingClientRect();"
+                "const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);"
+                "return {ok:hit===arguments[0]||arguments[0].contains(hit),"
+                "tag:hit?.tagName||'none',classes:hit?.className||'',"
+                "pointer:getComputedStyle(arguments[0]).pointerEvents};",
+                empty_preview
+            )
+            assert preview_hit_target['ok'], f'Blank preview pointer target is covered: {preview_hit_target}'
+            # Synthetic click tests DOM activation and local POST. Physical
+            # Android testing separately verifies a real finger tap.
+            driver.execute_script("arguments[0].click()", empty_preview)
+            try:
+                WebDriverWait(driver, 12).until(lambda page: page.current_url.endswith('/preview'))
+            except Exception:
+                print('EMPTY PREVIEW BROWSER DIAGNOSTIC:',
+                      'path=', driver.execute_script('return location.pathname'),
+                      'title=', driver.title,
+                      'page_start=', driver.find_element(By.TAG_NAME, 'body').text[:250],
+                      'request_count=', len(request_meta),
+                      'form_valid=', driver.execute_script('return document.querySelector("form#search").checkValidity()'),
+                      'invalid_names=', driver.execute_script('return [...document.querySelectorAll("form#search :invalid")].map(e=>e.name||e.id).slice(0,8)'),
+                      'formnovalidate=', driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-trigger').get_attribute('formnovalidate'),
+                      'test_clicks=', driver.execute_script('return window.__goreecloudTestPreviewClicks'),
+                      'app_click_seen=', driver.execute_script('return document.documentElement.dataset.goreecloudPreviewClickSeen||"no"'),
+                      'preview_asset=', driver.execute_script('return performance.getEntriesByType("resource").some(e=>e.name.includes("goreecloud-preview.js"))'),
+                      flush=True)
+                raise
+            assert 'No search terms have been entered' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview').text
+            assert not driver.execute_script('return location.search'), 'Blank preview leaked query URL data'
+            preview_terms = driver.find_element(By.CSS_SELECTOR, '#goreecloud-preview-query')
+            assert preview_terms.get_attribute('required'), 'Blank preflight may continue without terms'
+            assert preview_terms.rect['height'] >= 44, 'Blank preflight query input too small'
+            no_terms_search.assert_not_called()
+            preview_continue = driver.find_element(By.CSS_SELECTOR, '.goreecloud-preview-continue')
+            driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", preview_continue)
+            preview_continue.click()
+            assert driver.current_url.endswith('/preview'), 'Browser permitted empty provider search'
+            no_terms_search.assert_not_called()
+            preview_terms.send_keys('synthetic query from source preview')
+            preview_continue.click()
+            WebDriverWait(driver, 12).until(lambda page: page.current_url.endswith('/search'))
+            assert not driver.execute_script('return location.search'), 'Preview continuation terms leaked into URL'
+            no_terms_search.assert_called_once()
+            print('PASS blank source preflight has no egress, requires explicit terms, and uses POST')
         # Preview selected providers first, then explicitly continue to the
         # synthetic search. The preview must never create a provider executor.
         with patch('searx.search.SearchWithPlugins', side_effect=SyntheticBrowserSearch) as preview_search:

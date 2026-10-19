@@ -4,7 +4,7 @@
 <section class="goreecloud-preview" aria-labelledby="preview-heading">
   <p class="goreecloud-eyebrow">Private search preflight</p>
   <h1 id="preview-heading">Review your search sources</h1>
-  <p role="status"><strong>No search-provider requests have been sent.</strong> These are the sources selected by your current query and preferences, not confirmed responders.</p>
+  <p role="status"><strong>No search-provider requests have been sent.</strong> {% if query_provided %}These are the sources selected by your current query and preferences, not confirmed responders.{% else %}These are the sources available under your current categories and preferences. No search terms have been entered, and provider availability has not been checked.{% endif %}</p>
   <p><strong>{{ selected_sources|length }} source(s) selected.</strong> Categories: {{ selected_categories_preview|join(', ') or 'None' }}. Language: {{ selected_locale_preview }}. Safe search: {{ selected_safesearch }}.</p>
   {% if selected_sources %}
   <details open><summary>Selected providers</summary>
@@ -15,7 +15,12 @@
   <p class="goreecloud-startpage-note" role="note"><strong>Startpage availability:</strong> its upstream adapter may encounter anti-bot proof-of-work challenges. This preview has not checked Startpage's live availability. No other provider will be substituted.</p>
   {% endif %}
   <form method="post" action="{{ url_for('search') }}">
+    {% if query_provided %}
     <input type="hidden" name="q" value="{{ query_text }}">
+    {% else %}
+    <label for="goreecloud-preview-query">Search terms (required only to continue)</label>
+    <input type="search" id="goreecloud-preview-query" class="goreecloud-preview-query" name="q" autocomplete="off" spellcheck="false" required {% if query_limit %}maxlength="{{ query_limit }}"{% endif %} placeholder="Enter terms to search selected sources">
+    {% endif %}
     {% for field, value in replay_fields.items() %}<input type="hidden" name="{{ field }}" value="{{ value }}">{% endfor %}
     <button class="goreecloud-preview-continue" type="submit">Continue and search these providers</button>
   </form>
@@ -23,7 +28,12 @@
   <details class="goreecloud-preview-single">
     <summary>Search using only one selected provider</summary>
     <form method="post" action="{{ url_for('search') }}">
+      {% if query_provided %}
       <input type="hidden" name="q" value="{{ query_text }}">
+      {% else %}
+      <label for="goreecloud-preview-single-query">Search terms</label>
+      <input type="search" id="goreecloud-preview-single-query" class="goreecloud-preview-query" name="q" autocomplete="off" spellcheck="false" required {% if query_limit %}maxlength="{{ query_limit }}"{% endif %} placeholder="Enter terms to search one source">
+      {% endif %}
       {% for field, value in replay_fields.items() %}{% if not field.startswith('category_') and field != 'engines' %}<input type="hidden" name="{{ field }}" value="{{ value }}">{% endif %}{% endfor %}
       <label for="goreecloud-provider-choice">Choose a provider</label>
       <select id="goreecloud-provider-choice" name="engines" required>
