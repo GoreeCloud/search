@@ -3,6 +3,7 @@ import importlib.util
 import json
 from io import BytesIO
 from pathlib import Path
+from urllib.parse import parse_qs
 from unittest.mock import MagicMock, patch
 import unittest
 
@@ -184,6 +185,98 @@ class ProviderProbeContractTests(unittest.TestCase):
         self.assertEqual('request_or_decode_error', result['state'])
         self.assertNotIn('synthetic sensitive URL', str(result))
 
+
+    def test_category_adapter_registry_matches_dispatch_allowlist(self):
+        from searx.goreecloud_policy import SEARCH_SOURCE_FAMILIES
+        self.assertEqual(SEARCH_SOURCE_FAMILIES, mod.CATEGORY_ENGINES)
+
+    def test_each_category_uses_exact_engine_and_category_flag(self):
+        for category, mapping in mod.CATEGORY_ENGINES.items():
+            for source, engine in mapping.items():
+                with self.subTest(category=category, source=source):
+                    captured = []
+                    def respond(req, timeout):
+                        captured.append(req)
+                        return BytesIO(json.dumps({
+                            'goreecloud': {'selected_engines': [engine]},
+                            'results': [{'url': 'https://public.example.org'}],
+                            'unresponsive_engines': [],
+                        }).encode())
+                    output = mod.probe(source, 'http://localhost:8888',
+                                       category=category, transport=respond)
+                    self.assertEqual('results_observed', output['state'])
+                    self.assertEqual('POST', captured[0].get_method())
+                    self.assertEqual('http://127.0.0.1:8888/search', captured[0].full_url)
+                    fields = parse_qs(captured[0].data.decode())
+                    self.assertEqual([engine], fields['engines'])
+                    self.assertEqual(['json'], fields['format'])
+                    category_flags = [key for key in fields if key.startswith('category_')]
+                    self.assertEqual([] if category == 'general' else
+                                     ['category_' + category], category_flags)
+
+    def test_unsupported_provider_category_is_rejected_without_request(self):
+        network = MagicMock()
+        for source, category in (
+            ('ecosia', 'images'), ('ecosia', 'news'), ('ecosia', 'videos'),
+            ('startpage', 'videos'), ('brave', 'map'), ('unapproved', 'general'),
+        ):
+            with self.subTest(source=source, category=category):
+                with self.assertRaises(ValueError):
+                    mod.probe(source, 'http://localhost:8888',
+                              category=category, transport=network)
+        network.assert_not_called()
+
+    def test_category_response_requires_exact_adapter_not_family(self):
+        for error_case, expected in ((False, 'selection_mismatch'),
+                                     (True, 'invalid_error_contract')):
+            def respond(req, timeout):
+                return BytesIO(json.dumps({
+                    'goreecloud': {'selected_engines':
+                                   ['qwant images'] if error_case else ['qwant']},
+                    'results': [],
+                    'unresponsive_engines': [['qwant', 'timeout']] if error_case else [],
+                }).encode())
+            outcome = mod.probe('qwant', 'http://localhost:8888',
+                                category='images', transport=respond)
+            self.assertEqual(expected, outcome['state'])
+
+
+    def test_explicit_category_all_only_sweeps_supported_sources(self):
+        with patch.object(mod, 'probe') as network, patch('builtins.print'):
+            for category in mod.CATEGORY_ENGINES:
+                self.assertEqual(64, mod.main(['--provider', 'all', '--category', category]))
+            network.assert_not_called()
+        for category, mapping in mod.CATEGORY_ENGINES.items():
+            with self.subTest(category=category):
+                with patch.object(mod, 'probe', side_effect=lambda source, origin, **opts: {
+                    'provider': source, 'state': 'results_observed'
+                }) as network, patch('builtins.print'):
+                    self.assertEqual(0, mod.main([
+                        '--provider', 'all', '--category', category, '--allow-provider-egress'
+                    ]))
+                self.assertEqual(list(mapping), [call.args[0] for call in network.call_args_list])
+                for call in network.call_args_list:
+                    self.assertEqual({} if category == 'general' else
+                                     {'category': category}, call.kwargs)
+
+    def test_category_is_disclosed_in_privacy_safe_summary(self):
+        with patch.object(mod, 'probe', return_value={
+            'provider': 'bing', 'state': 'results_observed'
+        }), patch('builtins.print') as output:
+            self.assertEqual(0, mod.main([
+                '--provider', 'bing', '--category', 'news', '--allow-provider-egress'
+            ]))
+        result = json.loads(output.call_args.args[0])
+        self.assertEqual('news', result['category'])
+        self.assertTrue(result['development_only'])
+        self.assertNotIn(mod.QUERY, str(result))
+
+    def test_invalid_category_sweep_aborts_before_any_request(self):
+        with patch.object(mod, 'probe') as network, patch('builtins.print'), patch('sys.stderr'):
+            with self.assertRaises(SystemExit) as caught:
+                mod.main(['--category', 'videos', '--allow-provider-egress'])
+            self.assertEqual(2, caught.exception.code)
+            network.assert_not_called()
 
 if __name__ == '__main__':
     unittest.main()

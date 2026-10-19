@@ -56,17 +56,22 @@ and browser clicks can reveal client details to result destinations. See
 ## Controlled provider diagnostic (Development only)
 
 `scripts/provider_health_probe.py` is an explicitly opt-in, HTTP loopback-only
-**Web-provider diagnostic**, not a live availability or Tor anonymity monitor.
+**Development provider/category diagnostic**, not a live availability or Tor anonymity monitor.
 Without the egress flag, every mode performs **zero requests**:
 
 ```sh
 python scripts/provider_health_probe.py --provider all
+python scripts/provider_health_probe.py --provider all --category images
 ```
 
-The expanded `all` mode names Brave, Startpage, Qwant, DuckDuckGo, Ecosia,
-Bing and Google. The original `both` mode/default remains the **legacy
-three-provider** Brave/Startpage/Qwant sweep to avoid silently increasing
-previously authorized requests. A single provider can be selected by name.
+The Web `all` mode names Brave, Startpage, Qwant, DuckDuckGo, Ecosia,
+Bing and Google. Explicit `--category images|videos|news` selects category-specific
+adapters. `all` includes only supported providers: Ecosia is Web-only and
+Startpage has no Videos adapter. Unsupported individual combinations fail
+before dispatch; the tool never substitutes another source. The Web default
+`both` still limits selection to legacy Brave/Startpage/Qwant; choose
+`--provider all` or an approved individual source for Videos. Offline tests
+check that diagnostic adapters match the application allowlist.
 
 **Do not run with `--allow-provider-egress` until a trusted Development
 loopback listener and independently verified Tor exit/DNS safeguards exist.**
