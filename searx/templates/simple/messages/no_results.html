@@ -24,7 +24,7 @@
       <p>Retrying sends the search terms to the same selected providers again. You can also change the query or select another approved source above.</p>
       {% include 'simple/goreecloud_try_startpage.html' %}
     {% elif pageno == 1 %}
-      <p>No matches were returned by the selected sources. Try different search terms, another search category, or choose Brave Search, Startpage, or Qwant in Settings.</p>
+      <p>No matches were returned by the selected sources. Try different search terms, another search category, or choose a different approved source in Settings.</p>
     {% else %}
       {% if unresponsive_engines %}
       <p>At least one selected source reported an error, so results for this page could not be confirmed. <a href="#engines_msg-title">Review source messages</a>. No replacement provider was selected automatically.</p>

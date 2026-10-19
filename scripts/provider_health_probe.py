@@ -53,6 +53,24 @@ def require_private_origin(raw: str) -> str:
     return 'http://' + host + ((':' + str(port)) if port is not None else '')
 
 
+def classify_provider_error(message: str) -> str:
+    """Return a bounded diagnostic category; never echo upstream error details."""
+    text = message.lower()
+    if 'timeout' in text or 'timed out' in text:
+        return 'timeout'
+    if '429' in text or 'too many requests' in text or 'toomanyrequests' in text or 'rate limit' in text:
+        return 'rate_limited'
+    if 'captcha' in text or 'challenge' in text:
+        return 'challenge'
+    if '403' in text or 'access denied' in text or 'accessdenied' in text or 'blocked' in text:
+        return 'access_denied'
+    if 'pars' in text or 'markup' in text:
+        return 'parsing_error'
+    if 'proxy' in text or 'connection' in text or 'network' in text:
+        return 'network_error'
+    return 'other_error'
+
+
 def probe(source: str, origin: str, *, transport=None, timeout: float = 30.0) -> dict:
     """Send synthetic terms to exactly one source and return aggregate state."""
     if source not in SOURCES:
@@ -79,13 +97,22 @@ def probe(source: str, origin: str, *, transport=None, timeout: float = 30.0) ->
         errors = doc.get('unresponsive_engines')
         if not isinstance(errors, list):
             return {'provider': source, 'state': 'invalid_error_contract'}
+        types = set()
+        for error in errors:
+            if (not isinstance(error, (list, tuple)) or len(error) < 2
+                    or error[0] != source or not isinstance(error[1], str)):
+                # Do not trust malformed or other-provider error attribution.
+                return {'provider': source, 'state': 'invalid_error_contract'}
+            types.add(classify_provider_error(error[1]))
         results = doc.get('results')
         if not isinstance(results, list):
             return {'provider': source, 'state': 'invalid_result_contract'}
-        state = ('provider_error' if errors else
+        state = ('partial_results' if errors and results else
+                 'provider_error' if errors else
                  'results_observed' if results else 'no_results')
         return {'provider': source, 'state': state,
-                'result_count': len(results), 'error_count': len(errors)}
+                'result_count': len(results), 'error_count': len(errors),
+                'error_categories': sorted(types)}
     except (OSError, ValueError, TypeError) as exc:
         # Never expose exception text; error URLs may contain the query.
         return {'provider': source, 'state': 'request_or_decode_error',
