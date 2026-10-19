@@ -176,6 +176,54 @@ def safe_primary_result_url(url: object) -> bool:
         return False
 
 
+def safe_external_media_url(url: object) -> bool:
+    """Reject unsafe external HTTPS targets before any private provider fetch.
+
+    DNS rebinding requires a separate network/firewall defense. Validation
+    blocks direct local/metadata and malformed-authority SSRF paths only.
+    """
+    import ipaddress
+    import re
+    from urllib.parse import urlsplit
+
+    if (not isinstance(url, str) or not url or len(url) > 4096
+            or '\\' in url or any(ord(ch) <= 32 or ord(ch) == 127 for ch in url)):
+        return False
+    try:
+        target = urlsplit(url)
+        host = target.hostname
+        port = target.port
+        if (target.scheme.lower() != 'https' or not host
+                or port not in (None, 443)
+                or target.username is not None or target.password is not None
+                or target.fragment or '%' in target.netloc):
+            return False
+        try:
+            ipaddress.ip_address(host)
+            return False
+        except ValueError:
+            pass
+        ascii_host = host.encode('idna').decode('ascii').lower()
+        if (ascii_host.endswith('.') or len(ascii_host) > 253
+                or '.' not in ascii_host or ascii_host.startswith('.')):
+            return False
+        labels = ascii_host.split('.')
+        if any(
+            not 1 <= len(label) <= 63
+            or not re.fullmatch(r'[a-z0-9](?:[a-z0-9-]*[a-z0-9])?', label)
+            for label in labels
+        ):
+            return False
+        if labels[-1] in ('local', 'localhost', 'internal', 'lan', 'invalid',
+                          'test', 'example', 'onion', 'arpa'):
+            return False
+        if not re.fullmatch(r'[a-z]{2,63}|xn--[a-z0-9-]+', labels[-1]):
+            return False
+        return True
+    except (UnicodeError, TypeError, ValueError):
+        return False
+
+
 def represented_result_sources(results: Iterable[object], selected_names: Iterable[str]) -> dict[str, int]:
     """Count selected provider labels attached to *displayed* primary results.
 

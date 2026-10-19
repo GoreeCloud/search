@@ -22,6 +22,7 @@ from curl_cffi.requests.exceptions import (
 )
 
 from searx import logger, sxng_debug
+from searx.goreecloud_policy import safe_external_media_url
 from searx.extended_types import SXNG_Response
 from .client import DEFAULT_IMPERSONATE, AsyncClient, new_client, get_loop
 from .raise_for_httperror import raise_for_httperror
@@ -68,7 +69,6 @@ class Network:
         '_logger',
     )
 
-    _TOR_CHECK_RESULT = {}
     _CLIENT_KWARGS = ('verify', 'max_redirects', 'impersonate', 'curl_options', 'enable_http3')
 
     def __init__(
@@ -178,17 +178,20 @@ class Network:
 
     @staticmethod
     async def check_tor_proxy(client: AsyncClient, proxies) -> bool:
-        if proxies in Network._TOR_CHECK_RESULT:
-            return Network._TOR_CHECK_RESULT[proxies]
-
+        """Attest this client via its relay; never reuse an old proxy verdict."""
         if not proxies or not all(url.startswith('socks5h://') for _, url in proxies):
-            Network._TOR_CHECK_RESULT[proxies] = False
             return False
-
-        response = await client.get("https://check.torproject.org/api/ip", timeout=60)
-        result = bool(response.json()["IsTor"])
-        Network._TOR_CHECK_RESULT[proxies] = result
-        return result
+        try:
+            response = await client.get(
+                "https://check.torproject.org/api/ip", timeout=8, allow_redirects=False
+            )
+            if response.status_code != 200:
+                return False
+            payload = response.json()
+            return isinstance(payload, dict) and payload.get('IsTor') is True
+        except (RequestException, OSError, ValueError, TypeError, AttributeError):
+            # A failed or malformed verification cannot authorize private egress.
+            return False
 
     @staticmethod
     def valid_private_proxy(proxies: tuple[tuple[str, str], ...]) -> bool:
@@ -250,11 +253,15 @@ class Network:
                 impersonate=impersonate,
                 curl_options=curl_options,
             )
-            if self.using_tor_proxy and not await self.check_tor_proxy(client, proxies):
-                await client.aclose()
-                raise ProxyError('Network configuration problem: not using Tor')
             self._clients[key] = client
-        return self._clients[key]
+        client = self._clients[key]
+        # Even a reused connection must be verified: the local SOCKS gateway
+        # can change independently of the search client's lifetime.
+        if self.using_tor_proxy and not await self.check_tor_proxy(client, proxies):
+            self._clients.pop(key, None)
+            await client.aclose()
+            raise ProxyError('Private Search egress blocked: Tor verification failed')
+        return client
 
     async def aclose(self):
         async def close_client(client):
@@ -306,8 +313,10 @@ class Network:
         if self.privacy_proxy_required:
             if any(key in kwargs for key in ('proxy', 'proxies', 'interface', 'curl_options')):
                 raise ProxyError('Private Search egress blocked: per-request proxy override')
-            if urlsplit(url).scheme != 'https':
-                raise ProxyError('Private Search egress blocked: HTTPS required')
+            if not safe_external_media_url(url):
+                raise ProxyError('Private Search egress blocked: unsafe HTTPS destination')
+            # Never follow private provider redirects to unvalidated hosts.
+            kwargs['allow_redirects'] = False
             # Do not forward upstream cookies or client-identifying headers.
             # Provider challenges might need cookies; privacy takes precedence.
             kwargs.pop('cookies', None)
@@ -318,10 +327,17 @@ class Network:
                     'cf-connecting-ip', 'true-client-ip', 'x-forwarded-host',
                     'x-forwarded-proto', 'x-original-forwarded-for',
                     'x-original-ip', 'x-cluster-client-ip', 'x-proxyuser-ip',
+                    'referer', 'referrer', 'origin', 'x-requested-with',
+                    'x-amzn-trace-id', 'x-cloud-trace-context',
+                    'traceparent', 'tracestate', 'baggage', 'b3',
                 }
+                identifying_prefixes = (
+                    'x-forwarded-', 'x-b3-', 'sec-ch-', 'sec-fetch-',
+                )
                 kwargs['headers'] = {
                     name: value for name, value in kwargs['headers'].items()
                     if name.lower() not in identifying
+                    and not name.lower().startswith(identifying_prefixes)
                 }
         while retries >= 0:  # pragma: no cover
             client = await self.get_client(**kwargs_clients)
