@@ -91,6 +91,34 @@ class ProviderProbeContractTests(unittest.TestCase):
             self.assertEqual(64, mod.main([]))
             network.assert_not_called()
 
+    def test_expanded_provider_registry_and_no_egress_default(self):
+        self.assertEqual(
+            ('brave', 'startpage', 'qwant', 'duckduckgo', 'ecosia', 'bing', 'google'),
+            mod.SOURCES,
+        )
+        with patch.object(mod, 'probe') as network, patch('builtins.print'):
+            self.assertEqual(64, mod.main(['--provider', 'all']))
+            network.assert_not_called()
+
+    def test_explicit_all_probes_each_approved_family_only(self):
+        def synthetic_outcome(source, origin):
+            self.assertEqual('http://127.0.0.1:8888', origin)
+            return {'provider': source, 'state': 'results_observed'}
+
+        with patch.object(mod, 'probe', side_effect=synthetic_outcome) as network, \
+                patch('builtins.print'):
+            self.assertEqual(0, mod.main(['--provider', 'all', '--allow-provider-egress']))
+        self.assertEqual(list(mod.SOURCES), [call.args[0] for call in network.call_args_list])
+        self.assertEqual(7, network.call_count)
+
+    def test_legacy_three_provider_sweep_remains_unchanged(self):
+        with patch.object(mod, 'probe', side_effect=lambda source, origin: {
+            'provider': source, 'state': 'results_observed'
+        }) as network, patch('builtins.print'):
+            self.assertEqual(0, mod.main(['--allow-provider-egress']))
+        self.assertEqual(list(mod.LEGACY_SOURCES), [call.args[0] for call in network.call_args_list])
+        self.assertEqual(3, network.call_count)
+
     def test_decode_error_omits_exception_details(self):
         def fails(req, timeout):
             raise OSError('synthetic sensitive URL')
