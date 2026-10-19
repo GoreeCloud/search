@@ -340,6 +340,17 @@ def main() -> None:
                   range.setEnd(node, start + 'interface'.length);
                   return range.getClientRects().length;
                 """)
+                tab_geometry = driver.execute_script("""
+                    const label = document.getElementById('tab-label-ui');
+                    const style = getComputedStyle(label);
+                    return {width: label.getBoundingClientRect().width,
+                            clientWidth: label.clientWidth,
+                            padding: style.padding, fontSize: style.fontSize,
+                            fontWeight: style.fontWeight, letterSpacing: style.letterSpacing,
+                            overflowWrap: style.overflowWrap,
+                            parentColumns: getComputedStyle(label.parentElement).gridTemplateColumns};
+                """)
+                print('SETTINGS 320px label layout:', tab_geometry, flush=True)
                 assert interface_word_boxes == 1, ('Settings tab word split across lines', interface_word_boxes)
             driver.save_screenshot(str(artifacts / f'settings-{label}.png'))
         driver.set_window_size(1440, 900)
