@@ -326,6 +326,21 @@ def main() -> None:
                 title:document.querySelector('#main_preferences h1').getBoundingClientRect().width}
             """)
             assert prefs_geom['scroll'] <= prefs_geom['width'] + 1, (label, prefs_geom)
+            if width == 320:
+                # The visible word 'Interface' must remain intact at 320px.
+                # A Range returns two rectangles when the browser splits it.
+                interface_word_boxes = driver.execute_script("""
+                  const label = document.getElementById('tab-label-ui');
+                  const node = [...label.childNodes].find(n =>
+                    n.nodeType === Node.TEXT_NODE && n.textContent.toLowerCase().includes('interface'));
+                  if (!node) return -1;
+                  const start = node.textContent.toLowerCase().indexOf('interface');
+                  const range = document.createRange();
+                  range.setStart(node, start);
+                  range.setEnd(node, start + 'interface'.length);
+                  return range.getClientRects().length;
+                """)
+                assert interface_word_boxes == 1, ('Settings tab word split across lines', interface_word_boxes)
             driver.save_screenshot(str(artifacts / f'settings-{label}.png'))
         driver.set_window_size(1440, 900)
         driver.get(url + 'preferences')
