@@ -1,7 +1,8 @@
 {% if private_query_transport %}
 <details class="goreecloud-source-diagnostics" id="goreecloud-source-diagnostics">
   <summary>Sources and search details{% if unresponsive_engines %} · Attention needed{% endif %}</summary>
-  <p>Selected: {% for source in selected_source_names %}{{ 'Brave Search' if source.startswith('brave') else ('Qwant' if source.startswith('qwant') else 'Startpage') }}{% if not loop.last %} + {% endif %}{% endfor %}.</p>
+  {% set provider_labels = {'brave': 'Brave Search', 'startpage': 'Startpage', 'qwant': 'Qwant', 'duckduckgo': 'DuckDuckGo', 'ecosia': 'Ecosia', 'bing': 'Bing', 'google': 'Google'} %}
+  <p>Selected: {% for source in selected_source_names %}{{ provider_labels.get(source.split(' ')[0].split('.')[0], source) }}{% if not loop.last %} + {% endif %}{% endfor %}.</p>
   <p>{{ represented_source_counts|length }} source(s) represented in the displayed results. Attribution does not confirm provider availability.</p>
   {% if unresponsive_engines and (results or answers) %}
   <p>Some providers reported an error. No automatic replacement occurred.</p>

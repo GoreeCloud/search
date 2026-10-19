@@ -44,6 +44,38 @@ class SelectedSourcesTests(unittest.TestCase):
                     create_search.assert_called_once()
                     response.close()
 
+    def test_all_seven_provider_labels_match_selected_sources(self):
+        names = ('brave', 'startpage', 'qwant', 'duckduckgo', 'ecosia', 'bing', 'google')
+        display = ('Bing', 'Brave Search', 'DuckDuckGo', 'Ecosia', 'Google', 'Qwant', 'Startpage')
+        query = SearchQuery('synthetic provider labels', [
+            EngineRef(name, 'general') for name in names
+        ], lang='en')
+        result = SimpleNamespace(
+            redirect_url=None, suggestions=[], corrections=[], answers=[],
+            infoboxes=[], engine_data={}, paging=False, unresponsive_engines=[],
+            get_timings=lambda: [], get_ordered_results=lambda: [],
+        )
+        from lxml import html
+        with smoke.app.test_client() as client, patch(
+            'searx.webapp.get_search_query_from_webapp',
+            return_value=(query, None, None, None, 'en'),
+        ), patch('searx.search.SearchWithPlugins') as search:
+            search.return_value.search.return_value = result
+            search.return_value.search_query = query
+            response = client.post('/search', data={'q': 'synthetic provider labels'},
+                                   headers={'X-Real-IP': '127.0.0.1'})
+            self.assertEqual(200, response.status_code)
+            doc = html.fromstring(response.data)
+            selected = doc.xpath(
+                '//details[@id="goreecloud-source-diagnostics"]/p[1]'
+            )
+            self.assertEqual(1, len(selected))
+            text = ' '.join(selected[0].text_content().split())
+            self.assertEqual('Selected: ' + ' + '.join(display) + '.', text)
+            self.assertNotIn('Startpage + Startpage', text)
+            search.assert_called_once()
+            response.close()
+
     def test_untrusted_source_name_is_escaped_in_html(self):
         malicious = '<img src=x onerror=alert(42)>'
         query = SearchQuery('synthetic sample', [EngineRef(malicious, 'general')], lang='en')

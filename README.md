@@ -71,8 +71,11 @@ previously authorized requests. A single provider can be selected by name.
 **Do not run with `--allow-provider-egress` until a trusted Development
 loopback listener and independently verified Tor exit/DNS safeguards exist.**
 With that explicit opt-in, the tool sends fixed synthetic terms by POST, refuses
-redirects, validates selected-source metadata, and reports only provider states
-and counts. It does not save query terms or response bodies. Running it cannot
+redirects, validates selected-source/error attribution, and reports only
+provider states, counts, and bounded error categories (timeout, rate limiting,
+challenge, access denial, parsing, network, or other). A response with both
+results and errors is marked `partial_results`, never as full success.
+It does not save query terms or response bodies. Running it cannot
 establish all-category availability, privacy, publisher permission, or release
 acceptance. No real-provider tests were executed for this feature.
 
@@ -86,7 +89,7 @@ The same private local preflight is available through `POST /preview` with `q` a
 
 ## Search experience
 
-Results display separate selected-source and represented-source summaries: selected engines show which upstream choices were made, while per-engine counts show source labels attached to the safe web results actually displayed. A result aggregated from multiple approved adapters can contribute to each count; neither list confirms network contact, authenticates upstream providers, or proves every engine responded. The loopback JSON extension exposes the same represented-source counts. The search header uses GoreeCloud branding, with accessible search labels and responsive Glaze styling. An empty search provides local preference guidance instead of sending users to another service. Privacy policy refusals now have an accessible recovery screen that never reflects query text; local JSON callers receive a structured policy error. These interfaces are source- and Flask-render validated but still need browser, screen-reader, and visual acceptance.
+Results display separate selected-source and represented-source summaries: selected engines show which upstream choices were made, while per-engine counts show source labels attached to the safe web results actually displayed. A result aggregated from multiple approved adapters can contribute to each count; neither list confirms network contact, authenticates upstream providers, or proves every engine responded. The loopback JSON extension exposes the same represented-source counts. The search header uses GoreeCloud branding and responsive Search-local styling; full compliance with the canonical `GoreeCloud/gc-ui` platform design system remains unverified. An empty search provides local preference guidance instead of sending users to another service. Privacy policy refusals now have an accessible recovery screen that never reflects query text; local JSON callers receive a structured policy error. These interfaces are source- and Flask-render validated but still need browser, screen-reader, and visual acceptance.
 
 ## Local readiness diagnostics
 
@@ -109,14 +112,14 @@ python -m nose2 -s tests/unit test_query test_webadapter test_settings_loader te
 
 At the seven-family Development source checkpoint `d75b57c8f32e2b909a78fcb831155f9eba83d49d`, two exact-head workflows passed independently: [GoreeCloud Search foundation run 39172183106](https://github.com/GoreeCloud/search/actions/runs/39172183106) with **4/4 jobs** (Python 3.10/3.12 application contract and 72 targeted upstream regressions, browser smoke and private Granian listener), and [Native Search Development run 39172183097](https://github.com/GoreeCloud/search/actions/runs/39172183097) with **2/2 jobs** (all **23 native tests** plus fixture-indexing smoke on Python 3.10 and 3.12). The native workflow now runs for all branch-push and pull-request candidates, rather than only changes to native-source paths. The application test matrix remains separate; it is not necessary to pretend those same native tests were added to its workflow.
 
-The Ecosia adapter classifies unparseable organic cards as provider errors, not legitimate empty results; its dedicated malformed-card regression fixture is still uncommitted. The native index remains an opt-in Development source, not automatically part of All Sources. Both passing CI workflows verify bounded offline contracts, **not** live seven-provider availability, Tor anonymity, public authentication, abuse limits, screen-reader/Glaze acceptance or production readiness. Python 3.10 produces SQLite threading diagnostics while Python 3.12 does not; passing tests cannot establish SQLite concurrency safety in the target deployment. The Development configuration does not include a production public rate limiter. Real source compatibility, provider challenges/429s, Tor exit/DNS leak and relay recovery, security authorization and recovery/rollback qualification remain open.
+The Ecosia adapter classifies unparseable organic cards as provider errors, not legitimate empty results; its malformed-card regression fixtures are committed, but live parser compatibility remains unverified. The native index remains an opt-in Development source, not automatically part of All Sources. Both passing CI workflows verify bounded offline contracts, **not** live seven-provider availability, Tor anonymity, public authentication, abuse limits, screen-reader/GoreeCloud UI acceptance or production readiness. Python 3.10 produces SQLite threading diagnostics while Python 3.12 does not; passing tests cannot establish SQLite concurrency safety in the target deployment. The Development configuration does not include a production public rate limiter. Real source compatibility, provider challenges/429s, Tor exit/DNS leak and relay recovery, security authorization and recovery/rollback qualification remain open.
 
 Git version metadata now resolves local branches without upstream tracking (including detached-HEAD checkouts) instead of assuming an upstream `master` branch. This is a diagnostic reliability fix; it does not affect network requests or provider selection.
 
 ## Source boundaries
 
 - [SearXNG provenance and AGPL obligations](UPSTREAM.md)
-- [Partial Glaze implementation and acceptance gaps](GLAZE-INTEGRATION.md)
+- [Legacy UI integration assessment (historical, not a current design authority)](GLAZE-INTEGRATION.md)
 - [Capability roadmap](docs/goreecloud/ROADMAP.md)
 - [Local JSON source-selection extension](docs/goreecloud/LOCAL-JSON-API.md)
 - [Upstream SearXNG documentation](README.rst)

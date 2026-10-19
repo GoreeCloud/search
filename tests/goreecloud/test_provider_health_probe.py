@@ -119,6 +119,64 @@ class ProviderProbeContractTests(unittest.TestCase):
         self.assertEqual(list(mod.LEGACY_SOURCES), [call.args[0] for call in network.call_args_list])
         self.assertEqual(3, network.call_count)
 
+    def test_mixed_results_and_errors_are_reported_as_partial_not_success(self):
+        def fake_transport(req, timeout):
+            return BytesIO(json.dumps({
+                'goreecloud': {'selected_engines': ['startpage']},
+                'results': [{'url': 'https://public.example.org'}],
+                'unresponsive_engines': [['startpage', 'TimeoutException']],
+            }).encode())
+        output = mod.probe('startpage', 'http://127.0.0.1:8888',
+                           transport=fake_transport)
+        self.assertEqual('partial_results', output['state'])
+        self.assertEqual(1, output['result_count'])
+        self.assertEqual(1, output['error_count'])
+        self.assertEqual(['timeout'], output['error_categories'])
+        self.assertNotIn('TimeoutException', str(output))
+
+    def test_error_categories_are_fixed_and_do_not_expose_upstream_messages(self):
+        examples = (
+            ('SearxEngineTooManyRequestsException', 'rate_limited'),
+            ('HTTP error 403', 'access_denied'),
+            ('Cloudflare CAPTCHA', 'challenge'),
+            ('parser failed secret=synthetic', 'parsing_error'),
+            ('ConnectionError url=https://example.org/q=synthetic', 'network_error'),
+            ('other secret=synthetic', 'other_error'),
+        )
+        for message, category in examples:
+            with self.subTest(category=category):
+                def fake_transport(req, timeout):
+                    return BytesIO(json.dumps({
+                        'goreecloud': {'selected_engines': ['bing']},
+                        'results': [],
+                        'unresponsive_engines': [['bing', message]],
+                    }).encode())
+                output = mod.probe('bing', 'http://127.0.0.1:8888',
+                                   transport=fake_transport)
+                self.assertEqual('provider_error', output['state'])
+                self.assertEqual([category], output['error_categories'])
+                self.assertNotIn('synthetic', str(output))
+                self.assertNotIn(message, str(output))
+
+    def test_malformed_or_other_source_error_attribution_is_rejected(self):
+        invalid = (
+            ['invalid'], [['google', 'TimeoutException']],
+            [['brave']], [[None, 'timeout']], [['brave', None]],
+            [{'engine': 'brave', 'error': 'timeout'}],
+        )
+        for errors in invalid:
+            with self.subTest(errors=errors):
+                def fake_transport(req, timeout):
+                    return BytesIO(json.dumps({
+                        'goreecloud': {'selected_engines': ['brave']},
+                        'results': [],
+                        'unresponsive_engines': errors,
+                    }).encode())
+                output = mod.probe('brave', 'http://127.0.0.1:8888',
+                                   transport=fake_transport)
+                self.assertEqual('invalid_error_contract', output['state'])
+                self.assertNotIn('TimeoutException', str(output))
+
     def test_decode_error_omits_exception_details(self):
         def fails(req, timeout):
             raise OSError('synthetic sensitive URL')
