@@ -265,3 +265,14 @@ html[data-glaze-consumer] .goreecloud-source-switch button:focus-visible { outli
   html[data-glaze-consumer] .goreecloud-source-switch button { background: ButtonFace; color: ButtonText; border-color: ButtonText; }
   html[data-glaze-consumer] .goreecloud-source-switch button:disabled { color: GrayText; outline-color: GrayText; }
 }
+
+/* Keep native Settings radio labels legible at 320px without mid-word wraps. */
+@media (max-width: 360px) {
+  html[data-glaze-consumer] #main_preferences .tabs > label[for^="tab-"] {
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+    font-size: 10px;
+    letter-spacing: .01em;
+  }
+}
