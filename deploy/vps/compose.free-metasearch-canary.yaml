@@ -1,0 +1,83 @@
+# Standalone free-first canary. Preserve old Search/Tor containers and Caddy route.
+# Search has direct HTTPS egress; ingress joins proxy with a unique alias.
+# No paid API, no Tor dependency, no host-published ports or live data mounts.
+name: goreecloud-search-free-canary
+services:
+  search:
+    image: ${SEARCH_FREE_IMAGE:?Pin a locally verified Search image}
+    user: "977:977"
+    entrypoint: ["/usr/local/searxng/.venv/bin/granian", "searx.webapp:app"]
+    environment:
+      SEARXNG_SECRET: ${SEARCH_FREE_SECRET:?Set a separate random temporary secret}
+      SEARXNG_SETTINGS_PATH: /usr/local/searxng/free-settings.yml
+      GOREECLOUD_SEARCH_PRIVATE_HOST: search-dev.goreecloud.com
+      GRANIAN_HOST: 0.0.0.0
+      GRANIAN_PORT: "8080"
+      GRANIAN_WORKERS: "1"
+      GRANIAN_INTERFACE: wsgi
+      GRANIAN_WEBSOCKETS: "false"
+      GRANIAN_BLOCKING_THREADS: "4"
+    volumes:
+      - ../../configs/goreecloud/settings.free-first.yml:/usr/local/searxng/free-settings.yml:ro
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,noexec,size=32m,mode=1777
+      - /var/cache/searxng:rw,nosuid,noexec,size=64m,uid=977,gid=977
+      - /etc/searxng:rw,nosuid,noexec,size=8m,uid=977,gid=977
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    init: true
+    restart: unless-stopped
+    pids_limit: 128
+    mem_limit: 768m
+    healthcheck:
+      test:
+        - CMD
+        - /usr/local/searxng/.venv/bin/python
+        - -c
+        - "import urllib.request; q=urllib.request.Request('http://127.0.0.1:8080/readyz', headers={'Host':'search-dev.goreecloud.com'}); assert urllib.request.urlopen(q,timeout=3).read().strip()==b'READY'"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+    networks:
+      provider_egress: {}
+      app_link: {}
+  ingress:
+    image: ${SEARCH_FREE_INGRESS_IMAGE:?Pin a locally inspected Caddy image}
+    user: "977:977"
+    entrypoint: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    volumes:
+      - ./Caddyfile.hardened-ingress:/etc/caddy/Caddyfile:ro
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,noexec,size=8m,uid=977,gid=977
+      - /data:rw,nosuid,noexec,size=8m,uid=977,gid=977
+      - /config:rw,nosuid,noexec,size=8m,uid=977,gid=977
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    init: true
+    restart: unless-stopped
+    pids_limit: 48
+    mem_limit: 128m
+    depends_on:
+      search:
+        condition: service_healthy
+    networks:
+      app_link: {}
+      private_ingress:
+        aliases:
+          - goreecloud-search-free-canary-gateway
+networks:
+  app_link:
+    driver: bridge
+    internal: true
+    enable_ipv6: false
+  provider_egress:
+    driver: bridge
+    internal: false
+    enable_ipv6: false
+  private_ingress:
+    external: true
+    name: proxy
