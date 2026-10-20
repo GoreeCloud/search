@@ -15,7 +15,7 @@ from searx.goreecloud_policy import safe_external_media_url
 from searx.network.network import Network
 
 
-def private_network(*, tor=False):
+def private_network(*, tor=True):
     return Network(
         enable_http=False, verify=True,
         proxies={'all://': 'socks5h://127.0.0.1:9050'},
@@ -24,6 +24,26 @@ def private_network(*, tor=False):
 
 
 class PrivateProviderTransportTests(unittest.TestCase):
+    def test_private_egress_refuses_unattested_socks_gateway(self):
+        net = private_network(tor=False)
+        with patch('searx.network.network.new_client') as factory:
+            with self.assertRaisesRegex(ProxyError, 'Tor verification required'):
+                asyncio.run(net.request(
+                    'GET', 'https://search.example.org/path',
+                    raise_for_httperror=False,
+                ))
+            factory.assert_not_called()
+
+    def test_tor_attestation_failure_blocks_before_provider_request(self):
+        net = private_network()
+        client = Mock(is_closed=False)
+        client.aclose = AsyncMock()
+        with patch('searx.network.network.new_client', return_value=client):
+            with patch.object(Network, 'check_tor_proxy', new=AsyncMock(return_value=False)):
+                with self.assertRaisesRegex(ProxyError, 'Tor verification failed'):
+                    asyncio.run(net.request('GET', 'https://search.example.org/path'))
+        client.aclose.assert_awaited_once()
+
     def test_url_guard_rejects_local_metadata_ambiguous_and_malformed_hosts(self):
         self.assertTrue(safe_external_media_url('https://search.example.org/?q=synthetic'))
         self.assertTrue(safe_external_media_url('https://search.example.org:443/web'))
@@ -53,8 +73,9 @@ class PrivateProviderTransportTests(unittest.TestCase):
         client.request = AsyncMock(return_value=SimpleNamespace(status_code=200))
         client.stream = Mock(return_value='synthetic-stream')
         with patch('searx.network.network.new_client', return_value=client):
-            response = asyncio.run(net.request(
-                'GET', 'https://search.example.org/path',
+            with patch.object(Network, 'check_tor_proxy', new=AsyncMock(return_value=True)):
+                response = asyncio.run(net.request(
+                    'GET', 'https://search.example.org/path',
                 headers={
                     'X-Forwarded-For': '192.0.2.50', 'Referer': 'https://private.example.org/',
                     'Origin': 'https://private.example.org', 'Sec-Fetch-Mode': 'navigate',
@@ -62,10 +83,10 @@ class PrivateProviderTransportTests(unittest.TestCase):
                 },
                 cookies={'id': 'private'}, allow_redirects=True, raise_for_httperror=False,
             ))
-            self.assertEqual(200, response.status_code)
-            self.assertEqual('synthetic-stream', asyncio.run(
-                net.stream('GET', 'https://search.example.org/path', allow_redirects=True)
-            ))
+                self.assertEqual(200, response.status_code)
+                self.assertEqual('synthetic-stream', asyncio.run(
+                    net.stream('GET', 'https://search.example.org/path', allow_redirects=True)
+                ))
         sent = client.request.call_args.kwargs
         self.assertIs(False, sent['allow_redirects'])
         self.assertEqual({'Accept': 'text/html'}, sent['headers'])
