@@ -12,12 +12,23 @@
 
 ## Deployment gates
 
-1. Confirm correct GoreeCloud GitHub identity and exact source commit. Build the custom builder and application images:
+1. Confirm correct GoreeCloud GitHub identity and exact source commit. From a dedicated, reviewed, clean checkout of the approved Development revision, build the custom builder and application images with an explicit commit provenance label:
    ```sh
+   test -z "$(git status --porcelain)" || { echo "Refuse to build a dirty checkout" >&2; exit 1; }
+   SOURCE_SHA="$(git rev-parse HEAD)"
+   IMAGE="goreecloud/search:vps-${SOURCE_SHA:0:12}"
    docker build -f container/builder.dockerfile -t localhost/searxng/searxng:builder .
-   docker build -f container/dist.dockerfile -t goreecloud/search:vps-COMMIT .
+   docker build -f container/dist.dockerfile \
+     --build-arg VCS_REVISION="$SOURCE_SHA" \
+     --build-arg VCS_URL="https://github.com/GoreeCloud/search" \
+     --build-arg VERSION="dev-${SOURCE_SHA:0:12}" \
+     -t "$IMAGE" .
+   IMAGE_REVISION="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$IMAGE")"
+   test "$IMAGE_REVISION" = "$SOURCE_SHA" || { echo "Image revision does not match the source" >&2; exit 1; }
+   printf 'Qualified candidate: %s (source: %s)\n' "$IMAGE" "$SOURCE_SHA"
    ```
-2. Set `SEARCH_IMAGE=goreecloud/search:vps-COMMIT` and `SEARCH_SECRET` (32+ unique characters) in a private `0600` env file; never commit or print it.
+   A source-revision label establishes declared provenance, not a reproducible or cryptographically verified image; record and verify the local image ID/digest, build inputs and rollback target separately before staging. This step must not push an image or replace a running container.
+2. Set `SEARCH_IMAGE` to the exact verified image tag emitted in step 1 (for example, `goreecloud/search:vps-<12-character-source-commit-prefix>`) and set `SEARCH_SECRET` (32+ unique characters) in a private `0600` env file; never commit or print the secret.
 3. Validate Compose and startup health with `docker compose --env-file /protected/path/private.env -f deploy/vps/compose.yaml config` and `up -d`.
 4. Verify Tor bootstraps, DNS does not leak, exact Search image is running, health/readiness endpoints respond, query POST privacy limits apply, and providers work under their terms.
 5. Back up the existing VPS Caddyfile before appending `Caddyfile.search`; use Caddy validate before reload. Confirm public clients receive 403 and NetBird clients reach Search over TLS.
