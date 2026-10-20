@@ -28,6 +28,24 @@ class SourceProvenanceContracts(unittest.TestCase):
                 self.assertEqual(list(BRANCHES), data['on']['push']['branches'])
                 self.assertEqual('read', data['permissions']['contents'])
 
+    def test_disposable_isolation_gate_runs_on_both_push_and_pr(self):
+        workflow = yaml.load(
+            (ROOT / '.github/workflows/search-foundation.yml').read_text(),
+            Loader=yaml.BaseLoader,
+        )
+        self.assertIn('pull_request', workflow['on'])
+        self.assertIn('push', workflow['on'])
+        job = workflow['jobs']['disposable-egress-topology']
+        self.assertEqual('ubuntu-latest', job['runs-on'])
+        self.assertEqual('read', job['permissions']['contents'])
+        commands = [step.get('run', '') for step in job['steps']]
+        self.assertIn('python tests/goreecloud/ci_ephemeral_staging_topology.py', commands)
+        source = (ROOT / 'tests/goreecloud/ci_ephemeral_staging_topology.py').read_text()
+        self.assertIn('GATEWAY_EGRESS_LOSS_FAIL_CLOSED_PASS', source)
+        self.assertIn('SYNTHETIC_GATEWAY_RECOVERY_PASS', source)
+        self.assertIn('EPHEMERAL_NETWORK_TOPOLOGY_PASS', source)
+        self.assertIn('"--internal"', source)
+
     def test_dist_image_has_explicit_commit_label_build_argument(self):
         content = (ROOT / 'container/dist.dockerfile').read_text()
         self.assertRegex(content, r'(?m)^ARG VCS_REVISION=')
