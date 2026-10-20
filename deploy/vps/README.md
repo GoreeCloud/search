@@ -33,6 +33,35 @@ image rollback. Tor bootstrap logs and container health are not proof of those
 requirements. These checks require separately isolated staging, approved egress
 controls and retained rollback evidence before any deployment/promotion.
 
+## Read-only admission audit for the current Search/Tor deployment
+
+Run `python3 utils/goreecloud_search_egress_admission.py` from an authorized
+checkout on the Docker host **before** considering any Search image promotion.
+This script only inspects the two fixed Search/Tor containers and their Docker
+network definitions; it neither makes provider requests nor changes any
+containers, networks, Caddy rules or host firewall settings. It emits bounded
+finding names without serializing Docker environment variables or IP addresses.
+Exit code **2** always means `NOT_QUALIFIED`, even when structural settings
+pass: Docker metadata alone cannot prove forced Tor egress or deny-by-default
+DNS/metadata/IPv6 firewall enforcement. A shared Search/Tor namespace on the
+non-internal `proxy` bridge is explicitly flagged as having a potential direct
+route. Treat the report as a release blocker, not a deployment health check.
+
+The offline regression suite is
+`python3 -m unittest discover -s tests/goreecloud -p test_egress_admission.py`.
+A future staging configuration must separately verify **actual** Search/Tor
+isolation, Tor relay availability/failure, direct-connection denial, DNS behavior,
+provider-viewed identity, a pinned runnable Search image and a tested rollback.
+Do not reconfigure the currently running VPS to make this metadata report green.
+
+**Observed, October 20, 2026 (read-only on the existing VPS):** The audit returned
+`shared_namespace_has_external_route`, `search_writable_root`,
+`tor_writable_root`, and `host_firewall_and_live_leak_tests_unverified`.
+The running `goreecloud/search:dev-parser-56a4823` container was healthy.
+These are measured structural findings, **not** an observed query leak or an
+active exploitation claim. The staging candidate and its rollback remain separate
+from this older deployed Development image.
+
 ## Deployment gates
 
 1. Confirm correct GoreeCloud GitHub identity and exact source commit. From a dedicated, reviewed, clean checkout of the approved Development revision, build the custom builder and application images with an explicit commit provenance label:
