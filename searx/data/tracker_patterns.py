@@ -24,6 +24,12 @@ if t.TYPE_CHECKING:
 RuleType = tuple[str, list[str], list[str]]
 
 
+def _is_goreecloud_search() -> bool:
+    """Branded instances must not depend on previously downloaded rules."""
+    branded = get_setting("goreecloud", None)
+    return isinstance(branded, dict) and bool(branded)
+
+
 @t.final
 class TrackerPatternsDB:
     # pylint: disable=missing-class-docstring
@@ -58,6 +64,10 @@ class TrackerPatternsDB:
         self.cache = get_cache()
 
     def init(self):
+        # An upgraded instance may already have ClearURLs patterns in the
+        # persistent cache. Ignore them entirely instead of trusting "OK".
+        if _is_goreecloud_search():
+            return
         if self.cache.properties("tracker_patterns loaded") != "OK":
             # To avoid parallel initializations, the property is set first
             self.cache.properties.set("tracker_patterns loaded", "OK")
@@ -89,6 +99,11 @@ class TrackerPatternsDB:
         self.cache.set(key=key, value=value, ctx=self.ctx_name, expire=None)
 
     def rules(self) -> Iterator[RuleType]:
+        # A cache initialized by older images might contain remote patterns.
+        # Read only the audited bundled rule, not any existing SQLite rows.
+        if _is_goreecloud_search():
+            yield self.GOREECLOUD_OFFLINE_RULE
+            return
         self.init()
         for key, value in self.cache.pairs(ctx=self.ctx_name):
             yield key, value[0], value[1]
@@ -97,8 +112,7 @@ class TrackerPatternsDB:
         # Private-branded instances must not implicitly fetch third-party
         # rules through the application network at plugin initialization.
         # Apply this even when optional privacy flags are overridden.
-        branded = get_setting("goreecloud", None)
-        if isinstance(branded, dict) and branded:
+        if _is_goreecloud_search():
             yield self.GOREECLOUD_OFFLINE_RULE
             return
 

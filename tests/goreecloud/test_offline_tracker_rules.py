@@ -20,6 +20,50 @@ class OfflineTrackerRulesTests(unittest.TestCase):
                 self.assertEqual([TrackerPatternsDB.GOREECLOUD_OFFLINE_RULE], rules)
                 get.assert_not_called()
 
+    def test_existing_remote_cache_is_ignored_for_branded_instances(self):
+        """An upgraded instance must never consume old cached remote rules."""
+        old_rule = ("^https?://", [], [".*"])
+        for branding in ({"private_search": True}, {"private_search": False}):
+            with self.subTest(branding=branding), patch(
+                "searx.data.tracker_patterns.get_setting", return_value=branding
+            ), patch("searx.data.tracker_patterns.http_get") as fetch:
+                self.db.cache = Mock()
+                self.db.cache.properties.return_value = "OK"
+                self.db.cache.pairs.return_value = iter([(old_rule[0], (old_rule[1], old_rule[2]))])
+                self.assertEqual(
+                    [TrackerPatternsDB.GOREECLOUD_OFFLINE_RULE], list(self.db.rules())
+                )
+                self.db.init()
+                self.db.cache.pairs.assert_not_called()
+                self.db.cache.properties.assert_not_called()
+                fetch.assert_not_called()
+
+    def test_branded_cleanup_preserves_query_despite_legacy_cached_wildcard(self):
+        """Legacy tracking cleanup rules cannot corrupt genuine search URLs."""
+        self.db.cache = Mock()
+        self.db.cache.properties.return_value = "OK"
+        self.db.cache.pairs.return_value = iter([("^https?://", ([], [".*"]))])
+        with patch("searx.data.tracker_patterns.get_setting",
+                   return_value={"private_search": True}):
+            actual = self.db.clean_url(
+                "https://public.example.org/article?q=important&utm_medium=email"
+            )
+        self.assertEqual("https://public.example.org/article?q=important", actual)
+        self.db.cache.pairs.assert_not_called()
+
+    def test_nonbranded_search_can_still_read_existing_cache(self):
+        self.db.cache = Mock()
+        self.db.cache.properties.return_value = "OK"
+        self.db.cache.pairs.return_value = iter(
+            [("^https?://", ([], ["^test-tracking-param$"]))]
+        )
+        with patch("searx.data.tracker_patterns.get_setting", return_value=None):
+            rule_list = list(self.db.rules())
+        self.assertEqual(
+            [("^https?://", [], ["^test-tracking-param$"])], rule_list
+        )
+        self.db.cache.pairs.assert_called_once_with(ctx=self.db.ctx_name)
+
     def test_tracking_parameters_removed_without_mutating_meaningful_query(self):
         with patch.object(self.db, "rules",
                           return_value=iter((TrackerPatternsDB.GOREECLOUD_OFFLINE_RULE,))):

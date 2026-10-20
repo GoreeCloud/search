@@ -14,6 +14,14 @@ The offline rule strips only known advertising/analytics query keys:
 Unlike online ClearURLs rule downloads, this is **not** comprehensive tracker
 protection, and it cannot prevent every redirection/tracking technique.
 
+An upgrade from a prior SearXNG/GoreeCloud image may leave remote ClearURLs
+rules in an existing SQLite cache and a prior `tracker_patterns loaded=OK`
+marker. GoreeCloud Search now bypasses that cache for tracker cleanup
+completely: both plugin initialization and rule consumption use only the
+built-in rule. Old cached entries are not interpreted, fetched, or rewritten
+on the branded path. Existing cache rows may remain on disk until their normal
+lifecycle expires; this does not assert secure erasure.
+
 The original upstream SearXNG behavior is preserved in instances without a
 GoreeCloud settings namespace. Cleanup debug logs no longer contain result
 hosts, query parameter names/values, or raw URL strings.
