@@ -112,9 +112,18 @@ class IsolatedStagingContractTests(unittest.TestCase):
                 )
                 writer.write(b"synthetic")
                 await writer.drain()
-                self.assertEqual(b"", await asyncio.wait_for(reader.read(16), 3))
+                # Linux/asyncio can signal denial as EOF or ECONNRESET when
+                # the client has already queued bytes. Both must carry zero data.
+                try:
+                    denied = await asyncio.wait_for(reader.read(16), 3)
+                except ConnectionResetError:
+                    denied = b""
+                self.assertEqual(b"", denied)
                 writer.close()
-                await writer.wait_closed()
+                try:
+                    await writer.wait_closed()
+                except ConnectionResetError:
+                    pass
             finally:
                 local.close()
                 await local.wait_closed()
