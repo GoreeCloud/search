@@ -1,10 +1,18 @@
 """Offline tests of the isolated Search/Tor staging Compose contract."""
+import asyncio
+import importlib.util
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
+SPEC = importlib.util.spec_from_file_location(
+    'isolated_local_relay', ROOT / 'scripts/local_socks_relay.py'
+)
+RELAY = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(RELAY)
 
 
 class IsolatedStagingContractTests(unittest.TestCase):
@@ -52,6 +60,66 @@ class IsolatedStagingContractTests(unittest.TestCase):
             "socks5h://127.0.0.1:9050",
             (ROOT / "configs/goreecloud/settings.yml").read_text(),
         )
+
+
+    def test_real_asyncio_relay_passes_only_to_fixed_synthetic_gateway(self):
+        async def run():
+            received = []
+
+            async def fixture_gateway(reader, writer):
+                received.append(await reader.readexactly(7))
+                writer.write(b"accepted")
+                await writer.drain()
+                writer.close()
+                await writer.wait_closed()
+
+            gateway = await asyncio.start_server(fixture_gateway, "127.0.0.1", 0)
+            local = await asyncio.start_server(RELAY.relay, "127.0.0.1", 0)
+            try:
+                with patch.object(RELAY, "TOR_HOST", "127.0.0.1"), patch.object(
+                    RELAY, "TOR_PORT", gateway.sockets[0].getsockname()[1]
+                ):
+                    reader, writer = await asyncio.open_connection(
+                        "127.0.0.1", local.sockets[0].getsockname()[1]
+                    )
+                    writer.write(b"fixture")
+                    await writer.drain()
+                    self.assertEqual(b"accepted", await asyncio.wait_for(reader.read(16), 3))
+                    writer.close()
+                    await writer.wait_closed()
+                self.assertEqual([b"fixture"], received)
+            finally:
+                gateway.close()
+                local.close()
+                await gateway.wait_closed()
+                await local.wait_closed()
+
+        asyncio.run(run())
+
+    def test_missing_gateway_closes_relay_without_leaking_requests(self):
+        async def run():
+            async def missing(*_args, **_kwargs):
+                raise OSError("synthetic unavailable gateway")
+
+            async def local_handler(reader, writer):
+                with patch.object(RELAY.asyncio, "open_connection", new=missing):
+                    await RELAY.relay(reader, writer)
+
+            local = await asyncio.start_server(local_handler, "127.0.0.1", 0)
+            try:
+                reader, writer = await asyncio.open_connection(
+                    "127.0.0.1", local.sockets[0].getsockname()[1]
+                )
+                writer.write(b"synthetic")
+                await writer.drain()
+                self.assertEqual(b"", await asyncio.wait_for(reader.read(16), 3))
+                writer.close()
+                await writer.wait_closed()
+            finally:
+                local.close()
+                await local.wait_closed()
+
+        asyncio.run(run())
 
 
 if __name__ == "__main__":
