@@ -9,7 +9,7 @@ from typing_extensions import NotRequired
 from timeit import default_timer
 import asyncio
 import ssl
-from curl_cffi.requests.exceptions import RequestException, Timeout
+from curl_cffi.requests.exceptions import HTTPError, RequestException, Timeout
 
 import searx.network
 from searx.exceptions import (
@@ -117,6 +117,23 @@ def default_request_params() -> HTTPParams:
         "verify": None,
         "raise_for_httperror": True,
     }
+
+
+def bounded_http_provider_failure(exc: RequestException):
+    """Convert known HTTP denials to existing suspended-engine types.
+
+    Only a trusted numeric response status is examined. Never propagate the
+    exception message: it may contain user queries or private upstream URLs.
+    Other network/HTTP failures retain their original failure type.
+    """
+    if not isinstance(exc, HTTPError):
+        return None
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    if status == 429:
+        return SearxEngineTooManyRequestsException(message="Upstream HTTP 429")
+    if status == 403:
+        return SearxEngineAccessDeniedException(message="Upstream HTTP 403")
+    return None
 
 
 class OnlineProcessor(EngineProcessor):
@@ -270,12 +287,14 @@ class OnlineProcessor(EngineProcessor):
                 )
             )
         except RequestException as e:
-            # other requests exception
-            self.handle_exception(result_container, e, suspend=True)
+            # Preserve upstream HTTP 403/429 as access/rate-limit denials so
+            # user-facing errors can distinguish them and suspend the engine.
+            # Do not log e: curl errors may contain the user's query URL.
+            bounded_error = bounded_http_provider_failure(e)
+            self.handle_exception(result_container, bounded_error or e, suspend=True)
             self.logger.debug(
-                "requests exception (search duration : {0} s, timeout: {1} s) : {2}".format(
-                    default_timer() - start_time, timeout_limit, e
-                )
+                "HTTP transport failed after %.2fs (limit %.2fs, type=%s)",
+                default_timer() - start_time, timeout_limit, type(e).__name__,
             )
         except (
             SearxEngineCaptchaException,
