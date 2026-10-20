@@ -35,8 +35,11 @@ class ProviderProbeContractTests(unittest.TestCase):
         def fake_transport(req, timeout):
             seen.append(req)
             return BytesIO(json.dumps({
-                'goreecloud': {'selected_engines': ['brave']},
-                'results': [{'url': 'https://example.org'}],
+                'goreecloud': {'selected_engines': ['brave'],
+                               'represented_engines': ['brave'],
+                               'represented_result_counts': {'brave': 1},
+                               'representation_not_contact_confirmation': True},
+                'results': [{'url': 'https://example.org', 'engine': 'brave', 'engines': ['brave']}],
                 'unresponsive_engines': [],
             }).encode())
         result = mod.probe('brave', 'http://localhost:8888', transport=fake_transport)
@@ -76,6 +79,50 @@ class ProviderProbeContractTests(unittest.TestCase):
             }).encode())
         self.assertEqual('selection_mismatch', mod.probe(
             'brave', 'http://localhost:8888', transport=fake_transport)['state'])
+
+    def test_results_require_selected_engine_and_public_safe_link(self):
+        good_meta = {
+            'selected_engines': ['brave'],
+            'represented_engines': ['brave'],
+            'represented_result_counts': {'brave': 1},
+            'representation_not_contact_confirmation': True,
+        }
+        cases = (
+            ({'url': 'https://example.org', 'engine': 'google', 'engines': ['google']},
+             'invalid_result_attribution'),
+            ({'url': 'https://example.org'}, 'invalid_result_attribution'),
+            ({'url': 'https://example.org', 'engine': 'brave', 'engines': ['brave', 'google']},
+             'invalid_result_attribution'),
+            ({'url': 'javascript:alert(1)', 'engine': 'brave', 'engines': ['brave']},
+             'invalid_result_contract'),
+            ({'url': 'http://169.254.169.254/metadata', 'engine': 'brave', 'engines': ['brave']},
+             'invalid_result_contract'),
+            ({'url': 'https://user:pass@example.org', 'engine': 'brave', 'engines': ['brave']},
+             'invalid_result_contract'),
+        )
+        for item, state in cases:
+            with self.subTest(state=state, item=item):
+                def fake_transport(req, timeout):
+                    return BytesIO(json.dumps({
+                        'goreecloud': good_meta, 'results': [item], 'unresponsive_engines': [],
+                    }).encode())
+                output = mod.probe('brave', 'http://127.0.0.1:8888', transport=fake_transport)
+                self.assertEqual(state, output['state'])
+                self.assertNotIn(str(item.get('url')), str(output))
+
+    def test_mismatched_representation_count_cannot_report_success(self):
+        def fake_transport(req, timeout):
+            return BytesIO(json.dumps({
+                'goreecloud': {'selected_engines': ['brave'],
+                               'represented_engines': ['brave'],
+                               'represented_result_counts': {'brave': 2},
+                               'representation_not_contact_confirmation': True},
+                'results': [{'url': 'https://example.org',
+                             'engine': 'brave', 'engines': ['brave']}],
+                'unresponsive_engines': [],
+            }).encode())
+        self.assertEqual('invalid_representation_contract', mod.probe(
+            'brave', 'http://127.0.0.1:8888', transport=fake_transport)['state'])
 
     def test_redirects_and_environment_proxies_are_disabled(self):
         req = mod.Request('http://127.0.0.1:8888/search', data=b'test', method='POST')
@@ -123,8 +170,12 @@ class ProviderProbeContractTests(unittest.TestCase):
     def test_mixed_results_and_errors_are_reported_as_partial_not_success(self):
         def fake_transport(req, timeout):
             return BytesIO(json.dumps({
-                'goreecloud': {'selected_engines': ['startpage']},
-                'results': [{'url': 'https://public.example.org'}],
+                'goreecloud': {'selected_engines': ['startpage'],
+                               'represented_engines': ['startpage'],
+                               'represented_result_counts': {'startpage': 1},
+                               'representation_not_contact_confirmation': True},
+                'results': [{'url': 'https://public.example.org',
+                             'engine': 'startpage', 'engines': ['startpage']}],
                 'unresponsive_engines': [['startpage', 'TimeoutException']],
             }).encode())
         output = mod.probe('startpage', 'http://127.0.0.1:8888',
@@ -202,8 +253,12 @@ class ProviderProbeContractTests(unittest.TestCase):
                     def respond(req, timeout):
                         captured.append(req)
                         return BytesIO(json.dumps({
-                            'goreecloud': {'selected_engines': [engine]},
-                            'results': [{'url': 'https://public.example.org'}],
+                            'goreecloud': {'selected_engines': [engine],
+                                           'represented_engines': [engine],
+                                           'represented_result_counts': {engine: 1},
+                                           'representation_not_contact_confirmation': True},
+                            'results': [{'url': 'https://public.example.org',
+                                         'engine': engine, 'engines': [engine]}],
                             'unresponsive_engines': [],
                         }).encode())
                     output = mod.probe(source, 'http://localhost:8888',

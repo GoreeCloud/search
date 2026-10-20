@@ -102,6 +102,21 @@ a substitute for existing engine suspension and rate-limit enforcement.
 Offline Flask page tests verify first-page, later-page and partial-source
 cases without contacting external providers.
 
+## Provider-health proof gate (source-only)
+
+The offline/opt-in `scripts/provider_health_probe.py` previously classified any
+nonempty `results` list as `results_observed` when the intended provider
+was selected. Selected-engine metadata is not evidence that a result actually
+came from that provider. The hardened probe now requires that each result
+have a safe public HTTP(S) primary URL and exact single-provider attribution,
+and checks the represented-source list/count and explicit no-contact-proof
+flag. Wrong-source results, unsafe or malformed links, and inconsistent
+representation fail closed with bounded diagnostic states; result text, URLs
+and user search terms are never echoed. Synthetic offline tests cover these
+conditions across approved categories. **Matching these labels still does
+not prove live upstream access.** No provider queries are authorized or
+triggered by this source-only change.
+
 ## Next release acceptance gates
 
 - Confirm a sustainable provider access path that preserves GoreeCloud's
