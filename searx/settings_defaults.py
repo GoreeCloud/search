@@ -195,6 +195,7 @@ SCHEMA: dict[str, t.Any] = {
         'private_search': SettingsValue(bool, False),
         'max_query_chars': SettingsValue(int, 0),
         'max_provider_fanout': SettingsValue(int, 0),
+        'request_budget_per_minute': SettingsValue(int, 0),
     },
     'search': {
         'safe_search': SettingsValue((0, 1, 2), 0),

@@ -23,7 +23,22 @@ live source mounts, user credentials or reused private Search data.
 
 Free metasearch isn't zero-cost hosting: the VPS, bandwidth, storage and
 maintenance still cost money, and upstream engines may impose automated
-traffic restrictions. **No additional API subscriptions or search fees.**
+traffic restrictions. **No additional API subscriptions or search fees.
+
+## Bounded single-user admission
+
+This free-first candidate sets a **global 12-search-requests-per-60-seconds**
+single-worker budget. A rejected search returns HTTP 429 with an actionable
+`Retry-After` header, without logging or storing user IPs, queries or cookies.
+Health/readiness and static browsing do not consume the search budget.
+The configured single Granian worker owns this in-memory token window.
+It is intentionally an inexpensive **single-instance** safeguard for the
+already NetBird-only Development service, **not** per-user limiting or
+distributed enforcement. Before supporting public/anonymous/multiworker
+traffic, replace it with an audited shared limiter (e.g., Valkey-backed),
+verify ingress identity and enforce upstream fair-use budgets. Do not open
+host-published ports as a substitute for these safeguards.
+**
 
 ## Important disclosure
 
