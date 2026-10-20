@@ -3,6 +3,7 @@
 **Reviewed:** 2026-10-20
 **Environment:** seven-provider Development, *not* deployed; live VPS unchanged
 **Decision:** provider-results reliability NOT QUALIFIED; keep issues #26, #21 and #1 OPEN
+**Owner clarification (2026-10-20):** Prefer Zero Data Retention (ZDR) for authenticated upstream APIs, but do not make ZDR an absolute blocker to stabilizing GoreeCloud Search. This is a priority trade-off, **not authorization to activate a standard-retention provider, purchase a plan, or weaken private egress**.
 
 ## Evidence and supported-access options
 
@@ -98,6 +99,36 @@ usage caps and restrictions on storing search results. Before activation,
 confirm acceptable retention and attribution disclosures, account/plan
 rights, privacy promises, terms, billing limits, Tor compatibility, secret
 handling and isolated egress with an owner-authorized decision.
+
+### Owner-approved retention preference — nonblocking for stabilization
+
+The owner prefers **Zero Data Retention** where available, **but does not
+want it to prevent or delay GoreeCloud Search stabilization**. Apply this
+as a conditional preference, not a universal mandatory provider requirement:
+
+1. **Proceed now** with offline parser/security tests, Tor/VPN/DNS isolation,
+   category routing, supported-access research, performance, failure handling,
+   source attribution and rollback preparation. These activities do not require
+   Brave API credentials or a ZDR agreement.
+2. **Prefer ZDR** for any eventual authenticated production search-results
+   provider when it is actually offered, affordable, legally usable and
+   compatible with verified private egress.
+3. **If obtaining ZDR obstructs stabilization**, do not hold independent
+   development or testing hostage to an enterprise contract. Evaluate lawful
+   non-ZDR options separately, with explicit retention periods, billing, user
+   disclosure, account-query linkability, and compatibility with GoreeCloud's
+   privacy promise. A standard plan's data retention is **not ZDR**.
+4. **Activation is still a separate decision**: this conditional preference
+   does not authorize creating a paid account, adding real keys, sending user
+   queries to an account-linked API, changing data-retention promises, removing
+   Tor protections, or silently switching the seven approved sources.
+   If a non-ZDR option is ultimately recommended, obtain a specific approval
+   after presenting the concrete trade-offs and acceptance evidence.
+
+A functioning interface, green CI, and a retained subscriber token cannot
+by themselves demonstrate anonymous search or Stable release qualification.
+Continue to record actual provider access and production security as separate
+open acceptance gates.
 
 ## Offline evidence coverage gate
 
