@@ -4,6 +4,13 @@ on:
     branches:
       - main
       - 'feature/**'
+      - 'feat/**'
+      - 'fix/**'
+      - 'security/**'
+      - 'stabilize/**'
+      - 'deploy/**'
+      - 'design/**'
+      - 'test/**'
   pull_request:
 permissions:
   contents: read
