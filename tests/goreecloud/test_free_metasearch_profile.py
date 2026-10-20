@@ -37,6 +37,13 @@ class FreeMetasearchProfileTests(unittest.TestCase):
         self.assertFalse(self.config['server']['public_instance'])
         self.assertEqual('',self.config['search']['autocomplete'])
 
+    def test_bounded_search_admission_and_single_worker(self):
+        self.assertEqual(12, self.config['goreecloud']['request_budget_per_minute'])
+        self.assertEqual('1', self.services['search']['environment']['GRANIAN_WORKERS'])
+        self.assertEqual(4, int(self.services['search']['environment']['GRANIAN_BLOCKING_THREADS']))
+        private = yaml.safe_load(PRIVATE.read_text())
+        self.assertNotIn('request_budget_per_minute', private['goreecloud'])
+
     def test_separate_project_and_two_containers_without_tor(self):
         self.assertEqual('goreecloud-search-free-staging',self.compose['name'])
         self.assertEqual({'search','ingress'},set(self.services))

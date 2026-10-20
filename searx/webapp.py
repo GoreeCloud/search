@@ -64,6 +64,7 @@ from searx.settings_defaults import OUTPUT_FORMATS
 from searx.settings_loader import DEFAULT_SETTINGS_FILE
 from searx.exceptions import SearxParameterException
 from searx.goreecloud_native_dev import native_dev_available, serve_native_development
+from searx.goreecloud_request_budget import RequestBudget
 from searx.goreecloud_policy import (
     SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
     distinct_selected_sources, safe_primary_result_url, represented_result_sources, validate_builtin_sources,
@@ -503,6 +504,11 @@ def render(template_name: str, **kwargs):
     return result
 
 
+# Initialized once per single Granian worker. Do not use with multiple
+# workers or replicas unless replaced with a shared distributed limiter.
+free_search_budget = RequestBudget(12)
+
+
 @app.before_request
 def pre_request():
     sxng_request.start_time = default_timer()  # pylint: disable=assigning-non-slot
@@ -525,6 +531,19 @@ def pre_request():
             sxng_request.max_content_length = 65536
             if sxng_request.content_length is not None and sxng_request.content_length > 65536:
                 raise SearchPolicyViolation('Private Search form exceeds the size limit.', 413)
+
+    if (settings['goreecloud'].get('request_budget_per_minute', 0) > 0
+            and sxng_request.path in ('/search', '/preview', '/native-search')):
+        # Run before parsing or logging the form: global budget, not client/IP
+        # profiling. Reject excess fanout regardless of selected providers.
+        allowed, retry_seconds = free_search_budget.admit()
+        if not allowed:
+            return Response(
+                'Search request budget reached. Please retry shortly.',
+                status=429, mimetype='text/plain',
+                headers={'Retry-After': str(retry_seconds),
+                         'Cache-Control': 'private, no-store, max-age=0'},
+            )
 
     client_pref = ClientPref.from_http_request(sxng_request)
     # pylint: disable=redefined-outer-name
