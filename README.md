@@ -43,11 +43,15 @@ The local profile now rejects query-bearing GET requests, preserves POST even on
 
 All seven configured provider families require the approved local SOCKS5H proxy,
 including image-proxy traffic; there is no authorized direct fallback. **A SOCKS5H
-setting does not prove that the relay is Tor.** On this Development candidate the
-effective `outgoing.using_tor_proxy` setting is false, so the SearXNG Tor-exit
-attestation is **not yet enforced**. Before any promotion, integrate the positive
-Tor-exit guard, qualify fail-closed behavior across provider and image sessions,
-and verify relay identity, DNS isolation, and rollback in the target environment.
+setting alone does not prove that the relay is Tor.** Current Development source
+sets `outgoing.using_tor_proxy: true` and requires a fresh Tor attestation before
+private provider traffic; failed attestation closes the client rather than
+silently sending a direct request. Offline tests also exercise actual
+`curl_cffi` SOCKS5H negotiation against a rejecting synthetic loopback gateway
+and confirm that a missing relay fails closed. These tests do not prove actual
+VPS network isolation. Before promotion, qualify the real image-proxy path,
+provider behavior, relay identity, DNS/IPv6 and metadata isolation, and rollback
+in a separately isolated staging environment.
 The upstream providers can still receive the plaintext search terms over HTTPS,
 and browser clicks can reveal client details to result destinations. See
 [security boundaries](docs/goreecloud/SECURITY-BOUNDARIES.md) and
