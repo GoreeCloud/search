@@ -20,6 +20,15 @@ It must never replace or attach to existing `goreecloud-search`,
 - The Search staging starter probes the real Tor attestation API strictly via
   the loopback SOCKS5H relay before launching Granian. A failed or missing Tor
   gateway blocks startup; there is no direct proxy bypass.
+- The staging starter **first** checks its own Linux route tables for exactly
+  the isolated `eth0` on-link `172.29.247.0/28` IPv4 route and no usable
+  non-loopback IPv6 routes; any default route, unexpected interface/subnet,
+  unreadable or malformed route table **blocks Search before Tor attestation**.
+  This is a no-packet safety gate in addition to the independent Docker
+  topology, firewall and DNS checks; it is not a substitute for them.
+  The existing live Development Search/Tor pair shares a namespace with a
+  default IPv4 route and is **not** equivalent to isolated staging. Never use
+  this staging-only gate as evidence that the existing live pair is confined.
 - No staging component writes to the live Search application/cache/index, and
   all staging containers have read-only roots, dropped capabilities and bounded
   memory/PIDs. The stage uses a synthetic unique secret, not the live secret.
