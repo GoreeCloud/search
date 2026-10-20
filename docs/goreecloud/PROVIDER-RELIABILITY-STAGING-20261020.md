@@ -71,6 +71,21 @@ failures, but **none returned a usable result**. Do not conflate this mixed
 config/image rehearsal with a rebuilt candidate image test. No broader sweep
 was retried; explicitly rate-limited or access-denied sources were left alone.
 
+## Source-only HTTP denial classification follow-up
+
+The runtime logs above distinguish HTTP 429 and HTTP 403, but the existing
+online-engine processor catches both as generic `curl_cffi` HTTP errors,
+so the public unresponsive-engine contract only says `HTTP error`.
+A subsequent **source-only** correction maps a numeric `HTTPError.response`
+status of 429 to `SearxEngineTooManyRequestsException` (rate-limit suspension)
+and 403 to `SearxEngineAccessDeniedException` (access-denial suspension).
+Other HTTP/network errors keep their previous handling; the processor no
+longer logs exception string details that might contain a query or upstream
+URL. These mappings are covered by synthetic tests without real-provider
+egress. **They have not been exercised with another live upstream probe**:
+provider accessibility remains unqualified and upstream limits must not be
+circumvented.
+
 ## Next release acceptance gates
 
 - Confirm a sustainable provider access path that preserves GoreeCloud's
