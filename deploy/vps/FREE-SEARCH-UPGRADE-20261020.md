@@ -40,9 +40,11 @@ The exit code is **0 only if every defined prerequisite passes**. Any mismatch,
 missing parallel candidate, stale/absent rollback backup, snapshot owner mismatch,
 unexpectedly changed live upstream or access matcher, divergent running Docker
 image ID versus the inspected pinned image, tag/revision mismatch, a host port
-exposed through either Docker binding view, gateway collision, or unavailable
-Docker inspection returns a **blocked**
-status and nonzero exit code. Even a passing report is **admission for manual
+exposed through either Docker binding view, gateway collision, a missing or
+writable free-settings bind mount, a settings profile that differs from the
+exact Git revision, a disabled 12-searches/minute budget, nonprivate server
+settings, or unavailable Docker inspection returns a **blocked** status and
+nonzero exit code. Even a passing report is **admission for manual
 cutover review only**, not a permit to skip full HTTPS, provider, non-NetBird,
 restart, or actual rollback checks.
 

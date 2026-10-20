@@ -29,6 +29,16 @@ search-dev.goreecloud.com {
 PROJECT_NEW = "goreecloud-search-free-upgrade"
 PROJECT_OLD = "goreecloud-search-free-canary"
 IMAGE_ID = "sha256:" + "a" * 64
+PROFILE = b"""goreecloud:
+  private_search: true
+  request_budget_per_minute: 12
+  require_anonymous_egress: false
+outgoing:
+  proxies: {}
+  using_tor_proxy: false
+server:
+  public_instance: false
+"""
 
 
 def entry(name, project, networks, *, health=None, image=None):
@@ -40,7 +50,8 @@ def entry(name, project, networks, *, health=None, image=None):
         "Image": IMAGE_ID,
         "Config": {"Image": image or "goreecloud/caddy:2.11.4-porkbun-v0.3.1",
                    "Labels": {"com.docker.compose.project": project},
-                   "Env": ["GRANIAN_WORKERS=1"]},
+                   "Env": ["GRANIAN_WORKERS=1",
+                           "SEARXNG_SETTINGS_PATH=" + m.PROFILE_IN_CONTAINER]},
         "HostConfig": {"ReadonlyRootfs": True, "PortBindings": None},
         "NetworkSettings": {"Networks": {n: {"Aliases": []} for n in networks}},
     }
@@ -68,12 +79,14 @@ def fixture():
 
 
 def evaluate(source=SITE, snapshot=SITE, mode=0o600, backmode=0o600,
-             containers=None, image=None, owner=1001, snapshot_owner=1001):
+             containers=None, image=None, owner=1001, snapshot_owner=1001,
+             profile=PROFILE, pinned_profile=PROFILE):
     a, b = fixture()
     return m.evaluate(source, snapshot, mode, backmode,
                       a if containers is None else containers,
                       b if image is None else image, TAG, REV,
-                      owner_current=owner, owner_snapshot=snapshot_owner)
+                      owner_current=owner, owner_snapshot=snapshot_owner,
+                      profile_mounted=profile, profile_committed=pinned_profile)
 
 
 class ReadonlyUpgradeAdmissionTests(unittest.TestCase):
@@ -134,7 +147,8 @@ class ReadonlyUpgradeAdmissionTests(unittest.TestCase):
         containers[m.NEW_SEARCH]["Config"]["Image"] = wrong_tag
         result = m.evaluate(SITE, SITE, 0o600, 0o600,
                             containers, image, wrong_tag, REV,
-                            owner_current=1001, owner_snapshot=1001)
+                            owner_current=1001, owner_snapshot=1001,
+                            profile_mounted=PROFILE, profile_committed=PROFILE)
         self.assertEqual("blocked_do_not_cutover",result["status"])
 
     def test_network_published_port_blocks_even_without_hostconfig_bindings(self):
@@ -143,6 +157,41 @@ class ReadonlyUpgradeAdmissionTests(unittest.TestCase):
             "8080/tcp": [{"HostIp":"0.0.0.0","HostPort":"8099"}]
         }
         self.assertEqual("blocked_do_not_cutover",evaluate(containers=containers,image=image)["status"])
+
+    def test_disabled_budget_or_nonprivate_config_blocks_cutover(self):
+        for replacement in (
+            b"request_budget_per_minute: 0",
+            b"request_budget_per_minute: false",
+            b"private_search: false",
+            b"using_tor_proxy: true",
+            b"public_instance: true",
+        ):
+            with self.subTest(replacement=replacement):
+                old_line = (
+                    b"request_budget_per_minute: 12" if b"request_budget" in replacement
+                    else b"private_search: true" if b"private_search" in replacement
+                    else b"using_tor_proxy: false" if b"using_tor_proxy" in replacement
+                    else b"public_instance: false"
+                )
+                broken = PROFILE.replace(old_line, replacement)
+                self.assertEqual("blocked_do_not_cutover",
+                                 evaluate(profile=broken,pinned_profile=broken)["status"])
+
+    def test_uncommitted_runtime_profile_drift_blocks(self):
+        altered = PROFILE.replace(b"request_budget_per_minute: 12",
+                                  b"request_budget_per_minute: 120")
+        self.assertEqual("blocked_do_not_cutover",evaluate(profile=altered)["status"])
+
+    def test_profile_path_must_be_explicitly_selected(self):
+        a, image = fixture()
+        a[m.NEW_SEARCH]["Config"]["Env"] = ["GRANIAN_WORKERS=1"]
+        self.assertEqual("blocked_do_not_cutover",
+                         evaluate(containers=a,image=image)["status"])
+
+    def test_malformed_yaml_or_missing_profile_blocks(self):
+        self.assertEqual("blocked_do_not_cutover",evaluate(profile=None)["status"])
+        self.assertEqual("blocked_do_not_cutover",
+                         evaluate(profile=b"goreecloud: [broken",pinned_profile=b"goreecloud: [broken")["status"])
 
     def test_live_route_already_changed_blocks_old_route_gate(self):
         changed = SITE.replace(m.OLD.encode(), m.NEW.encode())

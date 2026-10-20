@@ -14,6 +14,8 @@ import stat
 import subprocess
 from pathlib import Path
 
+import yaml
+
 OLD = "goreecloud-search-free-canary-gateway:8080"
 NEW = "goreecloud-search-free-upgrade-gateway:8080"
 OLD_SEARCH = "goreecloud-search-free-canary-search-1"
@@ -24,6 +26,62 @@ HOST = "search-dev.goreecloud.com"
 PROJECT = "goreecloud-search-free-upgrade"
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 IMAGE = re.compile(r"goreecloud/search:staging-[0-9a-f]{12}\Z")
+
+PROFILE_IN_CONTAINER = "/usr/local/searxng/free-settings.yml"
+PROFILE_REPO_PATH = "configs/goreecloud/settings.free-first.yml"
+
+
+def committed_profile(revision: str) -> bytes | None:
+    """Read exactly the profile committed at the intended image source SHA."""
+    result = subprocess.run(
+        ["git", "-C", str(Path(__file__).resolve().parents[1]), "show",
+         revision + ":" + PROFILE_REPO_PATH],
+        check=False, capture_output=True, timeout=8,
+    )
+    return result.stdout if result.returncode == 0 else None
+
+
+def mounted_profile(container: dict | None) -> bytes | None:
+    """Read only the upgrade container's declared read-only settings bind mount."""
+    mounts = (container or {}).get("Mounts", [])
+    matches = [
+        m for m in mounts if isinstance(m, dict)
+        and m.get("Destination") == PROFILE_IN_CONTAINER
+        and m.get("Type") == "bind" and m.get("RW") is False
+        and isinstance(m.get("Source"), str)
+        and m["Source"].endswith("/" + PROFILE_REPO_PATH)
+    ]
+    if len(matches) != 1:
+        return None
+    source = Path(matches[0]["Source"])
+    if source.is_symlink() or not source.is_file():
+        return None
+    return source.read_bytes()
+
+
+def profile_is_safe(data: bytes | None) -> bool:
+    if not data:
+        return False
+    try:
+        profile = yaml.safe_load(data)
+        if not isinstance(profile, dict):
+            return False
+        goreecloud = profile.get("goreecloud")
+        outgoing = profile.get("outgoing")
+        server = profile.get("server")
+        if not all(isinstance(x, dict) for x in (goreecloud, outgoing, server)):
+            return False
+        return (
+            type(goreecloud.get("request_budget_per_minute")) is int
+            and goreecloud["request_budget_per_minute"] == 12
+            and goreecloud.get("private_search") is True
+            and goreecloud.get("require_anonymous_egress") is False
+            and outgoing.get("proxies") == {}
+            and outgoing.get("using_tor_proxy") is False
+            and server.get("public_instance") is False
+        )
+    except yaml.YAMLError:
+        return False
 
 
 def inspect(name: str) -> dict | None:
@@ -67,6 +125,7 @@ def evaluate(
     mode_snapshot: int | None, containers: dict, image: dict | None,
     expected_image: str, expected_sha: str,
     owner_current: int | None = None, owner_snapshot: int | None = None,
+    profile_mounted: bytes | None = None, profile_committed: bytes | None = None,
 ) -> dict:
     checks: list[dict] = []
 
@@ -161,8 +220,14 @@ def evaluate(
         "new gateway must use nonconflicting proxy alias")
 
     add("single_worker_budget",
-        bool(new and {"GRANIAN_WORKERS=1"} <= set(new.get("Config", {}).get("Env", []))),
-        "upgrade must retain a single Granian worker for local 12/min limiter")
+        bool(new and {"GRANIAN_WORKERS=1"} <= set(new.get("Config", {}).get("Env", []))
+             and {"SEARXNG_SETTINGS_PATH=" + PROFILE_IN_CONTAINER}
+             <= set(new.get("Config", {}).get("Env", []))),
+        "upgrade must retain one worker and load the inspected free settings path")
+    add("pinned_readonly_free_profile",
+        profile_mounted is not None and profile_committed is not None
+        and profile_mounted == profile_committed and profile_is_safe(profile_committed),
+        "mounted free settings must match the exact source revision and enforce 12/min, NetBird-only and no paid or Tor proxy")
 
     return {"status": "admitted_for_manual_cutover_review" if all(c["passed"] for c in checks)
             else "blocked_do_not_cutover", "checks": checks,
@@ -192,9 +257,12 @@ def main(argv: list[str] | None = None) -> int:
         names = (OLD_SEARCH, OLD_INGRESS, NEW_SEARCH, NEW_INGRESS)
         containers = {n: inspect(n) for n in names}
         source_image = image_inspect(args.image)
+        actual_profile = mounted_profile(containers.get(NEW_SEARCH))
+        expected_profile = committed_profile(args.revision)
         outcome = evaluate(active, old, mode_active, mode_old, containers,
                            source_image, args.image, args.revision,
-                           owner_current=owner_active, owner_snapshot=owner_old)
+                           owner_current=owner_active, owner_snapshot=owner_old,
+                           profile_mounted=actual_profile, profile_committed=expected_profile)
     except (OSError, ValueError, subprocess.SubprocessError, json.JSONDecodeError):
         outcome = {"status": "blocked_do_not_cutover", "passed": 0, "total": 0,
                    "checks": [{"check": "inspection", "passed": False,
