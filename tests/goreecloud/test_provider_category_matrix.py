@@ -29,7 +29,7 @@ class PrivateCategorySelectionMatrixTests(unittest.TestCase):
             name: len(engines) for name, engines in SEARCH_SOURCE_FAMILIES.items()
         })
         with smoke.app.test_client() as client, patch(
-            'searx.search.SearchWithPlugins', OfflineSearch
+            'searx.search.SearchWithPlugins', side_effect=OfflineSearch
         ) as search_factory:
             for category, mapping in SEARCH_SOURCE_FAMILIES.items():
                 for family, adapter in mapping.items():
@@ -56,7 +56,7 @@ class PrivateCategorySelectionMatrixTests(unittest.TestCase):
             ('images', 'brave.images,bing news'),
         )
         with smoke.app.test_client() as client, patch(
-            'searx.search.SearchWithPlugins', OfflineSearch
+            'searx.search.SearchWithPlugins', side_effect=OfflineSearch
         ) as search_factory:
             for category, adapter in prohibited:
                 with self.subTest(category=category, adapter=adapter):
