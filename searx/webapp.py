@@ -776,7 +776,7 @@ def goreecloud_preview():
             stored=flask.request.cookies.get(SEARCH_SOURCE_COOKIE),
             query_specific=bool(raw_text_query and raw_text_query.specific),
             category=(query.categories[0] if query.categories else 'general'),
-        ), categories=query.categories,
+        ), categories=tuple(name for name in SEARCH_SOURCE_FAMILIES if 'category_' + name in sxng_request.form) or None,
     )
     sources = distinct_selected_sources(ref.name for ref in query.engineref_list)
     validate_disclosure(
@@ -880,7 +880,7 @@ def search():
                     stored=flask.request.cookies.get(SEARCH_SOURCE_COOKIE),
                     query_specific=bool(raw_text_query and raw_text_query.specific),
                     category=(search_query.categories[0] if search_query.categories else 'general'),
-                ), categories=search_query.categories,
+                ), categories=tuple(name for name in SEARCH_SOURCE_FAMILIES if 'category_' + name in sxng_request.form) or None,
             )
             validate_disclosure(
                 search_query.query,
