@@ -234,6 +234,10 @@ class Network:
         local_address = next(self._local_addresses_cycle)
         proxies = next(self._proxies_cycle)  # is a tuple so it can be part of the key
         if self.privacy_proxy_required:
+            # Anonymous Search must prove the gateway is Tor, not merely SOCKS5H.
+            # Fail before opening a connection if the verification flag was omitted.
+            if not self.using_tor_proxy:
+                raise ProxyError('Private Search egress blocked: Tor verification required')
             if not self.valid_private_proxy(proxies):
                 raise ProxyError('Private Search egress blocked: approved local SOCKS5H proxy required')
             if verify is False or self.enable_http or curl_options:
@@ -386,6 +390,15 @@ def check_network_configuration():
     async def check():
         exception_count = 0
         for network in NETWORKS.values():
+            if network.privacy_proxy_required:
+                # Startup/readiness checks must be offline and deterministic.
+                # Live Tor exit attestation is mandatory on each actual request
+                # in get_client(), and never authorizes a direct fallback.
+                proxies = next(network._proxies_cycle)  # pylint: disable=protected-access
+                if not network.using_tor_proxy or not network.valid_private_proxy(proxies):
+                    network._logger.error('Private Search Tor gateway misconfigured')  # pylint: disable=protected-access
+                    exception_count += 1
+                continue
             if network.using_tor_proxy:
                 try:
                     await network.get_client()
@@ -433,8 +446,11 @@ def initialize(
         result = {}
         result.update(default_params)  # pyright: ignore[reportUnknownMemberType]
         result.update(params)  # pyright: ignore[reportUnknownMemberType]
-        # Engine-specific network overrides cannot downgrade the private egress policy.
+        # Engine-specific overrides cannot disable mandatory private Tor
+        # verification. A disabled global Tor flag still fails closed.
         result['privacy_proxy_required'] = default_params['privacy_proxy_required']
+        if result['privacy_proxy_required']:
+            result['using_tor_proxy'] = default_params['using_tor_proxy']
         if logger_name:
             result['logger_name'] = logger_name
         return Network(**result)  # type: ignore
