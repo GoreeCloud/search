@@ -37,9 +37,11 @@ python3 scripts/free_upgrade_preflight.py \
 ```
 
 The exit code is **0 only if every defined prerequisite passes**. Any mismatch,
-missing parallel candidate, stale/absent rollback backup, unexpectedly changed
-live upstream or access matcher, unknown image revision, exposed host port,
-gateway collision, or unavailable Docker inspection returns a **blocked**
+missing parallel candidate, stale/absent rollback backup, snapshot owner mismatch,
+unexpectedly changed live upstream or access matcher, divergent running Docker
+image ID versus the inspected pinned image, tag/revision mismatch, a host port
+exposed through either Docker binding view, gateway collision, or unavailable
+Docker inspection returns a **blocked**
 status and nonzero exit code. Even a passing report is **admission for manual
 cutover review only**, not a permit to skip full HTTPS, provider, non-NetBird,
 restart, or actual rollback checks.

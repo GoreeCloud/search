@@ -28,6 +28,7 @@ search-dev.goreecloud.com {
 '''
 PROJECT_NEW = "goreecloud-search-free-upgrade"
 PROJECT_OLD = "goreecloud-search-free-canary"
+IMAGE_ID = "sha256:" + "a" * 64
 
 
 def entry(name, project, networks, *, health=None, image=None):
@@ -36,6 +37,7 @@ def entry(name, project, networks, *, health=None, image=None):
         state["Health"] = {"Status": health}
     data = {
         "State": state,
+        "Image": IMAGE_ID,
         "Config": {"Image": image or "goreecloud/caddy:2.11.4-porkbun-v0.3.1",
                    "Labels": {"com.docker.compose.project": project},
                    "Env": ["GRANIAN_WORKERS=1"]},
@@ -61,16 +63,17 @@ def fixture():
         m.NEW_INGRESS: entry(m.NEW_INGRESS, PROJECT_NEW,
                              {PROJECT_NEW + "_app_link", "proxy"}),
     }
-    image = {"Config": {"Labels": {"org.opencontainers.image.revision": REV}}}
+    image = {"Id": IMAGE_ID, "Config": {"Labels": {"org.opencontainers.image.revision": REV}}}
     return containers, image
 
 
 def evaluate(source=SITE, snapshot=SITE, mode=0o600, backmode=0o600,
-             containers=None, image=None):
+             containers=None, image=None, owner=1001, snapshot_owner=1001):
     a, b = fixture()
     return m.evaluate(source, snapshot, mode, backmode,
                       a if containers is None else containers,
-                      b if image is None else image, TAG, REV)
+                      b if image is None else image, TAG, REV,
+                      owner_current=owner, owner_snapshot=snapshot_owner)
 
 
 class ReadonlyUpgradeAdmissionTests(unittest.TestCase):
@@ -105,6 +108,41 @@ class ReadonlyUpgradeAdmissionTests(unittest.TestCase):
         _, image = fixture()
         image["Config"]["Labels"]["org.opencontainers.image.revision"] = "0" * 40
         self.assertEqual("blocked_do_not_cutover", evaluate(image=image)["status"])
+
+    def test_mutated_image_tag_does_not_override_running_image_id(self):
+        containers, image = fixture()
+        containers[m.NEW_SEARCH]["Image"] = "sha256:" + "b" * 64
+        result = evaluate(containers=containers, image=image)
+        self.assertEqual("blocked_do_not_cutover", result["status"])
+        self.assertFalse(next(x["passed"] for x in result["checks"]
+                              if x["check"] == "running_image_id_matches_local_image"))
+
+    def test_missing_runtime_digest_blocks_even_if_tag_and_revision_match(self):
+        containers, image = fixture()
+        containers[m.NEW_SEARCH].pop("Image")
+        self.assertEqual("blocked_do_not_cutover",evaluate(containers=containers,image=image)["status"])
+        image.pop("Id")
+        self.assertEqual("blocked_do_not_cutover",evaluate(image=image)["status"])
+
+    def test_rollback_snapshot_owner_must_match_current(self):
+        self.assertEqual("blocked_do_not_cutover",evaluate(snapshot_owner=0)["status"])
+        self.assertEqual("blocked_do_not_cutover",evaluate(owner=None)["status"])
+
+    def test_label_and_image_tag_must_refer_to_the_same_revision(self):
+        containers, image = fixture()
+        wrong_tag = "goreecloud/search:staging-" + "0" * 12
+        containers[m.NEW_SEARCH]["Config"]["Image"] = wrong_tag
+        result = m.evaluate(SITE, SITE, 0o600, 0o600,
+                            containers, image, wrong_tag, REV,
+                            owner_current=1001, owner_snapshot=1001)
+        self.assertEqual("blocked_do_not_cutover",result["status"])
+
+    def test_network_published_port_blocks_even_without_hostconfig_bindings(self):
+        containers, image = fixture()
+        containers[m.NEW_INGRESS]["NetworkSettings"]["Ports"] = {
+            "8080/tcp": [{"HostIp":"0.0.0.0","HostPort":"8099"}]
+        }
+        self.assertEqual("blocked_do_not_cutover",evaluate(containers=containers,image=image)["status"])
 
     def test_live_route_already_changed_blocks_old_route_gate(self):
         changed = SITE.replace(m.OLD.encode(), m.NEW.encode())

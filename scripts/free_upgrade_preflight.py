@@ -66,14 +66,19 @@ def evaluate(
     current: bytes | None, snapshot: bytes | None, mode_current: int | None,
     mode_snapshot: int | None, containers: dict, image: dict | None,
     expected_image: str, expected_sha: str,
+    owner_current: int | None = None, owner_snapshot: int | None = None,
 ) -> dict:
     checks: list[dict] = []
 
     def add(identifier: str, ok: bool, reason: str) -> None:
         checks.append({"check": identifier, "passed": bool(ok), "detail": reason})
 
-    has_config = current is not None and mode_current == 0o600
-    add("protected_current_caddyfile", has_config, "requires readable root-owned private mode 0600")
+    has_config = current is not None and mode_current == 0o600 and owner_current is not None
+    add("protected_current_caddyfile", has_config, "requires an owned, private mode 0600 Caddyfile")
+    add("rollback_file_owner_matches",
+        owner_current is not None and owner_snapshot is not None
+        and owner_snapshot == owner_current,
+        "rollback snapshot must have the same owner UID as the current Caddyfile")
     text = current.decode("utf-8", "replace") if current is not None else ""
     block = site_block(text)
     old_route = "reverse_proxy " + OLD
@@ -109,10 +114,17 @@ def evaluate(
     add("upgrade_search_healthy", running(new, health=True), "parallel upgrade Search must be healthy")
     add("upgrade_ingress_running", running(new_proxy), "parallel upgrade ingress must be running")
 
+    local_image_id = (image or {}).get("Id")
     add("upgrade_exact_image",
-        bool(new and new.get("Config", {}).get("Image") == expected_image
+        bool(new and expected_image == "goreecloud/search:staging-" + expected_sha[:12]
+             and new.get("Config", {}).get("Image") == expected_image
              and image and image.get("Config", {}).get("Labels", {}).get("org.opencontainers.image.revision") == expected_sha),
         "running candidate tag and OCI source revision must match pinned head")
+    add("running_image_id_matches_local_image",
+        bool(new and isinstance(local_image_id, str)
+             and re.fullmatch(r"sha256:[0-9a-f]{64}", local_image_id)
+             and new.get("Image") == local_image_id),
+        "the actual running container must use the pinned local image ID, not only a matching mutable tag")
     add("upgrade_project_identity",
         bool(new and new_proxy and
              all(c.get("Config", {}).get("Labels", {}).get("com.docker.compose.project") == PROJECT
@@ -133,8 +145,10 @@ def evaluate(
 
     for name, c in ((OLD_SEARCH, old), (OLD_INGRESS, old_proxy),
                     (NEW_SEARCH, new), (NEW_INGRESS, new_proxy)):
+        ports = (c or {}).get("NetworkSettings", {}).get("Ports") or {}
         ok = bool(c and c.get("HostConfig", {}).get("ReadonlyRootfs") is True
-                  and not c.get("HostConfig", {}).get("PortBindings"))
+                  and not c.get("HostConfig", {}).get("PortBindings")
+                  and all(not published for published in ports.values()))
         add("confined_" + name.removeprefix("goreecloud-search-free-"), ok,
             "container needs read-only root and zero host-published ports")
 
@@ -168,17 +182,19 @@ def main(argv: list[str] | None = None) -> int:
     try:
         def read(path: Path):
             if not path.is_file() or path.is_symlink():
-                return None, None
-            mode = stat.S_IMODE(path.stat().st_mode)
-            return path.read_bytes(), mode
+                return None, None, None
+            metadata = path.stat()
+            mode = stat.S_IMODE(metadata.st_mode)
+            return path.read_bytes(), mode, metadata.st_uid
 
-        active, mode_active = read(args.caddyfile)
-        old, mode_old = read(args.snapshot)
+        active, mode_active, owner_active = read(args.caddyfile)
+        old, mode_old, owner_old = read(args.snapshot)
         names = (OLD_SEARCH, OLD_INGRESS, NEW_SEARCH, NEW_INGRESS)
         containers = {n: inspect(n) for n in names}
         source_image = image_inspect(args.image)
         outcome = evaluate(active, old, mode_active, mode_old, containers,
-                           source_image, args.image, args.revision)
+                           source_image, args.image, args.revision,
+                           owner_current=owner_active, owner_snapshot=owner_old)
     except (OSError, ValueError, subprocess.SubprocessError, json.JSONDecodeError):
         outcome = {"status": "blocked_do_not_cutover", "passed": 0, "total": 0,
                    "checks": [{"check": "inspection", "passed": False,
