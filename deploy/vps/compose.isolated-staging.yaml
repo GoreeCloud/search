@@ -35,7 +35,9 @@ services:
   search:
     image: ${SEARCH_STAGING_IMAGE:?Use an explicitly pinned Search Development image}
     user: "977:977"
-    entrypoint: ["/usr/local/searxng/.venv/bin/granian", "searx.webapp:app"]
+    # Search holds its internal namespace while the dependent relay starts.
+    # A SOCKS5H Tor attestation must pass before Granian is execd.
+    entrypoint: ["/usr/local/searxng/.venv/bin/python", "-u", "/usr/local/searxng/staging-start-search.py"]
     environment:
       SEARXNG_SECRET: ${SEARCH_STAGING_SECRET:?Use an isolated staging-only 32+ character secret}
       SEARXNG_SETTINGS_PATH: /usr/local/searxng/private-settings.yml
@@ -49,6 +51,7 @@ services:
       GRANIAN_BLOCKING_THREADS: "4"
     volumes:
       - ../../configs/goreecloud/settings.yml:/usr/local/searxng/private-settings.yml:ro
+      - ../../scripts/staging_start_search.py:/usr/local/searxng/staging-start-search.py:ro
     read_only: true
     tmpfs:
       - /tmp:rw,nosuid,noexec,size=32m,mode=1777

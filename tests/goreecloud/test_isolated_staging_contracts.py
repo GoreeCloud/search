@@ -29,6 +29,14 @@ class IsolatedStagingContractTests(unittest.TestCase):
                 self.assertEqual("no", svc["restart"])
                 self.assertTrue(all(x.endswith(":ro") for x in svc.get("volumes", [])))
         self.assertEqual("977:977", services["search"]["user"])
+        self.assertEqual(
+            ["/usr/local/searxng/.venv/bin/python", "-u", "/usr/local/searxng/staging-start-search.py"],
+            services["search"]["entrypoint"],
+        )
+        self.assertIn(
+            "../../scripts/staging_start_search.py:/usr/local/searxng/staging-start-search.py:ro",
+            services["search"]["volumes"],
+        )
         self.assertEqual("127.0.0.1", services["search"]["environment"]["GRANIAN_HOST"])
         self.assertEqual(
             "search-dev.goreecloud.com",
