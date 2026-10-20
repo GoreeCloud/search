@@ -236,6 +236,8 @@ class Network:
         if self.privacy_proxy_required:
             if not self.valid_private_proxy(proxies):
                 raise ProxyError('Private Search egress blocked: approved local SOCKS5H proxy required')
+            if not self.using_tor_proxy:
+                raise ProxyError('Private Search egress blocked: Tor attestation must be enabled')
             if verify is False or self.enable_http or curl_options:
                 raise ProxyError('Private Search egress blocked: insecure transport override')
         curl_key = tuple(sorted((int(k), v) for k, v in (curl_options or {}).items()))
