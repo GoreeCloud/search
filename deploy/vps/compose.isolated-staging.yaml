@@ -39,6 +39,8 @@ services:
     environment:
       SEARXNG_SECRET: ${SEARCH_STAGING_SECRET:?Use an isolated staging-only 32+ character secret}
       SEARXNG_SETTINGS_PATH: /usr/local/searxng/private-settings.yml
+      # Private host allowlist is hard-coded to this hostname; no host ports are published.
+      GOREECLOUD_SEARCH_PRIVATE_HOST: search-dev.goreecloud.com
       GRANIAN_HOST: 127.0.0.1
       GRANIAN_PORT: "8080"
       GRANIAN_WORKERS: "1"
