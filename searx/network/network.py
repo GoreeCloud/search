@@ -435,8 +435,10 @@ def initialize(
         result = {}
         result.update(default_params)  # pyright: ignore[reportUnknownMemberType]
         result.update(params)  # pyright: ignore[reportUnknownMemberType]
-        # Engine-specific network overrides cannot downgrade the private egress policy.
+        # Network-specific overrides must not disable required Tor attestation.
         result['privacy_proxy_required'] = default_params['privacy_proxy_required']
+        if result['privacy_proxy_required']:
+            result['using_tor_proxy'] = default_params['using_tor_proxy']
         if logger_name:
             result['logger_name'] = logger_name
         return Network(**result)  # type: ignore
