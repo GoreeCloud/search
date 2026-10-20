@@ -373,10 +373,35 @@ def validate_builtin_search_bangs(raw_query: str) -> None:
                 raise SearchPolicyViolation('Only approved GoreeCloud Search shortcuts are supported.', 422)
 
 
-def restrict_explicit_private_engines(enginerefs: Iterable[object], selected: str | None) -> list[object]:
-    """Honor the explicit approved selection even if a category also appears."""
+def restrict_explicit_private_engines(
+    enginerefs: Iterable[object], selected: str | None,
+    *, categories: Iterable[str] | None = None,
+) -> list[object]:
+    """Reject category/adapter mismatches before constructing a search worker.
+
+    SearXNG may admit an explicit engine even when the form's category does
+    not support that adapter. Never silently search Web for an Images request.
+    """
     refs = list(enginerefs)
     validate_builtin_sources((ref.name for ref in refs), submitted_engines=selected)
+    if categories is not None:
+        requested_categories = tuple(categories) or ('general',)
+        if any(name not in SEARCH_SOURCE_FAMILIES for name in requested_categories):
+            raise SearchPolicyViolation('That search category is unavailable.', 422)
+        allowed = {
+            adapter for name in requested_categories
+            for adapter in SEARCH_SOURCE_FAMILIES[name].values()
+        }
+        if any(ref.name not in allowed for ref in refs):
+            raise SearchPolicyViolation(
+                'The selected search source is unavailable for this category.', 422
+            )
+        if selected is not None and any(
+            name.strip() not in allowed for name in selected.split(',')
+        ):
+            raise SearchPolicyViolation(
+                'The selected search source is unavailable for this category.', 422
+            )
     if selected is None:
         return refs
     requested = {name.strip() for name in selected.split(',')}
