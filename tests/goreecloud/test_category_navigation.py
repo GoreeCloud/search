@@ -19,17 +19,17 @@ class CategoryNavigationTests(unittest.TestCase):
 
     def test_family_routes_only_to_approved_variant_instances(self):
         expected = {
-            'general': 'brave,startpage,qwant',
-            'images': 'brave.images,startpage images,qwant images',
-            'videos': 'brave.videos,qwant videos',
-            'news': 'brave.news,startpage news,qwant news',
+            'general': 'brave,startpage,qwant,duckduckgo,ecosia,bing,google',
+            'images': 'brave.images,startpage images,qwant images,duckduckgo images,bing images,google images',
+            'videos': 'brave.videos,qwant videos,duckduckgo videos,bing videos,google videos',
+            'news': 'brave.news,startpage news,qwant news,duckduckgo news,bing news,google news',
         }
         for category, mapping in expected.items():
             with self.subTest(category=category):
                 self.assertEqual(mapping, selected_engines_for_category(category))
                 self.assertTrue(set(mapping.split(',')).issubset(BUILTIN_SEARCH_SOURCES))
         self.assertEqual('brave.videos', selected_engines_for_category('videos', 'brave'))
-        for category, choice in [('videos', 'startpage'), ('maps', 'both'), ('images', 'google')]:
+        for category, choice in [('videos', 'startpage'), ('maps', 'both'), ('images', 'ecosia')]:
             with self.subTest(category=category, choice=choice):
                 with self.assertRaises(SearchPolicyViolation):
                     selected_engines_for_category(category, choice)
@@ -54,8 +54,8 @@ class CategoryNavigationTests(unittest.TestCase):
                 actual[category] = hidden['engines']
                 self.assertEqual('', form.get('action').split('?', 1)[-1] if '?' in form.get('action') else '')
             self.assertEqual({
-                'general': 'brave,startpage,qwant', 'images': 'brave.images,startpage images,qwant images',
-                'videos': 'brave.videos,qwant videos', 'news': 'brave.news,startpage news,qwant news',
+                'general': 'brave,startpage,qwant,duckduckgo,ecosia,bing,google', 'images': 'brave.images,startpage images,qwant images,duckduckgo images,bing images,google images',
+                'videos': 'brave.videos,qwant videos,duckduckgo videos,bing videos,google videos', 'news': 'brave.news,startpage news,qwant news,duckduckgo news,bing news,google news',
             }, actual)
             response.close()
 
@@ -64,9 +64,9 @@ class CategoryNavigationTests(unittest.TestCase):
             'searx.search.SearchWithPlugins', OfflineSearch
         ):
             for category, selected in [
-                ('images', ['brave.images', 'qwant images', 'startpage images']),
-                ('videos', ['brave.videos', 'qwant videos']),
-                ('news', ['brave.news', 'qwant news', 'startpage news']),
+                ('images', ['bing images', 'brave.images', 'duckduckgo images', 'google images', 'qwant images', 'startpage images']),
+                ('videos', ['bing videos', 'brave.videos', 'duckduckgo videos', 'google videos', 'qwant videos']),
+                ('news', ['bing news', 'brave.news', 'duckduckgo news', 'google news', 'qwant news', 'startpage news']),
             ]:
                 with self.subTest(category=category):
                     response = client.post('/search', data={

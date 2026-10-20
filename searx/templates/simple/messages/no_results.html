@@ -10,6 +10,9 @@
       {% else %}
       <p>At least one selected search source reported an error, so results may be incomplete. Review the source messages for details. No replacement provider was selected automatically.</p>
       {% endif %}
+      {% if goreecloud_retry_blocked %}
+      <p class="goreecloud-retry-restricted">All selected sources are currently rate-limiting or refusing access. Wait before trying them again, or explicitly choose another approved source. No automatic provider substitution occurred.</p>
+      {% else %}
       <form class="goreecloud-empty-retry" method="post" action="{{ url_for('search') }}">
         <input type="hidden" name="q" value="{{ source_switch_query }}">
         <input type="hidden" name="engines" value="{{ selected_engine_post }}">
@@ -23,11 +26,15 @@
       </form>
       <p>Retrying sends the search terms to the same selected providers again. You can also change the query or select another approved source above.</p>
       {% include 'simple/goreecloud_try_startpage.html' %}
+      {% endif %}
     {% elif pageno == 1 %}
-      <p>No matches were returned by the selected sources. Try different search terms, another search category, or choose Brave Search, Startpage, or Qwant in Settings.</p>
+      <p>No matches were returned by the selected sources. Try different search terms, another search category, or choose a different approved source in Settings.</p>
     {% else %}
       {% if unresponsive_engines %}
       <p>At least one selected source reported an error, so results for this page could not be confirmed. <a href="#engines_msg-title">Review source messages</a>. No replacement provider was selected automatically.</p>
+      {% if goreecloud_retry_blocked %}
+      <p class="goreecloud-retry-restricted">All selected sources are currently rate-limiting or refusing access. Wait before retrying this page; no automatic provider substitution occurred.</p>
+      {% else %}
       <form class="goreecloud-page-error-retry goreecloud-empty-retry" method="post" action="{{ url_for('search') }}">
         <input type="hidden" name="q" value="{{ source_switch_query }}">
         <input type="hidden" name="engines" value="{{ selected_engine_post }}">
@@ -41,9 +48,11 @@
         <button type="submit">Retry this results page</button>
       </form>
       <p>Retrying sends these terms to the same selected sources again on this page.</p>
+      {% endif %}
       {% else %}
       <p>No more displayed web matches on this page. You can request the previous results page from the same selected sources.</p>
       {% endif %}
+      {% if not goreecloud_retry_blocked %}
       <form class="goreecloud-previous-results goreecloud-empty-retry" method="post" action="{{ url_for('search') }}">
         <input type="hidden" name="q" value="{{ source_switch_query }}">
         <input type="hidden" name="engines" value="{{ selected_engine_post }}">
@@ -57,6 +66,9 @@
         <button type="submit">Previous results page</button>
       </form>
       <p>Returning to an earlier page makes another search request to the same selected providers.</p>
+      {% else %}
+      <p>Previous-page retries are withheld while all selected providers report access restrictions. You can <a href="{{ url_for('index') }}">start a new search</a> without resending these terms.</p>
+      {% endif %}
     {% endif %}
   {% else %}
     {% if pageno == 1 %}

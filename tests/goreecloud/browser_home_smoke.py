@@ -238,6 +238,25 @@ def main() -> None:
                 skip.send_keys(Keys.ENTER)
                 assert driver.current_url.endswith('#goreecloud-content-start'), 'Keyboard skip did not reach content'
                 print('PASS keyboard-accessible skip to content')
+            # Privacy is a separate user-facing page: verify usable navigation
+            # and keyboard focus at the same responsive viewports.
+            driver.get(url + 'static/themes/simple/goreecloud/privacy.html')
+            assert driver.find_element(By.CSS_SELECTOR, '#privacy-content h1').text.strip() == 'Privacy and sources'
+            privacy_skip = driver.find_element(By.CSS_SELECTOR, 'a.skip-link[href="#privacy-content"]')
+            driver.execute_script('arguments[0].focus()', privacy_skip)
+            assert driver.execute_script('return document.activeElement === arguments[0]', privacy_skip)
+            assert driver.execute_script(
+                'return arguments[0].getBoundingClientRect().top >= 0', privacy_skip
+            ), f'{label}: privacy skip link not visible when focused'
+            privacy_skip.send_keys(Keys.ENTER)
+            assert driver.current_url.endswith('#privacy-content'), f'{label}: skip target not navigable'
+            privacy_overflow = driver.execute_script(
+                'return document.documentElement.scrollWidth - document.documentElement.clientWidth'
+            )
+            assert privacy_overflow <= 2, f'{label}: privacy page overflow of {privacy_overflow}px'
+            for nav_link in driver.find_elements(By.CSS_SELECTOR, 'header nav .links a'):
+                assert nav_link.is_displayed(), f'{label}: privacy navigation link hidden'
+            print(f'PASS privacy page responsive and keyboard navigation: {label}')
         # Official mockup moon button is an actual local appearance control.
         driver.set_window_size(390, 844)
         driver.get(url)
@@ -269,7 +288,7 @@ def main() -> None:
         assert settings_link.get_attribute('href').endswith('/preferences')
         driver.get(url + 'preferences')
         options = driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')
-        assert sorted(option.get_attribute('value') for option in options) == ['both', 'brave', 'qwant', 'startpage']
+        assert sorted(option.get_attribute('value') for option in options) == ['all', 'bing', 'brave', 'duckduckgo', 'ecosia', 'google', 'qwant', 'startpage']
         brave_choice = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="brave"]')
         driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", brave_choice)
         brave_choice.click()
@@ -287,9 +306,9 @@ def main() -> None:
         driver.get(url + 'preferences')
         selected = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="brave"]')
         assert selected.is_selected(), 'Saved Brave-only choice not persisted'
-        both_choice = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="both"]')
-        driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", both_choice)
-        both_choice.click()
+        all_choice = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="all"]')
+        driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", all_choice)
+        all_choice.click()
         save_button = driver.find_element(By.CSS_SELECTOR, 'form#search_form input[type="submit"]')
         driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", save_button)
         save_button.click()
@@ -300,13 +319,39 @@ def main() -> None:
             driver.get(url + 'preferences')
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-preferences-intro h1').text == 'Settings'
             assert not driver.find_elements(By.CSS_SELECTOR, '#main_preferences > a img.logo')
-            assert len(driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')) == 4
+            assert len(driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')) == 8
             prefs_geom = driver.execute_script("""
               return {width:document.documentElement.clientWidth,
                 scroll:document.documentElement.scrollWidth,
                 title:document.querySelector('#main_preferences h1').getBoundingClientRect().width}
             """)
             assert prefs_geom['scroll'] <= prefs_geom['width'] + 1, (label, prefs_geom)
+            if width == 320:
+                # The visible word 'Interface' must remain intact at 320px.
+                # A Range returns two rectangles when the browser splits it.
+                interface_word_boxes = driver.execute_script("""
+                  const label = document.getElementById('tab-label-ui');
+                  const node = [...label.childNodes].find(n =>
+                    n.nodeType === Node.TEXT_NODE && n.textContent.toLowerCase().includes('interface'));
+                  if (!node) return -1;
+                  const start = node.textContent.toLowerCase().indexOf('interface');
+                  const range = document.createRange();
+                  range.setStart(node, start);
+                  range.setEnd(node, start + 'interface'.length);
+                  return range.getClientRects().length;
+                """)
+                tab_geometry = driver.execute_script("""
+                    const label = document.getElementById('tab-label-ui');
+                    const style = getComputedStyle(label);
+                    return {width: label.getBoundingClientRect().width,
+                            clientWidth: label.clientWidth,
+                            padding: style.padding, fontSize: style.fontSize,
+                            fontWeight: style.fontWeight, letterSpacing: style.letterSpacing,
+                            overflowWrap: style.overflowWrap,
+                            parentColumns: getComputedStyle(label.parentElement).gridTemplateColumns};
+                """)
+                print('SETTINGS 320px label layout:', tab_geometry, flush=True)
+                assert interface_word_boxes == 1, ('Settings tab word split across lines', interface_word_boxes)
             driver.save_screenshot(str(artifacts / f'settings-{label}.png'))
         driver.set_window_size(1440, 900)
         driver.get(url + 'preferences')
@@ -354,7 +399,7 @@ def main() -> None:
             retry = driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry button')
             assert retry.is_displayed() and retry.rect['height'] >= 44, 'Mobile error retry inaccessible'
             assert 'reported an error' in driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').text
-            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry input[name="engines"]').get_attribute('value') == 'brave,qwant,startpage'
+            assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-retry input[name="engines"]').get_attribute('value') == 'bing,brave,duckduckgo,ecosia,google,qwant,startpage'
             driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", retry)
             WebDriverWait(driver, 8).until(lambda page: page.execute_script(
                 "const r=arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;",
@@ -364,7 +409,7 @@ def main() -> None:
             WebDriverWait(driver, 12).until(lambda page: failed.call_count == 2)
             assert driver.current_url.endswith('/search'), 'Retry left the private result route'
             assert not driver.execute_script('return location.search'), 'Retry leaked search terms into URL'
-            assert driver.find_element(By.CSS_SELECTOR, 'form#search input[name="engines"]').get_attribute('value') == 'brave,qwant,startpage'
+            assert driver.find_element(By.CSS_SELECTOR, 'form#search input[name="engines"]').get_attribute('value') == 'bing,brave,duckduckgo,ecosia,google,qwant,startpage'
         print('PASS mobile explicit same-source retry, no fallback, and POST URL privacy')
 
         # Layout contract with eight real template cards but NO provider
@@ -536,7 +581,7 @@ def main() -> None:
             assert not driver.execute_script('return location.search'), 'Category switch leaked query'
             assert driver.find_element(By.CSS_SELECTOR, '#q').get_attribute('value') == 'synthetic category navigation'
             assert driver.find_element(By.CSS_SELECTOR,
-                '.goreecloud-category-form input[name="engines"][value="brave.images,startpage images,qwant images"]')
+                '.goreecloud-category-form input[name="engines"][value="brave.images,startpage images,qwant images,duckduckgo images,bing images,google images"]')
             driver.set_window_size(390, 844)
             driver.save_screenshot(str(artifacts / 'phone-category-tabs.png'))
             overflow = driver.execute_script(
@@ -568,7 +613,7 @@ def main() -> None:
             selected = driver.find_element(
                 By.CSS_SELECTOR, '.goreecloud-partial-retry input[name="engines"]'
             ).get_attribute('value')
-            assert selected == 'brave,qwant,startpage', f'Partial retry selected unexpected sources: {selected}'
+            assert selected == 'bing,brave,duckduckgo,ecosia,google,qwant,startpage', f'Partial retry selected unexpected sources: {selected}'
             assert not driver.execute_script('return location.search'), 'Partial-result search leaked query'
             driver.save_screenshot(str(artifacts / 'desktop-partial-retry.png'))
             driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", retry)
@@ -603,7 +648,7 @@ def main() -> None:
             previous = driver.find_element(By.CSS_SELECTOR, '.goreecloud-previous-results button')
             assert previous.is_displayed() and previous.rect['height'] >= 44, 'Previous page touch action is too small'
             assert driver.find_element(By.CSS_SELECTOR,
-                '.goreecloud-previous-results input[name="engines"]').get_attribute('value') == 'brave,qwant,startpage'
+                '.goreecloud-previous-results input[name="engines"]').get_attribute('value') == 'bing,brave,duckduckgo,ecosia,google,qwant,startpage'
             assert driver.find_element(By.CSS_SELECTOR,
                 '.goreecloud-previous-results input[name="pageno"]').get_attribute('value') == '1'
             assert not driver.execute_script('return location.search'), 'Later-page query entered URL'
@@ -618,7 +663,7 @@ def main() -> None:
             assert not driver.execute_script('return location.search'), 'Previous page leaked query into URL'
             assert not driver.find_elements(By.CSS_SELECTOR, '.goreecloud-previous-results')
             assert driver.find_element(By.CSS_SELECTOR,
-                'form#search input[name="engines"]').get_attribute('value') == 'brave,qwant,startpage'
+                'form#search input[name="engines"]').get_attribute('value') == 'bing,brave,duckduckgo,ecosia,google,qwant,startpage'
         print('PASS phone previous-page POST recovery and exact saved-source continuity')
 
         # Exercise a synthetic denied URL without dispatching a search.

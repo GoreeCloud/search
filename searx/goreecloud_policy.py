@@ -142,6 +142,33 @@ def distinct_selected_sources(provider_names: Iterable[str], *, max_providers: i
     return sorted(first_labels.values(), key=lambda label: (label.casefold(), label))
 
 
+_ACCESS_RESTRICTION_ERRORS = frozenset({
+    'searx.exceptions.SearxEngineAccessDeniedException',
+    'searx.exceptions.SearxEngineCaptchaException',
+    'searx.exceptions.SearxEngineTooManyRequestsException',
+})
+
+
+def all_selected_sources_access_restricted(
+    selected: Iterable[str], unresponsive: Iterable[object],
+) -> bool:
+    """Suppress immediate same-source retry only for *all* denied sources.
+
+    Use canonical internal exception types, not translated display messages.
+    Timed-out, unreachable, partially failing or unreported engines remain
+    retryable. This flag is advisory UI only; engine suspension stays authoritative.
+    """
+    sources = set(selected)
+    if not sources:
+        return False
+    denied = {
+        getattr(item, 'engine', None)
+        for item in unresponsive
+        if getattr(item, 'error_type', None) in _ACCESS_RESTRICTION_ERRORS
+    }
+    return sources.issubset(denied)
+
+
 def safe_primary_result_url(url: object) -> bool:
     """Allow only unambiguous HTTP(S) top-level result destinations.
 
@@ -176,6 +203,54 @@ def safe_primary_result_url(url: object) -> bool:
         return False
 
 
+def safe_external_media_url(url: object) -> bool:
+    """Reject unsafe external HTTPS targets before any private provider fetch.
+
+    DNS rebinding requires a separate network/firewall defense. Validation
+    blocks direct local/metadata and malformed-authority SSRF paths only.
+    """
+    import ipaddress
+    import re
+    from urllib.parse import urlsplit
+
+    if (not isinstance(url, str) or not url or len(url) > 4096
+            or '\\' in url or any(ord(ch) <= 32 or ord(ch) == 127 for ch in url)):
+        return False
+    try:
+        target = urlsplit(url)
+        host = target.hostname
+        port = target.port
+        if (target.scheme.lower() != 'https' or not host
+                or port not in (None, 443)
+                or target.username is not None or target.password is not None
+                or target.fragment or '%' in target.netloc):
+            return False
+        try:
+            ipaddress.ip_address(host)
+            return False
+        except ValueError:
+            pass
+        ascii_host = host.encode('idna').decode('ascii').lower()
+        if (ascii_host.endswith('.') or len(ascii_host) > 253
+                or '.' not in ascii_host or ascii_host.startswith('.')):
+            return False
+        labels = ascii_host.split('.')
+        if any(
+            not 1 <= len(label) <= 63
+            or not re.fullmatch(r'[a-z0-9](?:[a-z0-9-]*[a-z0-9])?', label)
+            for label in labels
+        ):
+            return False
+        if labels[-1] in ('local', 'localhost', 'internal', 'lan', 'invalid',
+                          'test', 'example', 'onion', 'arpa'):
+            return False
+        if not re.fullmatch(r'[a-z]{2,63}|xn--[a-z0-9-]+', labels[-1]):
+            return False
+        return True
+    except (UnicodeError, TypeError, ValueError):
+        return False
+
+
 def represented_result_sources(results: Iterable[object], selected_names: Iterable[str]) -> dict[str, int]:
     """Count selected provider labels attached to *displayed* primary results.
 
@@ -206,34 +281,30 @@ def represented_result_sources(results: Iterable[object], selected_names: Iterab
     return {name: counts[name] for name in sorted(counts, key=lambda label: (label.casefold(), label))}
 
 
-# Product-wide private Search provider allowlist; legacy upstream adapters
-# remain in the upstream source tree but are not selectable or executable.
-BUILTIN_SEARCH_SOURCES = frozenset({
-    'brave', 'startpage',
-    'brave.images', 'brave.videos', 'brave.news',
-    'startpage images', 'startpage news',
-    'qwant', 'qwant images', 'qwant videos', 'qwant news',
-})
+# Private-profile approved engine registry. Other SearXNG adapters remain blocked.
 SEARCH_SOURCE_FAMILIES = {
-    'general': {'brave': 'brave', 'startpage': 'startpage', 'qwant': 'qwant'},
-    'images': {'brave': 'brave.images', 'startpage': 'startpage images', 'qwant': 'qwant images'},
-    'videos': {'brave': 'brave.videos', 'qwant': 'qwant videos'},
-    'news': {'brave': 'brave.news', 'startpage': 'startpage news', 'qwant': 'qwant news'},
+    'general': {'brave': 'brave', 'startpage': 'startpage', 'qwant': 'qwant',
+                'duckduckgo': 'duckduckgo', 'ecosia': 'ecosia', 'bing': 'bing', 'google': 'google'},
+    'images': {'brave': 'brave.images', 'startpage': 'startpage images', 'qwant': 'qwant images',
+               'duckduckgo': 'duckduckgo images', 'bing': 'bing images', 'google': 'google images'},
+    'videos': {'brave': 'brave.videos', 'qwant': 'qwant videos', 'duckduckgo': 'duckduckgo videos',
+               'bing': 'bing videos', 'google': 'google videos'},
+    'news': {'brave': 'brave.news', 'startpage': 'startpage news', 'qwant': 'qwant news',
+             'duckduckgo': 'duckduckgo news', 'bing': 'bing news', 'google': 'google news'},
 }
+BUILTIN_SEARCH_SOURCES = frozenset(
+    adapter for category in SEARCH_SOURCE_FAMILIES.values() for adapter in category.values()
+)
 SEARCH_CATEGORIES = tuple(SEARCH_SOURCE_FAMILIES)
-
-
-# Browser-local choice: legacy 'both' now means all three approved providers.
 SEARCH_SOURCE_COOKIE = 'goreecloud_search_sources'
 SEARCH_SOURCE_OPTIONS = {
-    'both': 'brave,startpage,qwant',
-    'brave': 'brave',
-    'startpage': 'startpage',
-    'qwant': 'qwant',
+    'all': ','.join(SEARCH_SOURCE_FAMILIES['general']),
+    'both': ','.join(SEARCH_SOURCE_FAMILIES['general']),  # legacy cookie
+    **{family: family for family in SEARCH_SOURCE_FAMILIES['general']},
 }
 
 
-def selected_engines_for_category(category: str, choice: str = 'both') -> str:
+def selected_engines_for_category(category: str, choice: str = 'all') -> str:
     """Map saved provider families to actual allowed per-category adapter names.
 
     No engine fallback is performed: a Startpage-only video request is
@@ -242,17 +313,17 @@ def selected_engines_for_category(category: str, choice: str = 'both') -> str:
     if category not in SEARCH_SOURCE_FAMILIES:
         raise SearchPolicyViolation('That search category is unavailable.', 422)
     available = SEARCH_SOURCE_FAMILIES[category]
-    # The legacy "both" choice now means every supported provider for the
-    # category. Videos has Brave and Qwant, but no Startpage adapter.
-    wanted = tuple(available) if choice == 'both' else (choice,)
+    # All Sources selects available per-category engines, never substitutes an
+    # unsupported adapter for an explicitly requested single-source category.
+    wanted = tuple(available) if choice in ('all', 'both') else (choice,)
     if any(family not in available for family in wanted):
         raise SearchPolicyViolation('The selected search provider does not support this category.', 422)
     return ','.join(available[family] for family in wanted)
 
 
 def stored_search_source(raw: str | None) -> str:
-    """Accept only canonical provider choices; default to all three families."""
-    return raw if raw in SEARCH_SOURCE_OPTIONS else 'both'
+    """Migrate legacy multi-source cookies and default to All Sources."""
+    return raw if raw in SEARCH_SOURCE_OPTIONS and raw != 'both' else 'all'
 
 
 def requested_search_source(*, explicit: str | None, stored: str | None, query_specific: bool,
@@ -279,14 +350,14 @@ def validate_builtin_sources(provider_names: Iterable[str], *, submitted_engines
     if submitted_engines is not None:
         supplied = [name.strip() for name in submitted_engines.split(',')]
         if not supplied or any(name not in BUILTIN_SEARCH_SOURCES for name in supplied):
-            raise SearchPolicyViolation('Only Brave Search, Startpage and Qwant are available.', 422)
+            raise SearchPolicyViolation('Only approved GoreeCloud Search sources are available.', 422)
     names = list(provider_names)
     if not names or any(not isinstance(name, str) or name not in BUILTIN_SEARCH_SOURCES for name in names):
-        raise SearchPolicyViolation('Only Brave Search, Startpage and Qwant are available.', 422)
+        raise SearchPolicyViolation('Only approved GoreeCloud Search sources are available.', 422)
     return len(set(names))
 
 
-ALLOWED_SEARCH_BANGS = frozenset({'brave', 'br', 'startpage', 'sp', 'qwant', 'qw', 'general', 'web'})
+ALLOWED_SEARCH_BANGS = frozenset({'brave', 'br', 'startpage', 'sp', 'qwant', 'qw', 'duckduckgo', 'ddg', 'ecosia', 'eco', 'bing', 'bi', 'google', 'go', 'general', 'web'})
 
 
 def validate_builtin_search_bangs(raw_query: str) -> None:
@@ -299,13 +370,38 @@ def validate_builtin_search_bangs(raw_query: str) -> None:
     for token in raw_query.split():
         if token.startswith('!'):
             if token.startswith('!!') or token[1:].lower().replace('-', ' ').replace('_', ' ') not in ALLOWED_SEARCH_BANGS:
-                raise SearchPolicyViolation('Only Brave Search, Startpage and Qwant search shortcuts are supported.', 422)
+                raise SearchPolicyViolation('Only approved GoreeCloud Search shortcuts are supported.', 422)
 
 
-def restrict_explicit_private_engines(enginerefs: Iterable[object], selected: str | None) -> list[object]:
-    """Honor the explicit approved selection even if a category also appears."""
+def restrict_explicit_private_engines(
+    enginerefs: Iterable[object], selected: str | None,
+    *, categories: Iterable[str] | None = None,
+) -> list[object]:
+    """Reject category/adapter mismatches before constructing a search worker.
+
+    SearXNG may admit an explicit engine even when the form's category does
+    not support that adapter. Never silently search Web for an Images request.
+    """
     refs = list(enginerefs)
     validate_builtin_sources((ref.name for ref in refs), submitted_engines=selected)
+    if categories is not None:
+        requested_categories = tuple(categories) or ('general',)
+        if any(name not in SEARCH_SOURCE_FAMILIES for name in requested_categories):
+            raise SearchPolicyViolation('That search category is unavailable.', 422)
+        allowed = {
+            adapter for name in requested_categories
+            for adapter in SEARCH_SOURCE_FAMILIES[name].values()
+        }
+        if any(ref.name not in allowed for ref in refs):
+            raise SearchPolicyViolation(
+                'The selected search source is unavailable for this category.', 422
+            )
+        if selected is not None and any(
+            name.strip() not in allowed for name in selected.split(',')
+        ):
+            raise SearchPolicyViolation(
+                'The selected search source is unavailable for this category.', 422
+            )
     if selected is None:
         return refs
     requested = {name.strip() for name in selected.split(',')}

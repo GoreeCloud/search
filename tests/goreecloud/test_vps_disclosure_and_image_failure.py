@@ -24,11 +24,11 @@ class UnavailableImages(OfflineSearch):
 class VPSDisclosureAndImageFailureTests(unittest.TestCase):
     headers = {'X-Real-IP': '127.0.0.1'}
 
-    def test_homepage_discloses_three_providers_and_private_vps(self):
+    def test_homepage_discloses_seven_providers_and_private_vps(self):
         with smoke.app.test_client() as client:
             response = client.get('/', headers=self.headers)
             self.assertEqual(200, response.status_code)
-            self.assertIn(b'Brave Search, Startpage, and Qwant', response.data)
+            self.assertIn(b'Brave Search, Startpage, Qwant, DuckDuckGo, Ecosia, Bing and Google', response.data)
             self.assertIn(b'private VPS Development service', response.data)
             self.assertNotIn(b'local Development build', response.data)
             response.close()
@@ -39,7 +39,10 @@ class VPSDisclosureAndImageFailureTests(unittest.TestCase):
             self.assertEqual(200, response.status_code)
             self.assertIn(b'search-dev.goreecloud.com', response.data)
             self.assertIn(b'NetBird-only HTTPS', response.data)
-            self.assertIn(b'Tor SOCKS5H', response.data)
+            self.assertIn(b'local SOCKS5H relay', response.data)
+            self.assertIn(b'does not currently enforce Tor-exit attestation', response.data)
+            self.assertIn(b'not automatically combined with All Sources', response.data)
+            self.assertNotIn(b'External provider requests use a Tor SOCKS5H relay.', response.data)
             self.assertNotIn(b'bound to loopback for local testing', response.data)
             response.close()
 

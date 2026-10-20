@@ -72,8 +72,8 @@ class GoreeCloudFoundationTests(unittest.TestCase):
         base = (THEME / "base.html").read_text()
         self.assertIn("goreecloud/privacy.html", base)
         notice = (ASSETS / "goreecloud/privacy.html").read_text()
-        self.assertIn("Brave Search, Startpage, and Qwant", notice)
-        self.assertIn("default sends search terms to all three", notice)
+        self.assertIn("All Sources merges Brave Search, Startpage, Qwant, DuckDuckGo, Ecosia, Bing and Google", notice)
+        self.assertIn("Each selected external provider may receive the query", notice)
         self.assertIn("does not promise complete anonymity", notice)
 
     def test_accessibility_fallbacks(self):

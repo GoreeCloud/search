@@ -58,18 +58,19 @@ class AnonymousEgressTests(unittest.TestCase):
                 n = Network(proxies=proxy, privacy_proxy_required=True)
                 with patch('searx.network.network.new_client') as factory:
                     with self.assertRaises(ProxyError):
-                        asyncio.run(n.request('GET', 'https://search.example/?q=private'))
+                        asyncio.run(n.request('GET', 'https://search.example.org/?q=private'))
                     factory.assert_not_called()
 
     def test_approved_gateway_is_passed_to_client(self):
         n = Network(
             enable_http=False,
             proxies={'all://': 'socks5h://127.0.0.1:9050'},
-            privacy_proxy_required=True,
+            privacy_proxy_required=True, using_tor_proxy=True,
         )
         client = Mock()
         client.is_closed = False
-        with patch('searx.network.network.new_client', return_value=client) as factory:
+        with (patch('searx.network.network.new_client', return_value=client) as factory,
+              patch.object(Network, 'check_tor_proxy', new=AsyncMock(return_value=True))):
             self.assertIs(asyncio.run(n.get_client()), client)
             args = factory.call_args.args
             self.assertEqual({'all://': 'socks5h://127.0.0.1:9050'}, args[5])
@@ -83,11 +84,11 @@ class AnonymousEgressTests(unittest.TestCase):
             privacy_proxy_required=True,
         )
         cases = [
-            ('http://search.example/', {}),
-            ('https://search.example/', {'proxy': 'http://direct.example:80'}),
-            ('https://search.example/', {'proxies': {'https': 'http://direct.example:80'}}),
-            ('https://search.example/', {'interface': '0.0.0.0'}),
-            ('https://search.example/', {'curl_options': {1: 'unsafe'}}),
+            ('http://search.example.org/', {}),
+            ('https://search.example.org/', {'proxy': 'http://direct.example:80'}),
+            ('https://search.example.org/', {'proxies': {'https': 'http://direct.example:80'}}),
+            ('https://search.example.org/', {'interface': '0.0.0.0'}),
+            ('https://search.example.org/', {'curl_options': {1: 'unsafe'}}),
         ]
         with patch('searx.network.network.new_client') as factory:
             for url, kwargs in cases:
@@ -113,14 +114,15 @@ class AnonymousEgressTests(unittest.TestCase):
         n = Network(
             enable_http=False,
             proxies={'all://': 'socks5h://127.0.0.1:9050'},
-            privacy_proxy_required=True,
+            privacy_proxy_required=True, using_tor_proxy=True,
         )
         from types import SimpleNamespace
         client = Mock(is_closed=False)
         client.request = AsyncMock(return_value=SimpleNamespace(status_code=200))
-        with patch('searx.network.network.new_client', return_value=client):
+        with (patch('searx.network.network.new_client', return_value=client),
+              patch.object(Network, 'check_tor_proxy', new=AsyncMock(return_value=True))):
             asyncio.run(n.request(
-                'GET', 'https://search.example/?q=public',
+                'GET', 'https://search.example.org/?q=public',
                 headers={
                     'Cookie': 'persistent=user123',
                     'X-Forwarded-For': '192.0.2.44',
@@ -136,7 +138,7 @@ class AnonymousEgressTests(unittest.TestCase):
         self.assertEqual(
             {'Accept': 'application/json'}, forwarded['headers']
         )
-        self.assertEqual('https://search.example/?q=public',
+        self.assertEqual('https://search.example.org/?q=public',
                          client.request.call_args.args[1])
 
     def test_private_profile_has_strict_egress_policy(self):
@@ -149,6 +151,8 @@ class AnonymousEgressTests(unittest.TestCase):
         )
         self.assertTrue(NETWORKS)
         self.assertTrue(all(n.privacy_proxy_required for n in NETWORKS.values()))
+        self.assertTrue(smoke.settings['outgoing']['using_tor_proxy'])
+        self.assertTrue(all(n.using_tor_proxy for n in NETWORKS.values()))
 
 
 if __name__ == '__main__':

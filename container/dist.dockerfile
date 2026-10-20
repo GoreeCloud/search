@@ -1,4 +1,7 @@
-FROM localhost/searxng/searxng:builder AS builder
+# Keep the legacy builder default for existing workflows; staged builds use an
+# isolated revision-tagged builder image to avoid races between candidates.
+ARG BUILDER_IMAGE=localhost/searxng/searxng:builder
+FROM ${BUILDER_IMAGE} AS builder
 FROM docker.io/searxng/base:searxng AS dist
 
 COPY --chown=977:977 --from=builder /usr/local/searxng/.venv/ ./.venv/

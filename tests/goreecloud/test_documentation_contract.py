@@ -19,14 +19,14 @@ class DocumentationContractTests(unittest.TestCase):
 
     def test_three_family_allowlist_is_documented_in_current_contracts(self):
         self.assertEqual(
-            {"brave", "startpage", "qwant"},
+            {"brave", "startpage", "qwant", "duckduckgo", "ecosia", "bing", "google"},
             set(SEARCH_SOURCE_FAMILIES["general"]),
         )
-        self.assertEqual(11, len(BUILTIN_SEARCH_SOURCES))
+        self.assertEqual(24, len(BUILTIN_SEARCH_SOURCES))
         for relative_path in CURRENT_CONTRACT_DOCS:
             with self.subTest(document=relative_path):
                 text = (PROJECT_ROOT / relative_path).read_text(encoding="utf-8").lower()
-                for provider in ("brave", "startpage", "qwant"):
+                for provider in ("brave", "startpage", "qwant", "duckduckgo", "ecosia", "bing", "google"):
                     self.assertIn(provider, text)
                 self.assertNotIn("exactly two permitted", text)
                 self.assertNotIn("exactly two built-in", text)
@@ -34,7 +34,7 @@ class DocumentationContractTests(unittest.TestCase):
 
     def test_video_selection_never_implies_startpage_fallback(self):
         self.assertEqual(
-            {"brave", "qwant"},
+            {"brave", "qwant", "duckduckgo", "bing", "google"},
             set(SEARCH_SOURCE_FAMILIES["videos"]),
         )
         self.assertNotIn("startpage", SEARCH_SOURCE_FAMILIES["videos"])

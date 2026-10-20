@@ -5,6 +5,14 @@ on:
     branches:
       - main
       - 'feature/**'
+      - 'feat/**'
+      - 'fix/**'
+      - 'security/**'
+      - 'stabilize/**'
+      - 'deploy/**'
+      - 'design/**'
+      - 'test/**'
+      - 'ci/**'
 permissions:
   contents: read
 jobs:
@@ -67,3 +75,13 @@ jobs:
         run: python -m pip install -r requirements.txt granian==2.8.4
       - name: Verify real Granian socket is loopback-only without provider calls
         run: python tests/goreecloud/granian_private_listener_smoke.py
+
+  disposable-egress-topology:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Verify isolated synthetic gateway, outage and recovery
+        run: python tests/goreecloud/ci_ephemeral_staging_topology.py
