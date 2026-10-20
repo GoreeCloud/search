@@ -18,4 +18,40 @@ Never deploy a second ingress service advertising the **same** `goreecloud-searc
 4. Retain the old and new canaries alongside each other and verify the front Caddy host still uses the **old** gateway before considering a route change. A route switch requires the same single-upstream-only Caddy diff, locked 0600 backup, config validation, in-memory trial, NetBird HTTPS smoke, 403 denial from a non-NetBird probe, persistence and **actual rollback-to-old-and-back rehearsal** proven in the previous canary release. Keep old canary and original Search/Tor available.
 5. If any step fails, do **not** modify the active Caddy route. Tear down only the new project and preserve the old Search gateway. Report source/provider issues without guessing their cause. Stable release requires sustained multi-day source reliability, privacy/network/SSRF review, provenance, maintenance and rollback evidence, and explicit stable-branch release acceptance.
 
-This is a Development deployment process. Adding a second canary or a passing CI workflow alone does not make the new version live or Stable.
+## Read-only release admission check
+
+The new `scripts/free_upgrade_preflight.py` is a **gate, not a cutover utility**.
+It reads the current private host Caddyfile, an independently created exact
+backup, container and image inspection metadata, and prints only sanitized
+booleans. It never runs `docker compose`, sends provider queries, exposes
+secrets, modifies Caddy, reconfigures NetBird, or follows arbitrary endpoints.
+
+Example from the **authorized VPS** after independently starting the parallel
+upgrade and creating a protected exact Caddy snapshot:
+
+```sh
+python3 scripts/free_upgrade_preflight.py \
+  --image goreecloud/search:staging-64c4cab8e2bd \
+  --revision 64c4cab8e2bdf538d718a8409e51ee76613133c0 \
+  --snapshot /srv/docker/caddy/Caddyfile.free-upgrade-snapshot
+```
+
+The exit code is **0 only if every defined prerequisite passes**. Any mismatch,
+missing parallel candidate, stale/absent rollback backup, unexpectedly changed
+live upstream or access matcher, unknown image revision, exposed host port,
+gateway collision, or unavailable Docker inspection returns a **blocked**
+status and nonzero exit code. Even a passing report is **admission for manual
+cutover review only**, not a permit to skip full HTTPS, provider, non-NetBird,
+restart, or actual rollback checks.
+
+A prior route reload attempt on October 20 was blocked before execution, and
+its proposed backup/candidate files were cleaned up. The currently active host
+still uses `goreecloud-search-free-canary-gateway:8080` and the old free-search
+image; the new image `staging-64c4cab8e2bd` remains a tested, locally cached
+artifact, not a live deployment. **Do not work around a blocked route-changing
+operation.** The checker should truthfully report `blocked_do_not_cutover`
+until a separately reviewed candidate, current protected snapshot, and all
+other gates exist.
+
+This is a Development deployment process. Adding a second canary, a passing
+preflight, or a green CI workflow alone does not make the new version live or Stable.
