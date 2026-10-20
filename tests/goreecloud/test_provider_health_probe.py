@@ -124,6 +124,37 @@ class ProviderProbeContractTests(unittest.TestCase):
         self.assertEqual('invalid_representation_contract', mod.probe(
             'brave', 'http://127.0.0.1:8888', transport=fake_transport)['state'])
 
+    def test_nonpublic_hostname_aliases_and_numeric_ipv4_are_rejected(self):
+        forbidden = (
+            'http://localhost:8000/', 'http://service.local/',
+            'https://metadata.google.internal/', 'https://host.lan/',
+            'https://host.invalid/', 'https://host.test/',
+            'https://host.onion/', 'https://host.arpa/',
+            'http://localhost.localdomain/', 'https://host.home/',
+            'https://host.corp/',
+            'http://2130706433/', 'http://0177.0.0.1/',
+            'http://0x7f000001/', 'http://127.1/',
+            'https://singlelabel/', 'https://example.org./',
+            'https://user:password@example.org/',
+            'https://example.org:65536/',
+            'https://[fe80::1%25eth0]/',
+        )
+        for url in forbidden:
+            with self.subTest(url=url):
+                self.assertFalse(mod.safe_reported_result_url(url))
+        allowed = ('https://example.org/article',
+                   'https://public.example.org/news?section=world',
+                   'https://8.8.8.8/',
+                   'https://[2606:4700:4700::1111]/')
+        for url in allowed:
+            with self.subTest(url=url):
+                self.assertTrue(mod.safe_reported_result_url(url))
+
+    def test_result_url_validator_performs_no_dns_or_network(self):
+        with patch.object(mod, 'inet_aton', side_effect=OSError('not numeric')), \
+                patch.object(mod, 'urlsplit', wraps=mod.urlsplit):
+            self.assertTrue(mod.safe_reported_result_url('https://www.example.org/path'))
+
     def test_redirects_and_environment_proxies_are_disabled(self):
         req = mod.Request('http://127.0.0.1:8888/search', data=b'test', method='POST')
         opener = MagicMock()
