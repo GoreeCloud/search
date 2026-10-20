@@ -254,6 +254,44 @@ class AnonymousEgressTests(unittest.TestCase):
                     asyncio.run(candidate.get_client())
                 factory.assert_not_called()
 
+    def test_private_startup_validates_config_without_network_attestation(self):
+        from searx.network import network as network_module
+
+        private = Network(
+            enable_http=False,
+            verify=True,
+            proxies={'all://': 'socks5h://127.0.0.1:9050'},
+            privacy_proxy_required=True,
+            using_tor_proxy=True,
+        )
+        with patch.object(network_module, 'NETWORKS', {'private': private}), \
+             patch.object(Network, 'get_client', new_callable=AsyncMock) as getter:
+            network_module.check_network_configuration()
+            getter.assert_not_awaited()
+
+    def test_private_startup_rejects_unsafe_proxy_and_disabled_attestation(self):
+        from searx.network import network as network_module
+
+        for tor, proxy in [
+            (False, 'socks5h://127.0.0.1:9050'),
+            (True, 'socks5://127.0.0.1:9050'),
+            (True, 'socks5h://example.org:9050'),
+        ]:
+            with self.subTest(tor=tor, proxy=proxy):
+                private = Network(
+                    enable_http=False,
+                    verify=True,
+                    proxies={'all://': proxy},
+                    privacy_proxy_required=True,
+                    using_tor_proxy=tor,
+                )
+                with patch.object(network_module, 'NETWORKS', {'bad': private}), \
+                     patch.object(Network, 'get_client', new_callable=AsyncMock) as getter:
+                    with self.assertRaisesRegex(RuntimeError,
+                                                'Invalid network configuration'):
+                        network_module.check_network_configuration()
+                    getter.assert_not_awaited()
+
     def test_private_profile_has_strict_egress_policy(self):
         import test_runtime_smoke as smoke
         from searx.network.network import NETWORKS
