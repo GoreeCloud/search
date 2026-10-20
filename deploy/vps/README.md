@@ -68,6 +68,18 @@ from this older deployed Development image.
    ```sh
    test -z "$(git status --porcelain)" || { echo "Refuse to build a dirty checkout" >&2; exit 1; }
    SOURCE_SHA="$(git rev-parse HEAD)"
+   # Preferred source-safe staging builder: generates version_frozen.py from this
+   # commit, uses a revision-specific builder, verifies both image OCI labels,
+   # and neither pushes nor deploys containers.
+   bash scripts/build_pinned_staging_image.sh "$SOURCE_SHA"
+   ```
+   **Manual build alternative (do not run in addition to the preferred builder):**
+   The version file is gitignored and must be generated from the *same* pinned
+   clean checkout before Docker COPY. The following commands are only for an
+   authorized checkout where `SOURCE_SHA` was resolved and verified above:
+   ```sh
+   python3 searx/version.py freeze
+   test -f searx/version_frozen.py
    IMAGE="goreecloud/search:vps-${SOURCE_SHA:0:12}"
    docker build -f container/builder.dockerfile -t localhost/searxng/searxng:builder .
    docker build -f container/dist.dockerfile \
