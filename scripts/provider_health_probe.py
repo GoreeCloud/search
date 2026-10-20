@@ -78,6 +78,14 @@ def classify_provider_error(message: str) -> str:
         return 'challenge'
     if '403' in text or 'access denied' in text or 'accessdenied' in text or 'blocked' in text:
         return 'access_denied'
+    # SearXNG translates several different HTTP statuses to a generic
+    # 'HTTP error'. Do not claim 403 or 429 unless that status is visible.
+    if 'http error' in text or 'http status' in text:
+        return 'upstream_http_error'
+    if 'server api error' in text:
+        return 'upstream_api_error'
+    if 'unexpected crash' in text:
+        return 'engine_error'
     if 'pars' in text or 'markup' in text:
         return 'parsing_error'
     if 'proxy' in text or 'connection' in text or 'network' in text:
