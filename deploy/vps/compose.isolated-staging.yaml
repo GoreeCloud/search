@@ -12,7 +12,12 @@ services:
       - --ClientOnly
       - "1"
       - --SocksPort
-      - "0.0.0.0:9050"
+      # Listen only on Tor's fixed INTERNAL address, never the egress bridge.
+      - "172.29.247.2:9050"
+      - --SocksPolicy
+      - "accept 172.29.247.3/32"
+      - --SocksPolicy
+      - "reject *"
       - --DataDirectory
       - /tmp/goreecloud-search-tor-staging
       - --Log
@@ -29,8 +34,9 @@ services:
     pids_limit: 128
     mem_limit: 192m
     networks:
-      - search_internal
-      - tor_egress
+      search_internal:
+        ipv4_address: 172.29.247.2
+      tor_egress: {}
 
   search:
     image: ${SEARCH_STAGING_IMAGE:?Use an explicitly pinned Search Development image}
@@ -67,7 +73,8 @@ services:
     depends_on:
       - tor
     networks:
-      - search_internal
+      search_internal:
+        ipv4_address: 172.29.247.3
 
   relay:
     image: ${SEARCH_STAGING_IMAGE:?Use an explicitly pinned Search Development image}
@@ -98,6 +105,11 @@ networks:
     driver: bridge
     internal: true
     enable_ipv6: false
+    # Dedicated small staging subnet; validate against host/VPN routes first.
+    # Static addresses let Tor bind the internal NIC and reject other clients.
+    ipam:
+      config:
+        - subnet: 172.29.247.0/28
   tor_egress:
     driver: bridge
     internal: false

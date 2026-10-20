@@ -23,9 +23,13 @@ It must never replace or attach to existing `goreecloud-search`,
 - No staging component writes to the live Search application/cache/index, and
   all staging containers have read-only roots, dropped capabilities and bounded
   memory/PIDs. The stage uses a synthetic unique secret, not the live secret.
-- The Tor SOCKS5 listener currently binds to all container interfaces
-  (including the isolated project's outbound bridge). Although no ports are
-  published, this still needs scope-restriction review before promotion.
+- The **current hardened staging manifest** assigns the isolated internal bridge
+  subnet `172.29.247.0/28`, Search `172.29.247.3` and Tor `172.29.247.2`.
+  Tor listens only at `172.29.247.2:9050` and additionally enforces
+  `SocksPolicy accept 172.29.247.3/32` followed by `reject *`; it does not
+  listen on its outbound bridge. Operators must verify this dedicated subnet
+  does not overlap any existing host, VPN or Docker network before startup.
+  These staging restrictions do not assert that production Tor is restricted.
 - Search's Docker embedded DNS may behave differently under other daemon
   versions; DNS-leak denial must be retested against the actual target.
 
@@ -121,10 +125,46 @@ bitwise reproducibility or a build of the subsequent merge SHA is made.
 
 **Still NOT QUALIFIED for Stable:** real provider results and challenge/429
 handling, production firewall and DNS-rebinding/IPv6/metadata guarantees,
-Tor SOCKS listener scope on its outbound bridge, protected ingress and rate
-limiting, external visitor IP privacy, application data-migration rollback,
+production Tor SOCKS listener scope, protected ingress and rate limiting,
+external visitor IP privacy, application data-migration rollback,
 image build reproducibility/signatures, and seven-provider acceptance remain
 open. Staging-only rollback is not production rollback.
+
+## Hardened staging-only SOCKS listener rehearsal — October 20, 2026
+
+Pinned source branch commit `e9dc6cfccc91bf807a297f0737e18830fcf565f2`,
+using the already-built seven-provider staging Search image
+`goreecloud/search:staging-d828a1c556df`. Docker Compose schema validation
+succeeded. Prior to this test, read-only inspection of VPS Docker networks
+and host routes found no overlap with the selected `172.29.247.0/28`
+subnet. **Repeat that preflight on every target host; this is not a portable
+guarantee.** No live/production containers were changed.
+
+- Verified Docker allocation: internal-only Search `172.29.247.3/28`,
+  Tor `172.29.247.2/28`; Tor's separately attached outbound bridge received
+  `172.21.0.2/16` in this disposable rehearsal.
+- Tor reached **100% bootstrap**. Its real TCP listener on port 9050 bound
+  only to `172.29.247.2`, **not** `0.0.0.0` or the outbound-bridge IP.
+- From a disposable, capability-dropped container on the **outbound-only**
+  bridge, a connection to Tor's outward IP/port returned **ECONNREFUSED (111)**.
+  An attempt to reach the internal address from that bridge did not succeed.
+- From a different disposable client on the internal bridge, a SOCKS5 method
+  handshake was **reset/closed**, confirming Tor's client-source policy
+  rejected a client other than the designated Search IP.
+- From the **actual Search** namespace, the loopback SOCKS5H path passed the
+  fixed Tor Project attestation with HTTP 200 / `IsTor=True`. Search
+  `/readyz` returned HTTP 200 / READY.
+- Stopping **only staging Tor** caused a new proxied fixed attestation to
+  fail closed with `ProxyError`; restarting staging Tor restored successful
+  Tor attestation. No provider searches were sent during this rehearsal.
+- Finally, `docker compose down --remove-orphans` deleted all three staging
+  containers and both staging networks. The original VPS Search/Tor pair
+  remained unchanged, and original Search health was **healthy**.
+
+This confirms the **staging-only** listener/single-client improvement, not
+production host firewall, ingress, DNS-rebinding resistance, provider
+availability, or the Stable release. Production Tor may still have a different
+interface configuration and must be inspected independently.
 
 ## Reproduction and teardown
 
