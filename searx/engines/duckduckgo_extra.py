@@ -16,6 +16,11 @@ from searx.network import get  # see https://github.com/searxng/searxng/issues/7
 
 from searx.engines.duckduckgo import fetch_traits  # pylint: disable=unused-import
 from searx.engines.duckduckgo import get_ddg_lang, get_vqd, set_vqd
+from searx.exceptions import (
+    SearxEngineAPIException,
+    SearxEngineAccessDeniedException,
+    SearxEngineTooManyRequestsException,
+)
 
 if t.TYPE_CHECKING:
     from searx.extended_types import SXNG_Response
@@ -66,21 +71,18 @@ def fetch_vqd(
         timeout=2,
     )
 
-    value = ""
-    if resp.status_code == 200:
-        value = extr(resp.text, 'vqd="', '"')
-        if value:
-            logger.debug("vqd value from duckduckgo.com request: '%s'", value)
-        else:
-            logger.error("vqd: can't parse value from ddg response (return empty string)")
-            return ""
-    else:
-        logger.error("vqd: got HTTP %s from duckduckgo.com", resp.status_code)
-
-    if value:
-        set_vqd(query=query, value=value, params=params)
-    else:
-        logger.error("none vqd value from duckduckgo.com: HTTP %s", resp.status_code)
+    # A denied token request must not be followed by an invalid /i.js,
+    # /v.js or /news.js request. Do not attempt to evade provider limits.
+    if resp.status_code == 403:
+        raise SearxEngineAccessDeniedException(message="DuckDuckGo token lookup denied")
+    if resp.status_code == 429:
+        raise SearxEngineTooManyRequestsException(message="DuckDuckGo token lookup rate-limited")
+    if resp.status_code != 200:
+        raise SearxEngineAPIException("DuckDuckGo token lookup unavailable")
+    value = extr(resp.text, 'vqd="', '"')
+    if not value:
+        raise SearxEngineAPIException("DuckDuckGo token unavailable")
+    set_vqd(query=query, value=value, params=params)
     return value
 
 
@@ -100,6 +102,10 @@ def request(query: str, params: "OnlineParams") -> None:
     headers["User-Agent"] = _HTTP_User_Agent
     params["impersonate"] = "none"
     vqd = get_vqd(query=query, params=params) or fetch_vqd(query=query, params=params)
+    if not vqd:
+        # The image/video/news JSON endpoints require a real token.
+        # A malformed/missing cached token must not cause a second request.
+        raise SearxEngineAPIException("DuckDuckGo token unavailable")
 
     headers["Accept"] = "*/*"
     headers["Referer"] = "https://duckduckgo.com/"
@@ -144,9 +150,7 @@ def request(query: str, params: "OnlineParams") -> None:
 
     params["url"] = f"https://duckduckgo.com/{search_path_map[ddg_category]}.js?{urlencode(args)}"
 
-    logger.debug("param headers: %s", params["headers"])
-    logger.debug("param data: %s", params["data"])
-    logger.debug("param cookies: %s", params["cookies"])
+    # Never log raw headers, cookies, per-query token or request data.
 
 
 def _image_result(result):
