@@ -67,6 +67,7 @@ from searx.goreecloud_native_dev import native_dev_available, serve_native_devel
 from searx.goreecloud_policy import (
     SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
     distinct_selected_sources, safe_primary_result_url, represented_result_sources, validate_builtin_sources,
+    all_selected_sources_access_restricted,
     validate_builtin_search_bangs, restrict_explicit_private_engines, validate_private_request_context,
     SEARCH_SOURCE_COOKIE, SEARCH_SOURCE_OPTIONS, SEARCH_SOURCE_FAMILIES,
     stored_search_source, requested_search_source, selected_engines_for_category,
@@ -1020,6 +1021,10 @@ def search():
         represented_source_counts = represented_result_sources(
             results, (ref.name for ref in search_query.engineref_list)
         ) if settings['goreecloud']['private_search'] else {},
+        goreecloud_retry_blocked = all_selected_sources_access_restricted(
+            (ref.name for ref in search_query.engineref_list),
+            result_container.unresponsive_engines,
+        ) if settings['goreecloud']['private_search'] else False,
         results = results,
         source_switch_query = private_search_terms,
         q=sxng_request.form['q'],

@@ -86,6 +86,22 @@ egress. **They have not been exercised with another live upstream probe**:
 provider accessibility remains unqualified and upstream limits must not be
 circumvented.
 
+## Private result-page retry behavior for upstream denials
+
+A separate **source-only** UI safeguard checks the canonical internal failure
+classes for the user's exact selected sources, not translated error strings.
+If **every** selected source reports rate limiting, CAPTCHA or access denial,
+the no-results page explains that the providers are currently refusing
+requests and suppresses immediate same-source retry and previous-page POST
+forms. Users can start a fresh search and explicitly choose another approved
+provider. If even one selected provider is not access-restricted (including
+ordinary timeout, network failure, or missing failure reports), the previous
+explicit retry behavior remains available; there is no silent provider swap.
+This is UI guidance, **not** server-side prevention of all manual searches or
+a substitute for existing engine suspension and rate-limit enforcement.
+Offline Flask page tests verify first-page, later-page and partial-source
+cases without contacting external providers.
+
 ## Next release acceptance gates
 
 - Confirm a sustainable provider access path that preserves GoreeCloud's

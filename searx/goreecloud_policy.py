@@ -142,6 +142,33 @@ def distinct_selected_sources(provider_names: Iterable[str], *, max_providers: i
     return sorted(first_labels.values(), key=lambda label: (label.casefold(), label))
 
 
+_ACCESS_RESTRICTION_ERRORS = frozenset({
+    'searx.exceptions.SearxEngineAccessDeniedException',
+    'searx.exceptions.SearxEngineCaptchaException',
+    'searx.exceptions.SearxEngineTooManyRequestsException',
+})
+
+
+def all_selected_sources_access_restricted(
+    selected: Iterable[str], unresponsive: Iterable[object],
+) -> bool:
+    """Suppress immediate same-source retry only for *all* denied sources.
+
+    Use canonical internal exception types, not translated display messages.
+    Timed-out, unreachable, partially failing or unreported engines remain
+    retryable. This flag is advisory UI only; engine suspension stays authoritative.
+    """
+    sources = set(selected)
+    if not sources:
+        return False
+    denied = {
+        getattr(item, 'engine', None)
+        for item in unresponsive
+        if getattr(item, 'error_type', None) in _ACCESS_RESTRICTION_ERRORS
+    }
+    return sources.issubset(denied)
+
+
 def safe_primary_result_url(url: object) -> bool:
     """Allow only unambiguous HTTP(S) top-level result destinations.
 
