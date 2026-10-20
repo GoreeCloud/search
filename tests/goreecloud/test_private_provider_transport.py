@@ -48,8 +48,9 @@ class PrivateProviderTransportTests(unittest.TestCase):
                     factory.assert_not_called()
 
     def test_redirect_overrides_are_ignored_and_headers_sanitized(self):
-        net = private_network()
+        net = private_network(tor=True)
         client = Mock(is_closed=False)
+        client.get = AsyncMock(return_value=SimpleNamespace(status_code=200, json=lambda: {'IsTor': True}))
         client.request = AsyncMock(return_value=SimpleNamespace(status_code=200))
         client.stream = Mock(return_value='synthetic-stream')
         with patch('searx.network.network.new_client', return_value=client):
