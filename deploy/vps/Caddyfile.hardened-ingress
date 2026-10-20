@@ -1,0 +1,19 @@
+{
+    admin off
+    auto_https off
+}
+
+:8080 {
+    header {
+        -Server
+        Referrer-Policy "no-referrer"
+        Cache-Control "private, no-store, max-age=0"
+    }
+    reverse_proxy search:8080 {
+        # The private owner-only ingress never forwards a real client address
+        # into the search worker. Rate limiting must be enforced upstream.
+        header_up X-Forwarded-For 127.0.0.1
+        header_up X-Real-IP 127.0.0.1
+        header_up -Forwarded
+    }
+}
