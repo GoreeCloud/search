@@ -115,12 +115,26 @@ def inspect_results(raw: bytes, test: Category) -> dict:
             if not literal_ip.is_global:
                 continue
         valid += 1
+    # SearXNG's unresponsive_engines list can include exception messages,
+    # URLs and provider-specific metadata. Never emit those raw fields.
+    # Publish only approved engine labels already selected in this request.
+    safe_failed = sorted({
+        item[0] for item in failures
+        if isinstance(item, (list, tuple)) and item
+        and isinstance(item[0], str) and item[0] in test.engines
+    })
+    if valid >= test.minimum_results:
+        state = "partial_results_with_provider_error" if failures else "results_observed"
+    elif valid == 0:
+        state = "no_results_with_provider_error" if failures else "no_result_links"
+    else:
+        state = "below_minimum_with_provider_error" if failures else "below_minimum"
     return {
         "category": test.name,
         "result_links": valid,
         "unresponsive_engines": len(failures),
-        "state": "results_observed" if valid >= test.minimum_results else
-                 ("no_result_links" if valid == 0 else "below_minimum"),
+        "unresponsive_selected_engines": safe_failed,
+        "state": state,
     }
 
 

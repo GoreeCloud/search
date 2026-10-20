@@ -103,6 +103,42 @@ class CategorySmokeTests(unittest.TestCase):
         outcome=smoke.inspect_results(document(test,results=bad),test)
         self.assertEqual(0,outcome["result_links"])
 
+    def test_partial_image_results_are_not_marked_fully_healthy(self):
+        test=smoke.CATEGORIES["images"]
+        failure=[["duckduckgo images", "never log this untrusted error URL ?q=private"]]
+        outcome=smoke.inspect_results(document(test, failures=failure), test)
+        self.assertEqual("partial_results_with_provider_error",outcome["state"])
+        self.assertEqual(6,outcome["result_links"])
+        self.assertEqual(1,outcome["unresponsive_engines"])
+        self.assertEqual(["duckduckgo images"],outcome["unresponsive_selected_engines"])
+        self.assertNotIn("private",str(outcome))
+        self.assertNotIn("error URL",str(outcome))
+
+    def test_unknown_error_name_is_counted_but_never_echoed(self):
+        test=smoke.CATEGORIES["images"]
+        failure=[["unapproved provider HTTPS ?q=private", "secret"]]
+        outcome=smoke.inspect_results(document(test, failures=failure), test)
+        self.assertEqual("partial_results_with_provider_error",outcome["state"])
+        self.assertEqual([],outcome["unresponsive_selected_engines"])
+        self.assertEqual(1,outcome["unresponsive_engines"])
+        self.assertNotIn("private",str(outcome))
+
+    def test_no_results_and_reported_error_are_separately_classified(self):
+        test=smoke.CATEGORIES["images"]
+        result=smoke.inspect_results(document(test, results=[], failures=[
+            ["bing images", "synthetic 429 error"]]),test)
+        self.assertEqual("no_results_with_provider_error",result["state"])
+        self.assertEqual(["bing images"],result["unresponsive_selected_engines"])
+
+    def test_runtime_check_fails_when_images_are_only_partially_available(self):
+        fake=FakeOpener(response_factory=lambda c:document(
+            c,failures=[["duckduckgo images", "no raw error should escape"]]))
+        with patch("builtins.print"):
+            records,healthy=smoke.run(("images",),opener=fake,nap=lambda _:None)
+        self.assertFalse(healthy)
+        self.assertEqual(2,len(fake.calls))
+        self.assertEqual("partial_results_with_provider_error",records[0]["state"])
+
     def test_wrong_selected_engine_never_passes(self):
         test=smoke.CATEGORIES["news"]
         bad=json.loads(document(test))

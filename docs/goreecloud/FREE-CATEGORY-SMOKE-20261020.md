@@ -17,11 +17,11 @@ This fixed-fixture smoke tool uses nonpersonal, subject-appropriate queries and 
 | Category | Explicit free engine selection | Valid result links | Unresponsive engines | State |
 | --- | --- | ---: | ---: | --- |
 | General | DuckDuckGo, Bing, Startpage | 18 | 0 | Results observed |
-| Images | DuckDuckGo Images, Bing Images | 35 | 1 | Results observed, one engine still needs diagnosis |
+| Images | DuckDuckGo Images, Bing Images | 35 | 1 | **Partial results with provider error**; Bing returned results, DuckDuckGo Images failed |
 | Videos | DuckDuckGo Videos, Bing Videos | 95 | 0 | Results observed |
 | News | DuckDuckGo News | 29 | 0 | Results observed |
 
-HTTPS readiness was HTTP 200 / READY with certificate verification enabled. Results are counted only when the structured JSON response identifies the expected selected engines and contains nonempty titles and syntactically valid, nonlocal HTTP(S) destination URLs. **Counts measure observed result links, not independent provider reachability or guarantee of future topical matching.** A provider may be selected but not respond; do not infer all selected providers were available merely from a combined result count. Never silently replace a denied source.
+HTTPS readiness was HTTP 200 / READY with certificate verification enabled. Results are counted only when the structured JSON response identifies the expected selected engines and contains nonempty titles and syntactically valid, nonlocal HTTP(S) destination URLs. **Counts measure observed result links, not independent provider reachability or guarantee of future topical matching.** A provider may be selected but not respond; do not infer all selected providers were available merely from a combined result count. **Any reported engine failure now produces a nonhealthy partial-result state, even when another selected engine supplies enough links.** The tool emits only exact preapproved selected engine labels, not third-party error messages or private URLs. Never silently replace a denied source.
 
 ## Reproduce through authorized NetBird connection
 
@@ -40,7 +40,7 @@ A zero-result state is not automatically proof of a provider outage: first consi
 ## Remaining acceptance gates
 
 - Confirm repeatability over several days and at different times; a one-time category result is insufficient for Stable.
-- Investigate the single image-engine unresponsive report without excessive probes or bypassing upstream controls.
+- **Isolated failure:** one bounded per-engine test of the same public NASA photo query returned DuckDuckGo Images HTTP 200 / 0 results / 1 engine failure and Bing Images HTTP 200 / 35 results / 0 failures. This supports a DuckDuckGo Images-specific adapter/provider failure, **not** a proven cause (e.g., 403, parser break or rate limit). Do not probe upstream repeatedly or bypass controls. The diagnostic CLI now fails the category health check when a selected provider reports a failure; it does not suppress the working Bing Images results.
 - Independently qualify each selected adapter: combined result counts do not prove every engine returned results.
 - Continue validating that the NetBird-only HTTPS client restriction, per-worker request budget, backup/rollback, and Caddy recovery remain intact; do not widen access.
 - Separate stable-branch promotion, signed release provenance, appropriate security/data-restoration verification and long-duration monitoring remain open. Keep current live Development status until independently accepted.
