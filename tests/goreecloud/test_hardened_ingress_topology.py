@@ -37,6 +37,7 @@ class HardenedIngressContractTests(unittest.TestCase):
         self.assertEqual({"search_internal","private_ingress"},set(ingress["networks"]))
         self.assertNotIn("ports",ingress)
         self.assertTrue(ingress["read_only"])
+        self.assertEqual(["NET_BIND_SERVICE"], ingress["cap_add"])
         self.assertEqual("no",str(ingress["restart"]))
         self.assertIn("goreecloud-search-hardened-gateway",
                       ingress["networks"]["private_ingress"]["aliases"])

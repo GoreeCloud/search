@@ -34,7 +34,12 @@ fail-closed private architecture.
   isolated internal bridge and an **explicitly selected** proxy-style bridge.
   It reverse proxies only to `search:8080`, with no host ports, HTTP request
   logging, open forward-proxy service, or real visitor-IP forwarding into
-  Search. Upstream abuse controls and identity enforcement are **still
+  Search. The pinned Caddy binary has a `NET_BIND_SERVICE` file capability;
+  this ingress container retains **only** that bounding capability, as
+  needed for the installed executable, while running as uid 977 with
+  no-new-privileges and read-only root. Host-level Caddy config validation
+  confirmed that dropping all capabilities prevents this binary from
+  starting. Upstream abuse controls and identity enforcement are **still
   required** at the real TLS/VPN front door.
 
 No application content, live caches, live credentials or actual users are

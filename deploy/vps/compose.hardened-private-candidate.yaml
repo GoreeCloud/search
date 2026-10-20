@@ -116,6 +116,9 @@ services:
     security_opt:
       - no-new-privileges:true
     cap_drop: [ALL]
+    # The pinned Caddy binary carries a bind-service file capability.
+    # Keep only this one bounding capability so execve works as uid 977.
+    cap_add: [NET_BIND_SERVICE]
     init: true
     restart: "no"
     pids_limit: 48
