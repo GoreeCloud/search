@@ -20,9 +20,9 @@ class StagingGateTests(unittest.TestCase):
         def reject(coroutine):
             coroutine.close()
             return False
-        with patch.object(gate.asyncio, "run", side_effect=reject), patch.object(
-            gate.os, "execv"
-        ) as execv, contextlib.redirect_stderr(output):
+        with patch.object(gate, "staging_namespace_confined", return_value=True), patch.object(
+            gate.asyncio, "run", side_effect=reject
+        ), patch.object(gate.os, "execv") as execv, contextlib.redirect_stderr(output):
             self.assertEqual(78, gate.main())
         execv.assert_not_called()
         self.assertIn("STAGING_STARTUP_BLOCKED", output.getvalue())
@@ -32,11 +32,19 @@ class StagingGateTests(unittest.TestCase):
         def accept(coroutine):
             coroutine.close()
             return True
-        with patch.object(gate.asyncio, "run", side_effect=accept), patch.object(
-            gate.os, "execv"
-        ) as execv, contextlib.redirect_stdout(io.StringIO()):
+        with patch.object(gate, "staging_namespace_confined", return_value=True), patch.object(
+            gate.asyncio, "run", side_effect=accept
+        ), patch.object(gate.os, "execv") as execv, contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(78, gate.main())
         execv.assert_called_once_with(gate.GRANIAN, [gate.GRANIAN, "searx.webapp:app"])
+
+    def test_unconfined_namespace_blocks_before_any_tor_request(self):
+        with patch.object(gate, "staging_namespace_confined", return_value=False), patch.object(
+            gate.asyncio, "run"
+        ) as net, patch.object(gate.os, "execv") as execv, contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(78, gate.main())
+        net.assert_not_called()
+        execv.assert_not_called()
 
     def test_gate_uses_strict_loopback_proxy_and_fixed_tor_endpoint(self):
         self.assertEqual("socks5h://127.0.0.1:9050", gate.LOCAL_SOCKS)
