@@ -15,7 +15,7 @@ production readiness from a successful application health check or offline CI.
 
 | Source | Verified public official access information | Release decision |
 | --- | --- | --- |
-| Brave | Brave Search API is documented, requires a secret subscription token and activated plan; a credit card may be required even with free credits | **Potential supported integration, not yet authorized or implemented**. First independently assess entitlement, billing, source attribution, API-use rights, and private Tor exit compatibility; never commit credentials or leak identifying account headers to unrelated endpoints |
+| Brave | Official Web Search API requires a secret subscription token, activated plan, and payment information even with promotional credits. Its API-customer privacy notice says account-associated queries may be retained for up to 90 days for billing and troubleshooting | **Potential supported integration, not authorized or enabled**. First independently assess entitlement, billing, source attribution, API-use rights, and private Tor exit compatibility; never commit credentials or leak identifying account headers to unrelated endpoints |
 | Google | Google's Custom Search JSON API is closed to new customers and scheduled to end for existing customers on **2027-01-01**. Google directs new use cases toward different enterprise/search offerings | **Do not build a new integration on the sunset API.** Any alternative must be separately licensed, evaluated for general Web-result suitability and privacy, and explicitly mapped to the actual credited provider |
 | Bing | Microsoft's legacy Bing Search APIs were **retired 2025-08-11**. Grounding with Bing and Web IQ are newer AI/agent products, not confirmed as reusable organic-result APIs for this ordinary metasearch frontend | **Do not claim a direct JSON Search API replacement exists** or silently mark Bing as another provider |
 | DuckDuckGo | Official help pages describe user-facing search and Instant Answers and report that traditional links/images are largely sourced from Bing | **No independent entitlement to programmatically redistribute full SERPs verified** from reviewed official pages; do not assume a user search page is a licensed API |
@@ -25,6 +25,9 @@ production readiness from a successful application health check or offline CI.
 
 Authoritative vendor pages reviewed:
 
+- Brave API customer privacy notice (updated 2026-08-25): https://api-dashboard.search.brave.com/documentation/resources/privacy-notice
+- Brave API Terms of Use (updated 2026-09-01): https://api-dashboard.search.brave.com/documentation/resources/terms-of-service
+- Brave Web Search GET/POST reference: https://api-dashboard.search.brave.com/api-reference/web/search/get
 - Brave API authentication: https://api-dashboard.search.brave.com/documentation/guides/authentication
 - Brave API setup and plan terms: https://api-dashboard.search.brave.com/documentation/quickstart
 - Brave product overview, free-credit and storage-rights notes: https://brave.com/search/api/
@@ -66,6 +69,35 @@ A supported integration must satisfy **all** of these independently:
 
 **Do not expand the approved seven-provider registry** or replace one brand with
 a different vendor without a separate governed decision and precise UI labeling.
+
+## Dormant Brave API adapter — source-only preparation
+
+SearXNG already contains `searx/engines/braveapi.py`, but it remains
+`inactive: true` in its defaults, absent from the GoreeCloud private
+`keep_only` list, and explicitly **unapproved** by the private source registry.
+No account or token has been provisioned. Existing `brave` Web/Images/Videos/News
+source names still refer to the original HTML-based Brave connectors, not this API.
+
+An offline-only correction now prepares the dormant Web adapter against the
+vendor's documented API: HTTPS POST to the fixed official URL with the query
+in a JSON body (not in a query-bearing URL), token accepted only through a
+server-side configuration when separately authorized, explicit no-redirect
+policy, supported freshness/offset/count limits, and correctly typed Web
+results instead of video-result parsing. Invalid/malformed results and unsafe
+URLs fail closed. Synthetic test tokens are not credentials. The API is
+**not switched on and no queries are sent**.
+
+**Material privacy decision required before any activation:** The Brave
+**Search API customer** privacy notice says account-associated queries can be
+retained for up to **90 days**; Tor only hides the network origin, not the
+customer identity contained in a subscription token. Brave separately markets
+enterprise Zero Data Retention; it must not be assumed for a standard plan.
+Brave's public Search website privacy notice is *not* the API-customer
+privacy contract. An authenticated subscription may also entail charges,
+usage caps and restrictions on storing search results. Before activation,
+confirm acceptable retention and attribution disclosures, account/plan
+rights, privacy promises, terms, billing limits, Tor compatibility, secret
+handling and isolated egress with an owner-authorized decision.
 
 ## Offline evidence coverage gate
 
