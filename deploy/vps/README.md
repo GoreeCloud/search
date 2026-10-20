@@ -10,6 +10,29 @@
 - Tor: local SOCKS5H relay with application process in the same network namespace. The Search application must refuse direct provider egress if that proxy is unavailable or misconfigured.
 - Approved adapters depend on the exact checked-out Development revision. The older privately deployed `dev-parser-56a4823` image predates the seven-source candidate; inspect the selected source registry and profile before a new build. Source inclusion is not proof of live reachability.
 
+## Disposable network-isolation rehearsal
+
+The `disposable-egress-topology` GitHub Actions job runs
+`tests/goreecloud/ci_ephemeral_staging_topology.py` on a fresh CI runner.
+It creates **two Docker-internal bridges**, a synthetic visitor, gateway and
+provider. It checks that the visitor cannot directly reach the provider,
+public IPv4/IPv6 or metadata targets, or resolve an external DNS name. Only
+the synthetic gateway can relay a fixed marker to the synthetic provider.
+It then disconnects the gateway, requires fail-closed behavior, reconnects it
+and verifies synthetic recovery. The script removes its test containers and
+networks; it never attaches to the VPS `proxy` network and uses no real terms,
+production mounts or public host ports. The laptop's rootless Podman CNI lacks
+the compatible `--internal` network plugin, so a failed local attempt is **not**
+evidence of isolation; the CI Docker runner is the executable test target.
+
+**Not release acceptance:** These synthetic tests do not run Search's actual
+Tor SOCKS5H relay, test current provider anti-bot responses, prove public exit
+IP masking, verify Docker host firewall/DNS-rebinding prevention, qualify the
+existing VPS (whose `proxy` bridge is not internal), or exercise real Search
+image rollback. Tor bootstrap logs and container health are not proof of those
+requirements. These checks require separately isolated staging, approved egress
+controls and retained rollback evidence before any deployment/promotion.
+
 ## Deployment gates
 
 1. Confirm correct GoreeCloud GitHub identity and exact source commit. From a dedicated, reviewed, clean checkout of the approved Development revision, build the custom builder and application images with an explicit commit provenance label:
