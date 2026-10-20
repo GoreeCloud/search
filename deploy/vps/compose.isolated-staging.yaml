@@ -1,0 +1,99 @@
+# Disposable GoreeCloud Search/Tor staging only. NO public ports, Caddy, DNS or live volume.
+# Use with a verified image tag and a generated staging-only secret.
+name: goreecloud-search-isolated-staging
+
+services:
+  tor:
+    image: ${SEARCH_STAGING_TOR_IMAGE:-goreecloud/search-tor:private-v1}
+    command:
+      - tor
+      - --RunAsDaemon
+      - "0"
+      - --ClientOnly
+      - "1"
+      - --SocksPort
+      - "0.0.0.0:9050"
+      - --DataDirectory
+      - /tmp/goreecloud-search-tor-staging
+      - --Log
+      - notice stdout
+    user: debian-tor
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,noexec,size=32m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    init: true
+    restart: "no"
+    pids_limit: 128
+    mem_limit: 192m
+    networks:
+      - search_internal
+      - tor_egress
+
+  search:
+    image: ${SEARCH_STAGING_IMAGE:?Use an explicitly pinned Search Development image}
+    user: "977:977"
+    entrypoint: ["/usr/local/searxng/.venv/bin/granian", "searx.webapp:app"]
+    environment:
+      SEARXNG_SECRET: ${SEARCH_STAGING_SECRET:?Use an isolated staging-only 32+ character secret}
+      SEARXNG_SETTINGS_PATH: /usr/local/searxng/private-settings.yml
+      GRANIAN_HOST: 127.0.0.1
+      GRANIAN_PORT: "8080"
+      GRANIAN_WORKERS: "1"
+      GRANIAN_INTERFACE: wsgi
+      GRANIAN_WEBSOCKETS: "false"
+      GRANIAN_BLOCKING_THREADS: "4"
+    volumes:
+      - ../../configs/goreecloud/settings.yml:/usr/local/searxng/private-settings.yml:ro
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,noexec,size=32m,mode=1777
+      - /var/cache/searxng:rw,nosuid,noexec,size=64m,uid=977,gid=977
+      - /etc/searxng:rw,nosuid,noexec,size=8m,uid=977,gid=977
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    init: true
+    restart: "no"
+    pids_limit: 128
+    mem_limit: 768m
+    depends_on:
+      - tor
+    networks:
+      - search_internal
+
+  relay:
+    image: ${SEARCH_STAGING_IMAGE:?Use an explicitly pinned Search Development image}
+    # Only this disposable process shares Search's INTERNAL network namespace.
+    # Unlike the former architecture, Tor never shares Search's namespace.
+    network_mode: "service:search"
+    user: "977:977"
+    entrypoint:
+      - /usr/local/searxng/.venv/bin/python
+      - -u
+      - /usr/local/searxng/local-socks-relay.py
+    volumes:
+      - ../../scripts/local_socks_relay.py:/usr/local/searxng/local-socks-relay.py:ro
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    init: true
+    restart: "no"
+    pids_limit: 32
+    mem_limit: 128m
+    depends_on:
+      - search
+      - tor
+
+networks:
+  search_internal:
+    driver: bridge
+    internal: true
+    enable_ipv6: false
+  tor_egress:
+    driver: bridge
+    internal: false
+    enable_ipv6: false
