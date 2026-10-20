@@ -11,7 +11,7 @@
   </section>
   <section class="goreecloud-why" id="why-goreecloud-search" aria-labelledby="goreecloud-why-heading">
     <h2 id="goreecloud-why-heading">Find more. Give away less.</h2>
-    <p class="goreecloud-source-disclosure" role="note">GoreeCloud Search defaults to All Sources, combining Brave Search, Startpage, Qwant, DuckDuckGo, Ecosia, Bing and Google. Availability varies by provider and search category; the separate native index is still development-only. Queries are sent to your selected providers through the configured privacy relay, and those providers may process the search terms. This private VPS Development service is not a production privacy guarantee.</p>
+    <p class="goreecloud-source-disclosure" role="note">GoreeCloud Search defaults to All Sources, combining Brave Search, Startpage, Qwant, DuckDuckGo, Ecosia, Bing and Google. Availability varies by provider and search category; the separate native index is still development-only. Queries are sent to your selected providers from the Search server. The outbound path depends on the selected deployment profile: the existing private VPS uses a relay, while the optional free-first profile uses direct HTTPS and discloses the server IP to providers. Both may expose search terms to providers. This private VPS Development service is not a production privacy guarantee; the separate free-first staging candidate is not yet deployed.</p>
   </section>
 </div>
 {% endblock %}
