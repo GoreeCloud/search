@@ -65,11 +65,12 @@ class AnonymousEgressTests(unittest.TestCase):
         n = Network(
             enable_http=False,
             proxies={'all://': 'socks5h://127.0.0.1:9050'},
-            privacy_proxy_required=True,
+            privacy_proxy_required=True, using_tor_proxy=True,
         )
         client = Mock()
         client.is_closed = False
-        with patch('searx.network.network.new_client', return_value=client) as factory:
+        with (patch('searx.network.network.new_client', return_value=client) as factory,
+              patch.object(Network, 'check_tor_proxy', new=AsyncMock(return_value=True))):
             self.assertIs(asyncio.run(n.get_client()), client)
             args = factory.call_args.args
             self.assertEqual({'all://': 'socks5h://127.0.0.1:9050'}, args[5])
@@ -113,12 +114,13 @@ class AnonymousEgressTests(unittest.TestCase):
         n = Network(
             enable_http=False,
             proxies={'all://': 'socks5h://127.0.0.1:9050'},
-            privacy_proxy_required=True,
+            privacy_proxy_required=True, using_tor_proxy=True,
         )
         from types import SimpleNamespace
         client = Mock(is_closed=False)
         client.request = AsyncMock(return_value=SimpleNamespace(status_code=200))
-        with patch('searx.network.network.new_client', return_value=client):
+        with (patch('searx.network.network.new_client', return_value=client),
+              patch.object(Network, 'check_tor_proxy', new=AsyncMock(return_value=True))):
             asyncio.run(n.request(
                 'GET', 'https://search.example.org/?q=public',
                 headers={
@@ -149,6 +151,8 @@ class AnonymousEgressTests(unittest.TestCase):
         )
         self.assertTrue(NETWORKS)
         self.assertTrue(all(n.privacy_proxy_required for n in NETWORKS.values()))
+        self.assertTrue(smoke.settings['outgoing']['using_tor_proxy'])
+        self.assertTrue(all(n.using_tor_proxy for n in NETWORKS.values()))
 
 
 if __name__ == '__main__':
