@@ -119,6 +119,8 @@ goreecloud:
   # The local SOCKS5H gateway must be independently verified as a privacy relay.
   require_anonymous_egress: true
 outgoing:
+  # The private proxy is Tor; omitting this flag defaults to false upstream.
+  using_tor_proxy: true
   # Never bypass this relay or resolve provider DNS locally.
   # With no trusted SOCKS5H service listening, searches fail closed.
   proxies:
