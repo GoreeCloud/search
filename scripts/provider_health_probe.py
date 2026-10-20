@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from ipaddress import ip_address
 import sys
 from unicodedata import category
 from urllib.parse import urlsplit, urlencode
@@ -93,6 +94,44 @@ def classify_provider_error(message: str) -> str:
     return 'other_error'
 
 
+def safe_reported_result_url(url: object) -> bool:
+    """Validate a reported primary link without fetching or logging its contents."""
+    if (not isinstance(url, str) or not url or url != url.strip()
+            or '\\' in url or any(ord(ch) <= 32 or ord(ch) == 127
+                                    or category(ch) in ('Cc', 'Cf', 'Cs') for ch in url)):
+        return False
+    try:
+        parsed = urlsplit(url)
+        port = parsed.port
+    except ValueError:
+        return False
+    if (parsed.scheme not in ('http', 'https') or not parsed.hostname
+            or parsed.username is not None or parsed.password is not None or port == 0):
+        return False
+    # Numeric local, metadata, non-global and loopback links cannot qualify
+    # a public search provider. Domain-name rebinding is a separate boundary.
+    try:
+        return ip_address(parsed.hostname).is_global
+    except ValueError:
+        return True
+
+
+def validate_observed_results(results: list, engine: str, metadata: dict) -> str | None:
+    """Fail closed on wrong-source or unsafe result attribution; no network I/O."""
+    for item in results:
+        if not isinstance(item, dict) or not safe_reported_result_url(item.get('url')):
+            return 'invalid_result_contract'
+        credited = item.get('engines')
+        if (item.get('engine') != engine or not isinstance(credited, list)
+                or not credited or any(name != engine for name in credited)):
+            return 'invalid_result_attribution'
+    if results and (metadata.get('represented_engines') != [engine]
+                    or metadata.get('represented_result_counts') != {engine: len(results)}
+                    or metadata.get('representation_not_contact_confirmation') is not True):
+        return 'invalid_representation_contract'
+    return None
+
+
 def probe(source: str, origin: str, *, category: str = 'general',
           transport=None, timeout: float = 30.0) -> dict:
     """Send a fixed synthetic query to one approved category/source adapter."""
@@ -134,6 +173,9 @@ def probe(source: str, origin: str, *, category: str = 'general',
         results = doc.get('results')
         if not isinstance(results, list):
             return {'provider': source, 'state': 'invalid_result_contract'}
+        failure = validate_observed_results(results, engine, metadata)
+        if failure:
+            return {'provider': source, 'state': failure}
         state = ('partial_results' if errors and results else
                  'provider_error' if errors else
                  'results_observed' if results else 'no_results')
