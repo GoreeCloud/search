@@ -119,6 +119,12 @@ goreecloud:
   # The local SOCKS5H gateway must be independently verified as a privacy relay.
   require_anonymous_egress: true
 outgoing:
+  # The upstream default 3s engine deadline is too short for verified Tor
+  # attestation plus provider response. Bound *all* requests to 12s, including
+  # regular HTTPS engines: extra_proxy_timeout only applies to onion adapters.
+  # A timeout stays a provider failure; never silently switch sources.
+  request_timeout: 12.0
+  max_request_timeout: 12.0
   # Never bypass this relay or resolve provider DNS locally.
   # With no trusted SOCKS5H service listening, searches fail closed.
   proxies:

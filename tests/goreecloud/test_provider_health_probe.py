@@ -139,6 +139,10 @@ class ProviderProbeContractTests(unittest.TestCase):
         examples = (
             ('SearxEngineTooManyRequestsException', 'rate_limited'),
             ('HTTP error 403', 'access_denied'),
+            ('HTTP error', 'upstream_http_error'),
+            ('HTTP status unknown', 'upstream_http_error'),
+            ('server API error', 'upstream_api_error'),
+            ('unexpected crash', 'engine_error'),
             ('Cloudflare CAPTCHA', 'challenge'),
             ('parser failed secret=synthetic', 'parsing_error'),
             ('ConnectionError url=https://example.org/q=synthetic', 'network_error'),
