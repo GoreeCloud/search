@@ -388,6 +388,24 @@ def check_network_configuration():
     async def check():
         exception_count = 0
         for network in NETWORKS.values():
+            if network.privacy_proxy_required:
+                # CI and cold-start readiness cannot depend on a live Tor relay.
+                # Validate *all* configured gateway options here; get_client()
+                # must still attest the actual exit before every provider call.
+                options = list(network.iter_proxies())
+                valid = (
+                    network.using_tor_proxy and not network.enable_http
+                    and network.verify is True and len(options) == 1
+                    and options[0][0] == 'all://' and bool(options[0][1])
+                    and all(
+                        network.valid_private_proxy((('all://', url),))
+                        for url in options[0][1]
+                    )
+                )
+                if not valid:
+                    network._logger.error('Invalid private network configuration')
+                    exception_count += 1
+                continue
             if network.using_tor_proxy:
                 try:
                     await network.get_client()
@@ -435,8 +453,10 @@ def initialize(
         result = {}
         result.update(default_params)  # pyright: ignore[reportUnknownMemberType]
         result.update(params)  # pyright: ignore[reportUnknownMemberType]
-        # Engine-specific network overrides cannot downgrade the private egress policy.
+        # Network-specific overrides must not disable required Tor attestation.
         result['privacy_proxy_required'] = default_params['privacy_proxy_required']
+        if result['privacy_proxy_required']:
+            result['using_tor_proxy'] = default_params['using_tor_proxy']
         if logger_name:
             result['logger_name'] = logger_name
         return Network(**result)  # type: ignore

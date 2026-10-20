@@ -210,6 +210,88 @@ class AnonymousEgressTests(unittest.TestCase):
         self.assertFalse(asyncio.run(Network.check_tor_proxy(client, proxy)))
         client.get.assert_awaited_once()
 
+    def test_private_tor_flag_cannot_be_downgraded_by_network_override(self):
+        from searx import settings
+        from searx.network import network as network_module
+
+        outgoing = dict(settings['outgoing'])
+        self.assertTrue(outgoing['using_tor_proxy'],
+                        'Private profile must explicitly enable Tor attestation')
+        outgoing['networks'] = {
+            'tor_downgrade_fixture': {'using_tor_proxy': False}
+        }
+        # Use an isolated network registry and unregistered synthetic engine,
+        # leaving process-wide runtime networks and client sockets untouched.
+        with patch.object(network_module, 'NETWORKS', {}):
+            network_module.initialize(
+                settings_engines=[{'name': '__goreecloud_synthetic_engine__'}],
+                settings_outgoing=outgoing,
+            )
+            candidate = network_module.NETWORKS['tor_downgrade_fixture']
+            self.assertTrue(candidate.privacy_proxy_required)
+            self.assertTrue(candidate.using_tor_proxy,
+                            'Network override must not disable private Tor attestation')
+
+    def test_unconfigured_global_tor_flag_still_fails_closed(self):
+        from searx import settings
+        from searx.network import network as network_module
+
+        outgoing = dict(settings['outgoing'])
+        outgoing['using_tor_proxy'] = False
+        outgoing['networks'] = {
+            'unsafe_fixture': {'using_tor_proxy': True}
+        }
+        with patch.object(network_module, 'NETWORKS', {}):
+            network_module.initialize(
+                settings_engines=[{'name': '__goreecloud_synthetic_engine__'}],
+                settings_outgoing=outgoing,
+            )
+            candidate = network_module.NETWORKS['unsafe_fixture']
+            self.assertTrue(candidate.privacy_proxy_required)
+            self.assertFalse(candidate.using_tor_proxy)
+            with patch('searx.network.network.new_client') as factory:
+                with self.assertRaisesRegex(ProxyError, 'Tor attestation'):
+                    asyncio.run(candidate.get_client())
+                factory.assert_not_called()
+
+    def test_private_startup_validates_config_without_network_attestation(self):
+        from searx.network import network as network_module
+
+        private = Network(
+            enable_http=False,
+            verify=True,
+            proxies={'all://': 'socks5h://127.0.0.1:9050'},
+            privacy_proxy_required=True,
+            using_tor_proxy=True,
+        )
+        with patch.object(network_module, 'NETWORKS', {'private': private}), \
+             patch.object(Network, 'get_client', new_callable=AsyncMock) as getter:
+            network_module.check_network_configuration()
+            getter.assert_not_awaited()
+
+    def test_private_startup_rejects_unsafe_proxy_and_disabled_attestation(self):
+        from searx.network import network as network_module
+
+        for tor, proxy in [
+            (False, 'socks5h://127.0.0.1:9050'),
+            (True, 'socks5://127.0.0.1:9050'),
+            (True, 'socks5h://example.org:9050'),
+        ]:
+            with self.subTest(tor=tor, proxy=proxy):
+                private = Network(
+                    enable_http=False,
+                    verify=True,
+                    proxies={'all://': proxy},
+                    privacy_proxy_required=True,
+                    using_tor_proxy=tor,
+                )
+                with patch.object(network_module, 'NETWORKS', {'bad': private}), \
+                     patch.object(Network, 'get_client', new_callable=AsyncMock) as getter:
+                    with self.assertRaisesRegex(RuntimeError,
+                                                'Invalid network configuration'):
+                        network_module.check_network_configuration()
+                    getter.assert_not_awaited()
+
     def test_private_profile_has_strict_egress_policy(self):
         import test_runtime_smoke as smoke
         from searx.network.network import NETWORKS
@@ -220,6 +302,8 @@ class AnonymousEgressTests(unittest.TestCase):
         )
         self.assertTrue(NETWORKS)
         self.assertTrue(all(n.privacy_proxy_required for n in NETWORKS.values()))
+        self.assertTrue(smoke.settings['outgoing']['using_tor_proxy'])
+        self.assertTrue(all(n.using_tor_proxy for n in NETWORKS.values()))
 
 
 if __name__ == '__main__':
