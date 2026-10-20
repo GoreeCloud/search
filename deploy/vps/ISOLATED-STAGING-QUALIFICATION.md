@@ -62,11 +62,69 @@ Using **that older image only** in a separate disposable Compose project:
 - The older Search image reported that the Ecosia engine module was missing.
   It must **not** be used to qualify seven-provider functionality.
 
-**Boundaries:** No user searches, public Search exposure or provider
-availability probes were performed. The tests do not qualify direct-provider
-fallback under every application code path, DNS rebinding, app image
-provenance, public visitor-IP masking, seven-provider reliability, current
-candidate-image rollback, public ingress or the Stable release.
+**Boundaries of the older-image rehearsal above:** No user searches, public
+Search exposure or provider availability probes were performed. Its results
+did not qualify direct-provider fallback under every code path, DNS rebinding,
+app image provenance, visitor-IP masking, seven-provider reliability,
+new candidate-image rollback, public ingress or Stable release. The separate
+candidate-image rehearsal below adds limited staging rollback evidence.
+
+## Seven-provider candidate image and rollback rehearsal — October 20, 2026
+
+The earlier old-image rehearsal above was followed by a **separate actual
+candidate-image rehearsal**, using only the isolated Docker staging project:
+
+- Pinned source commit: `d828a1c556dfb7ed111525af91a19fb6973a8931`.
+  The builder Docker build passed. The first distribution-image attempt
+  correctly failed because the gitignored `searx/version_frozen.py` had not
+  been generated. Generating it using `python3 searx/version.py freeze`,
+  verifying the source short SHA, and rebuilding succeeded.
+- Built image: `goreecloud/search:staging-d828a1c556df`, local Docker image
+  ID `sha256:6e0104bfa6ea1c65c241f8a75772975ce33bb10b6df65b4d7bc1a61160975d63`.
+  OCI revision and source labels matched the pinned GoreeCloud GitHub commit.
+  This is **declared provenance**, not independently reproducible or signed
+  supply-chain attestation.
+- The real staging Search, Tor and relay containers ran with the new image.
+  Search had **only** the internal Docker bridge; Tor alone also had outbound
+  bridge access; direct public/private/metadata IPv4 and public IPv6 attempts
+  from Search returned `ENETUNREACH`; external DNS did not resolve.
+- Fixed HTTPS Tor Project attestation through Search's local SOCKS5H relay
+  returned HTTP 200 / `IsTor=True`; loopback `/readyz` and `/` returned
+  HTTP 200 from the new candidate. The homepage displayed all seven approved
+  source names, and the previously missing Ecosia adapter file existed.
+  These do **not** prove any upstream search provider returned results.
+- **Staging rollback:** replaced only the isolated Search and relay image
+  with the preexisting `goreecloud/search:dev-parser-56a4823`, verifying
+  actual Docker image ID and `/readyz` HTTP 200. **Restore:** switched staging
+  back to `goreecloud/search:staging-d828a1c556df` and verified image ID,
+  `/readyz` HTTP 200 and homepage HTTP 200. The real live Search service
+  was never restarted, upgraded or replaced.
+- **Candidate Tor outage and recovery:** stopped only the isolated staging Tor
+  container. A new fixed HTTPS attestation through SOCKS5H failed closed with
+  `ProxyError`; restarting that Tor container restored `IsTor=True`.
+- **Teardown:** all three isolated staging containers and both disposable
+  networks were removed. The unrelated live Search image remained the older
+  `dev-parser-56a4823`, healthy, with its Tor container still running.
+
+The missing-version packaging problem was then addressed by
+`scripts/build_pinned_staging_image.sh`, integrated into Development commit
+`cc256fad7e5a04c22567080cd81b83a6a6d46916`.
+A **fresh checkout of its tested PR head**
+`26c3cd26626d1911b2b3992779f6a79e3b3c41a5` successfully ran that script
+on the VPS, generating pinned version metadata and using a revision-specific
+builder. It produced local image `goreecloud/search:staging-26c3cd26626d`,
+ID `sha256:411a15829fbeaa3cd167a3d1372fa19bd6fdb0503fe1a9b1fe3ce1d4573020e4`,
+with matching OCI source and revision labels. The exact PR head passed all
+14 CI checks before Development integration. That second image was **built
+and verified but not deployed** to staging or production. No claim of
+bitwise reproducibility or a build of the subsequent merge SHA is made.
+
+**Still NOT QUALIFIED for Stable:** real provider results and challenge/429
+handling, production firewall and DNS-rebinding/IPv6/metadata guarantees,
+Tor SOCKS listener scope on its outbound bridge, protected ingress and rate
+limiting, external visitor IP privacy, application data-migration rollback,
+image build reproducibility/signatures, and seven-provider acceptance remain
+open. Staging-only rollback is not production rollback.
 
 ## Reproduction and teardown
 
@@ -94,8 +152,9 @@ docker compose -f deploy/vps/compose.isolated-staging.yaml down --remove-orphans
 ```
 
 Verify that the two staging networks and three disposable containers are gone,
-while the unrelated live Search/Tor containers are still healthy. This is a
-staging teardown, **not** a tested rollback of a newly built seven-provider
-Search image. Keep [security issue #21](https://github.com/GoreeCloud/search/issues/21)
+while the unrelated live Search/Tor containers are still healthy. The
+separate candidate-image test above verified staging image rollback and
+restoration; teardown is **not** a test of production cutover or data rollback.
+Keep [security issue #21](https://github.com/GoreeCloud/search/issues/21)
 and [source/provenance issue #33](https://github.com/GoreeCloud/search/issues/33)
 open until the missing real acceptance gates are satisfied.
