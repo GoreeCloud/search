@@ -14,6 +14,7 @@ from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
 from curl_cffi.requests.exceptions import RequestException
 
 from searx.data.core import get_cache, log
+from searx import get_setting
 from searx.network import get as http_get
 
 if t.TYPE_CHECKING:
@@ -28,6 +29,17 @@ class TrackerPatternsDB:
     # pylint: disable=missing-class-docstring
 
     ctx_name = "data_tracker_patterns"
+
+    # Branded GoreeCloud Search never downloads tracker lists at startup.
+    # This intentionally small, auditable subset strips only known tracking
+    # keys and preserves application-specific query arguments. It is not
+    # equivalent to ClearURLs' comprehensive remote rules.
+    GOREECLOUD_OFFLINE_RULE: RuleType = (
+        r"^https?://",
+        [],
+        [r"(?i)^(?:utm_[a-z0-9_]+|fbclid|gclid|msclkid|igshid|"
+         r"ttclid|twclid|mc_cid|mc_eid)$"],
+    )
 
     # ClearURL rule lists, the first one that responds HTTP 200 is used
     CLEAR_LIST_URL = [
@@ -82,6 +94,14 @@ class TrackerPatternsDB:
             yield key, value[0], value[1]
 
     def iter_clear_list(self) -> Iterator[RuleType]:
+        # Private-branded instances must not implicitly fetch third-party
+        # rules through the application network at plugin initialization.
+        # Apply this even when optional privacy flags are overridden.
+        branded = get_setting("goreecloud", None)
+        if isinstance(branded, dict) and branded:
+            yield self.GOREECLOUD_OFFLINE_RULE
+            return
+
         resp = None
         for url in self.CLEAR_LIST_URL:
             log.debug("TRACKER_PATTERNS: Trying to fetch %s...", url)
@@ -151,9 +171,9 @@ class TrackerPatternsDB:
                     # remove URL arguments
                     for pattern in rule[self.Fields.del_args]:
                         if re.match(pattern, name):
-                            log.debug(
-                                "TRACKER_PATTERNS: %s remove tracker arg: %s='%s'", parsed_new_url.netloc, name, val
-                            )
+                            # Never log result hosts, parameter values or
+                            # query-bearing URLs, even in debug mode.
+                            log.debug("TRACKER_PATTERNS: tracking argument removed")
                             query_args.remove((name, val))
 
                 parsed_new_url = parsed_new_url._replace(query=urlencode(query_args))
@@ -166,7 +186,7 @@ class TrackerPatternsDB:
                 # is a simple string and not a key/value dict.
                 for pattern in rule[self.Fields.del_args]:
                     if re.match(pattern, query_str):
-                        log.debug("TRACKER_PATTERNS: %s remove tracker arg: '%s'", parsed_new_url.netloc, query_str)
+                        log.debug("TRACKER_PATTERNS: tracking query removed")
                         parsed_new_url = parsed_new_url._replace(query="")
                         new_url = urlunparse(parsed_new_url)
                         break
