@@ -5,6 +5,14 @@ on:
     branches:
       - main
       - 'feature/**'
+      - 'feat/**'
+      - 'fix/**'
+      - 'security/**'
+      - 'stabilize/**'
+      - 'deploy/**'
+      - 'design/**'
+      - 'test/**'
+      - 'ci/**'
 permissions:
   contents: read
 jobs:
