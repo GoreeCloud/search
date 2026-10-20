@@ -123,6 +123,8 @@ outgoing:
   # With no trusted SOCKS5H service listening, searches fail closed.
   proxies:
     all://: socks5h://127.0.0.1:9050
+  # A SOCKS gateway alone does not attest Tor anonymity.
+  using_tor_proxy: true
   extra_proxy_timeout: 10
 general:
   instance_name: "GoreeCloud Search"
