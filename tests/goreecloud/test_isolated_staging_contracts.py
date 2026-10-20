@@ -81,6 +81,12 @@ class IsolatedStagingContractTests(unittest.TestCase):
         )
 
 
+    def test_bounded_relay_close_contract(self):
+        self.assertEqual(120, RELAY.SESSION_TIMEOUT)
+        source = (ROOT / "scripts/local_socks_relay.py").read_text()
+        self.assertIn("return_when=asyncio.ALL_COMPLETED", source)
+        self.assertIn("writer.write_eof()", source)
+
     def test_real_asyncio_relay_passes_only_to_fixed_synthetic_gateway(self):
         async def run():
             received = []

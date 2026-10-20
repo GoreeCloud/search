@@ -15,6 +15,8 @@ LOCAL_PORT = 9050
 TOR_HOST = "tor"
 TOR_PORT = 9050
 CONNECT_TIMEOUT = 5
+# Limit the lifetime of stalled, half-closed staging connections.
+SESSION_TIMEOUT = 120
 
 
 async def copy_stream(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
@@ -22,9 +24,12 @@ async def copy_stream(reader: asyncio.StreamReader, writer: asyncio.StreamWriter
         while data := await reader.read(16384):
             writer.write(data)
             await writer.drain()
+        if writer.can_write_eof():
+            writer.write_eof()
+            await writer.drain()
+        else:
+            writer.close()
     except (ConnectionError, OSError):
-        pass
-    finally:
         writer.close()
 
 
@@ -44,7 +49,7 @@ async def relay(client_reader: asyncio.StreamReader, client_writer: asyncio.Stre
         asyncio.create_task(copy_stream(tor_reader, client_writer)),
     ]
     try:
-        await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        await asyncio.wait(tasks, timeout=SESSION_TIMEOUT, return_when=asyncio.ALL_COMPLETED)
     finally:
         for task in tasks:
             task.cancel()
