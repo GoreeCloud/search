@@ -10,6 +10,8 @@ from __future__ import annotations
 import argparse
 import json
 from ipaddress import ip_address
+import re
+from socket import inet_aton
 import sys
 from unicodedata import category
 from urllib.parse import urlsplit, urlencode
@@ -96,9 +98,10 @@ def classify_provider_error(message: str) -> str:
 
 def safe_reported_result_url(url: object) -> bool:
     """Validate a reported primary link without fetching or logging its contents."""
-    if (not isinstance(url, str) or not url or url != url.strip()
-            or '\\' in url or any(ord(ch) <= 32 or ord(ch) == 127
-                                    or category(ch) in ('Cc', 'Cf', 'Cs') for ch in url)):
+    if (not isinstance(url, str) or not url or len(url) > 4096
+            or '\\' in url or any(ch.isspace() or ord(ch) <= 32 or ord(ch) == 127
+                                    or category(ch) in ('Cc', 'Cf', 'Cs', 'Zl', 'Zp')
+                                    for ch in url)):
         return False
     try:
         parsed = urlsplit(url)
@@ -106,14 +109,38 @@ def safe_reported_result_url(url: object) -> bool:
     except ValueError:
         return False
     if (parsed.scheme not in ('http', 'https') or not parsed.hostname
-            or parsed.username is not None or parsed.password is not None or port == 0):
+            or parsed.username is not None or parsed.password is not None
+            or port == 0 or '%' in parsed.netloc):
         return False
-    # Numeric local, metadata, non-global and loopback links cannot qualify
-    # a public search provider. Domain-name rebinding is a separate boundary.
+    host = parsed.hostname
+
+    # inet_aton recognizes alternate numeric IPv4 hosts (integer/octal/hex
+    # forms), which browsers or URL clients can interpret as loopback even
+    # though ip_address() alone treats them as DNS names. No DNS I/O occurs.
     try:
-        return ip_address(parsed.hostname).is_global
+        return ip_address(inet_aton(host)).is_global
+    except OSError:
+        pass
+    try:
+        return ip_address(host).is_global
     except ValueError:
-        return True
+        pass
+    try:
+        ascii_host = host.encode('idna').decode('ascii').lower()
+    except UnicodeError:
+        return False
+    if (len(ascii_host) > 253 or ascii_host.endswith('.') or '.' not in ascii_host):
+        return False
+    labels = ascii_host.split('.')
+    if any(not 1 <= len(label) <= 63 or not re.fullmatch(
+            r'[a-z0-9](?:[a-z0-9-]*[a-z0-9])?', label) for label in labels):
+        return False
+    if labels[-1] in ('local', 'localhost', 'internal', 'lan', 'invalid',
+                      'test', 'example', 'onion', 'arpa', 'localdomain', 'home', 'corp'):
+        return False
+    # DNS rebinding and public names resolving to private IPs are an egress
+    # firewall concern. This checker deliberately performs no DNS lookups.
+    return True
 
 
 def validate_observed_results(results: list, engine: str, metadata: dict) -> str | None:

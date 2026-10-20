@@ -114,8 +114,13 @@ flag. Wrong-source results, unsafe or malformed links, and inconsistent
 representation fail closed with bounded diagnostic states; result text, URLs
 and user search terms are never echoed. Synthetic offline tests cover these
 conditions across approved categories. **Matching these labels still does
-not prove live upstream access.** No provider queries are authorized or
-triggered by this source-only change.
+not prove live upstream access.** Follow-up offline hardening rejects
+alternate numeric IPv4 hosts (integer, octal, hex forms), non-public literal
+IPs, special-use local DNS suffixes, invalid hostname labels and ambiguous
+URL authorities. None are fetched, resolved or logged. Public DNS names can
+still rebind to private IPs, so a verified network egress firewall remains
+mandatory; syntax checks cannot prove DNS safety. No provider queries are
+authorized or triggered by these source-only changes.
 
 ## Next release acceptance gates
 
