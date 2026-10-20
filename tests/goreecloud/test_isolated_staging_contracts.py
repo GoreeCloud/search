@@ -1,6 +1,7 @@
 """Offline tests of the isolated Search/Tor staging Compose contract."""
 import asyncio
 import importlib.util
+from ipaddress import ip_address, ip_network
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -20,8 +21,26 @@ class IsolatedStagingContractTests(unittest.TestCase):
         doc = yaml.safe_load((ROOT / "deploy/vps/compose.isolated-staging.yaml").read_text())
         self.assertEqual("goreecloud-search-isolated-staging", doc["name"])
         services = doc["services"]
-        self.assertEqual(["search_internal"], services["search"]["networks"])
-        self.assertEqual(["search_internal", "tor_egress"], services["tor"]["networks"])
+        self.assertEqual(
+            {"search_internal": {"ipv4_address": "172.29.247.3"}},
+            services["search"]["networks"],
+        )
+        self.assertEqual(
+            {"search_internal": {"ipv4_address": "172.29.247.2"}, "tor_egress": {}},
+            services["tor"]["networks"],
+        )
+        inner = ip_network(doc["networks"]["search_internal"]["ipam"]["config"][0]["subnet"])
+        self.assertEqual(ip_network("172.29.247.0/28"), inner)
+        self.assertIn(ip_address("172.29.247.2"), inner)
+        self.assertIn(ip_address("172.29.247.3"), inner)
+        tor_command = services["tor"]["command"]
+        self.assertEqual(
+            ["accept 172.29.247.3/32", "reject *"],
+            [tor_command[index + 1] for index, arg in enumerate(tor_command[:-1])
+             if arg == "--SocksPolicy"],
+        )
+        self.assertEqual("172.29.247.2:9050", tor_command[tor_command.index("--SocksPort") + 1])
+        self.assertNotIn("0.0.0.0:9050", tor_command)
         self.assertEqual("service:search", services["relay"]["network_mode"])
         self.assertIs(True, doc["networks"]["search_internal"]["internal"])
         self.assertIs(False, doc["networks"]["tor_egress"]["internal"])
