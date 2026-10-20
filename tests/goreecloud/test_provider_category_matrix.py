@@ -68,5 +68,40 @@ class PrivateCategorySelectionMatrixTests(unittest.TestCase):
             search_factory.assert_not_called()
 
 
+    def test_preview_matches_search_category_policy_without_provider_dispatch(self):
+        prohibited = (
+            ('images', 'ecosia'),
+            ('videos', 'startpage'),
+            ('videos', 'ecosia'),
+            ('news', 'ecosia'),
+            ('images', 'brave.images,bing news'),
+        )
+        with smoke.app.test_client() as client, patch(
+            'searx.search.SearchWithPlugins', side_effect=OfflineSearch
+        ) as search_factory:
+            for category, mapping in SEARCH_SOURCE_FAMILIES.items():
+                for adapter in mapping.values():
+                    with self.subTest(route='preview', category=category, adapter=adapter):
+                        response = client.post(
+                            '/preview', data=self.form(category, adapter),
+                            headers=self.HEADERS,
+                        )
+                        self.assertEqual(200, response.status_code)
+                        self.assertEqual(
+                            [adapter], response.json['goreecloud']['selected_engines']
+                        )
+                        self.assertIs(False, response.json['goreecloud']['network_requests_made'])
+                        response.close()
+            for category, adapter in prohibited:
+                with self.subTest(route='preview', category=category, adapter=adapter):
+                    response = client.post(
+                        '/preview', data=self.form(category, adapter),
+                        headers=self.HEADERS,
+                    )
+                    self.assertEqual(422, response.status_code)
+                    response.close()
+            search_factory.assert_not_called()
+
+
 if __name__ == '__main__':
     unittest.main()
