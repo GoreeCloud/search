@@ -127,7 +127,8 @@ def core_audit(opener, *, expected_revision: str, timeout: float) -> list[dict]:
                 parser.feed((body or b'').decode('utf-8', errors='replace'))
                 ok = (status == 200 and parser.checked == ['working']
                       and parser.options.count('all') == 1
-                      and parser.options.count('working') == 1)
+                      and parser.options.count('working') == 1
+                      and not parser.disabled)
             results.append({'check': name, 'passed': bool(ok),
                             'reason': 'ok' if ok else 'unexpected_response'})
         except (HTTPError, URLError, OSError, ValueError, TypeError) as error:
