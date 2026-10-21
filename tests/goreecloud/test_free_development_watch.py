@@ -121,6 +121,34 @@ class FreeDevelopmentWatchTests(unittest.TestCase):
                 self.assertEqual(2, code)
                 self.assertFalse(report['checks'][2]['passed'])
 
+    def test_duplicated_html_attributes_never_attest_release_or_defaults(self):
+        valid_revision = 'searxng/2026.10.20+40caeb47a1f'
+        for html in (
+            '<meta name="other" name="generator" content="'+valid_revision+'">',
+            '<meta name="generator" content="incorrect" content="'+valid_revision+'">',
+        ):
+            with self.subTest(page='homepage', html=html):
+                code, report, _ = execute(['--expected-revision', REV],
+                                          FakeOpener(modified={'/': FakeResponse(html)}))
+                self.assertEqual(2, code)
+                self.assertFalse(report['checks'][1]['passed'])
+                self.assertEqual(0, report['provider_requests_attempted'])
+        for html in (
+            '<input type="hidden" type="radio" name="goreecloud_sources" '
+            'value="working" checked>',
+            '<input type="radio" name="other" name="goreecloud_sources" '
+            'value="working" checked>',
+            '<input type="radio" name="goreecloud_sources" '
+            'value="all" value="working" checked>',
+        ):
+            markup = html + '<input type="radio" name="goreecloud_sources" value="all">'
+            with self.subTest(page='preferences', html=html):
+                code, report, _ = execute(['--expected-revision', REV],
+                                          FakeOpener(modified={'/preferences': FakeResponse(markup)}))
+                self.assertEqual(2, code)
+                self.assertFalse(report['checks'][2]['passed'])
+                self.assertEqual(0, report['provider_requests_attempted'])
+
     def test_disabled_source_controls_are_not_usable_preferences(self):
         for html in (
             '<input type="radio" name="goreecloud_sources" value="working" checked disabled>'
