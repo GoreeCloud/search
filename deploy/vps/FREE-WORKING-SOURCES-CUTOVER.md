@@ -58,8 +58,11 @@ is not a guarantee that every upstream provider will respond.
    healthy routed Search unchanged, tear down only the candidate project
    and its project networks if safe, and record the exact blocker.
 
-The historical hardcoded `free_upgrade_preflight.py` validates the
-**previous** canary-to-upgrade route and is **not** sufficient for this new
-upgrade-to-working cutover. A new read-only exact-head gate for these names,
-owners, image IDs and backup must be audited before a live route switch.
+The read-only `scripts/free_upgrade_preflight.py --phase working` checks the
+**upgrade-to-working** route, pinned image and running Docker metadata; its
+default `--phase legacy` retains the previous canary-to-upgrade behavior.
+For the new gate use a fresh protected byte-identical Caddyfile snapshot at
+`/srv/docker/caddy/Caddyfile.free-working-snapshot` with matching owner/mode.
+The new phase must pass all checks on the exact source SHA before any
+manual route change; do not reuse the prior cutover's 0600 snapshot.
 The current Development service is **not Stable**.
