@@ -319,7 +319,7 @@ def main() -> None:
             driver.get(url + 'preferences')
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-preferences-intro h1').text == 'Settings'
             assert not driver.find_elements(By.CSS_SELECTOR, '#main_preferences > a img.logo')
-            assert len(driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')) == 8
+            assert len(driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')) == 9
             prefs_geom = driver.execute_script("""
               return {width:document.documentElement.clientWidth,
                 scroll:document.documentElement.scrollWidth,
