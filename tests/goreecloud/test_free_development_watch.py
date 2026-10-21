@@ -229,5 +229,28 @@ class FreeDevelopmentWatchTests(unittest.TestCase):
                              for h in transport.handlers))
 
 
+
+class GeneratorMarkupTests(unittest.TestCase):
+    def test_attribute_order_quote_style_and_duplicate_meta(self):
+        for document in (
+            "<META content='searxng/2026.10.20+40caeb47a1f' name='generator'>",
+            '<meta data-extra="true" name="generator" content="searxng/2026.10.20+40caeb47a1f">',
+        ):
+            with self.subTest(document=document):
+                parser = watch.GeneratorParser()
+                parser.feed(document)
+                self.assertTrue(parser.matches(REV))
+        for document in (
+            '<meta name="generator" content="searxng/2026.10.20+64c4cab8e2">',
+            '<meta name="generator" content="searxng/2026.10.20+40caeb47a1f">'
+            '<meta name="generator" content="searxng/2026.10.20+40caeb47a1f">',
+            '<script><meta name="generator" content="searxng/2026.10.20+40caeb47a1f"></script>',
+        ):
+            with self.subTest(document=document):
+                parser = watch.GeneratorParser()
+                parser.feed(document)
+                self.assertFalse(parser.matches(REV))
+
+
 if __name__ == '__main__':
     unittest.main()
