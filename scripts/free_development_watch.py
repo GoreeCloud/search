@@ -37,6 +37,27 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
+class GeneratorParser(HTMLParser):
+    """Identify exactly one generator meta tag regardless of attribute order."""
+    def __init__(self):
+        super().__init__()
+        self.values = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'meta':
+            attributes = dict(attrs)
+            name = attributes.get('name')
+            if isinstance(name, str) and name.lower() == 'generator':
+                content = attributes.get('content')
+                self.values.append(content if isinstance(content, str) else '')
+
+    def matches(self, expected_revision):
+        if len(self.values) != 1:
+            return False
+        match = re.fullmatch(r'searxng/[^<>]*\+([0-9a-f]{10,12})', self.values[0])
+        return match is not None and expected_revision.startswith(match.group(1))
+
+
 class SourcePreferenceParser(HTMLParser):
     def __init__(self):
         super().__init__()
@@ -95,11 +116,9 @@ def core_audit(opener, *, expected_revision: str, timeout: float) -> list[dict]:
             if name == 'readiness':
                 ok = status == 200 and body is not None and body.strip() == b'READY'
             elif name == 'homepage':
-                matched = re.search(
-                    rb'<meta\s+name="generator"\s+content="searxng/[^"]+\+([0-9a-f]{10,12})"',
-                    body or b'', flags=re.IGNORECASE,
-                )
-                ok = status == 200 and matched is not None and expected_revision.startswith(matched.group(1).decode())
+                parser = GeneratorParser()
+                parser.feed((body or b'').decode('utf-8', errors='replace'))
+                ok = status == 200 and parser.matches(expected_revision)
             else:
                 parser = SourcePreferenceParser()
                 parser.feed((body or b'').decode('utf-8', errors='replace'))
