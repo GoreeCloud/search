@@ -288,7 +288,7 @@ def main() -> None:
         assert settings_link.get_attribute('href').endswith('/preferences')
         driver.get(url + 'preferences')
         options = driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')
-        assert sorted(option.get_attribute('value') for option in options) == ['all', 'bing', 'brave', 'duckduckgo', 'ecosia', 'google', 'qwant', 'startpage']
+        assert sorted(option.get_attribute('value') for option in options) == ['all', 'bing', 'brave', 'duckduckgo', 'ecosia', 'google', 'qwant', 'startpage', 'working']
         brave_choice = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="brave"]')
         driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", brave_choice)
         brave_choice.click()
