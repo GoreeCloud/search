@@ -63,6 +63,7 @@ class SourcePreferenceParser(HTMLParser):
         super().__init__()
         self.options = []
         self.checked = []
+        self.disabled = []
 
     def handle_starttag(self, tag, attrs):
         if tag != 'input':
