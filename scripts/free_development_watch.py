@@ -47,7 +47,9 @@ class SourcePreferenceParser(HTMLParser):
         if tag != 'input':
             return
         item = dict(attrs)
-        if item.get('name') == 'goreecloud_sources':
+        # Only radio controls represent a selectable preference. A hidden
+        # or duplicate input must not make an unsafe default look healthy.
+        if item.get('name') == 'goreecloud_sources' and item.get('type', '').lower() == 'radio':
             self.options.append(item.get('value'))
             if 'checked' in item:
                 self.checked.append(item.get('value'))
@@ -102,7 +104,8 @@ def core_audit(opener, *, expected_revision: str, timeout: float) -> list[dict]:
                 parser = SourcePreferenceParser()
                 parser.feed((body or b'').decode('utf-8', errors='replace'))
                 ok = (status == 200 and parser.checked == ['working']
-                      and 'all' in parser.options and 'working' in parser.options)
+                      and parser.options.count('all') == 1
+                      and parser.options.count('working') == 1)
             results.append({'check': name, 'passed': bool(ok),
                             'reason': 'ok' if ok else 'unexpected_response'})
         except (HTTPError, URLError, OSError, ValueError, TypeError) as error:
