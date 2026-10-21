@@ -38,7 +38,7 @@ class BrowserLocalSearchSourcesTests(unittest.TestCase):
             self.assertEqual(200, page.status_code)
             doc = html.fromstring(page.data)
             radios = doc.xpath('//input[@type="radio"][@name="goreecloud_sources"]')
-            self.assertEqual(['all', 'brave', 'startpage', 'qwant', 'duckduckgo', 'ecosia', 'bing', 'google'], [radio.get('value') for radio in radios])
+            self.assertEqual(['working', 'all', 'brave', 'startpage', 'qwant', 'duckduckgo', 'ecosia', 'bing', 'google'], [radio.get('value') for radio in radios])
             self.assertEqual(['all'], [radio.get('value') for radio in radios if radio.get('checked') is not None])
             page.close()
 

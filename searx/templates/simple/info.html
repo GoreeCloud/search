@@ -10,11 +10,11 @@
 <h1>Search the web on your terms.</h1>
 <p class="goreecloud-info-lead">A privacy-conscious, open-source search experience using deduplicated results from Brave Search, Startpage, Qwant, DuckDuckGo, Ecosia, Bing and Google.</p>
 <h2>Choose your sources</h2>
-<p>All Sources is selected by default, combining approved providers in one deduplicated results page. You can select just one in <a href="{{ url_for('preferences') }}">Settings</a>. Your selected services receive your search terms; provider access can be blocked or rate-limited. No automatic replacement provider is added.</p>
+<p>{% if get_setting('goreecloud.default_source_choice') == 'working' %}This free-first Development deployment starts with tested free sources, while All Sources remains available.{% else %}All Sources is selected by default, combining approved providers in one deduplicated results page.{% endif %} You can select individual engines in <a href="{{ url_for('preferences') }}">Settings</a>. Your selected services receive your search terms; provider access can be blocked or rate-limited. No automatic replacement provider is added.</p>
 <h2>Explore more</h2>
 <p>Use Web, Images, Videos, or News tabs after searching. Some providers offer different types of results; Qwant and Brave provide video searches in this build.</p>
 <h2>Privacy, not anonymity</h2>
-<p>Search queries use POST on this private VPS Development service. Your browser, the Search server, the privacy relay, and selected external search providers may still process connection information. Read the <a href="{{ url_for('static',filename='goreecloud/privacy.html') }}">Privacy and source disclosure</a>.</p>
+<p>Search queries use POST on this private VPS Development service. Your browser, the Search server and selected external search providers may still process connection information. The free-first configuration uses direct HTTPS, not Tor or commercial APIs. Read the <a href="{{ url_for('static',filename='goreecloud/privacy.html') }}">Privacy and source disclosure</a>.</p>
 <h2>Open source foundations</h2>
 <p>GoreeCloud Search is built on the open-source SearXNG engine, distributed under the AGPL-3.0-or-later license. We recognize its developers and contributors. See the <a href="https://github.com/GoreeCloud/search" rel="noreferrer">GoreeCloud Search source repository</a> for code and attribution.</p>
 {% else %}

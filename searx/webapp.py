@@ -453,7 +453,10 @@ def render(template_name: str, **kwargs):
     kwargs['private_query_transport'] = settings['goreecloud']['private_search']
     kwargs['goreecloud_native_dev_enabled'] = native_dev_available()
     if settings['goreecloud']['private_search']:
-        chosen_source = stored_search_source(flask.request.cookies.get(SEARCH_SOURCE_COOKIE))
+        chosen_source = stored_search_source(
+            flask.request.cookies.get(SEARCH_SOURCE_COOKIE),
+            default=settings['goreecloud'].get('default_source_choice', 'all'),
+        )
         available_tabs = []
         for category_name in SEARCH_SOURCE_FAMILIES:
             try:
@@ -795,6 +798,7 @@ def goreecloud_preview():
             stored=flask.request.cookies.get(SEARCH_SOURCE_COOKIE),
             query_specific=bool(raw_text_query and raw_text_query.specific),
             category=(query.categories[0] if query.categories else 'general'),
+            default=settings['goreecloud'].get('default_source_choice', 'all'),
         ), categories=tuple(name for name in SEARCH_SOURCE_FAMILIES if 'category_' + name in sxng_request.form) or None,
     )
     sources = distinct_selected_sources(ref.name for ref in query.engineref_list)
@@ -899,6 +903,7 @@ def search():
                     stored=flask.request.cookies.get(SEARCH_SOURCE_COOKIE),
                     query_specific=bool(raw_text_query and raw_text_query.specific),
                     category=(search_query.categories[0] if search_query.categories else 'general'),
+                    default=settings['goreecloud'].get('default_source_choice', 'all'),
                 ), categories=tuple(name for name in SEARCH_SOURCE_FAMILIES if 'category_' + name in sxng_request.form) or None,
             )
             validate_disclosure(
@@ -1270,7 +1275,10 @@ def preferences():
         # fmt: off
         'preferences.html',
         preferences = True,
-        goreecloud_source_choice = stored_search_source(flask.request.cookies.get(SEARCH_SOURCE_COOKIE)),
+        goreecloud_source_choice = stored_search_source(
+            flask.request.cookies.get(SEARCH_SOURCE_COOKIE),
+            default=settings['goreecloud'].get('default_source_choice', 'all'),
+        ),
         engines_with_tokens = any(getattr(e, "tokens", None) for e in engines.values()),
         selected_categories = get_selected_categories(sxng_request.preferences, sxng_request.form),
         locales = LOCALE_NAMES,
