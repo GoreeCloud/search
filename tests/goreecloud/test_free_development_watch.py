@@ -53,8 +53,8 @@ class FakeOpener:
             )
         if path == '/preferences':
             return FakeResponse(
-                b'<input name="goreecloud_sources" value="working" checked>'
-                b'<input name="goreecloud_sources" value="all">'
+                b'<input type="radio" name="goreecloud_sources" value="working" checked>'
+                b'<input type="radio" name="goreecloud_sources" value="all">'
             )
         if path == '/search':
             data = parse_qs(req.data.decode())
@@ -103,6 +103,23 @@ class FreeDevelopmentWatchTests(unittest.TestCase):
         code, doc, _ = execute(['--expected-revision', REV], bad)
         self.assertEqual(2, code)
         self.assertFalse(doc['checks'][2]['passed'])
+
+    def test_shadowed_source_controls_cannot_spoof_a_healthy_default(self):
+        examples = (
+            '<input name="goreecloud_sources" value="working" checked>'
+            '<input name="goreecloud_sources" value="all">',
+            '<input type="hidden" name="goreecloud_sources" value="working" checked>'
+            '<input type="radio" name="goreecloud_sources" value="all">',
+            '<input type="radio" name="goreecloud_sources" value="working" checked>'
+            '<input type="radio" name="goreecloud_sources" value="working">'
+            '<input type="radio" name="goreecloud_sources" value="all">',
+        )
+        for markup in examples:
+            with self.subTest(markup=markup):
+                opener = FakeOpener(modified={'/preferences': FakeResponse(markup)})
+                code, report, _ = execute(['--expected-revision', REV], opener)
+                self.assertEqual(2, code)
+                self.assertFalse(report['checks'][2]['passed'])
 
     def test_redirect_error_does_not_reach_external_host_or_log_url(self):
         failure = HTTPError('https://search-dev.goreecloud.com/readyz',
