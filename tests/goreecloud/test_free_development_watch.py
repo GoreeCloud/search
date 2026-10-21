@@ -121,6 +121,20 @@ class FreeDevelopmentWatchTests(unittest.TestCase):
                 self.assertEqual(2, code)
                 self.assertFalse(report['checks'][2]['passed'])
 
+    def test_disabled_source_controls_are_not_usable_preferences(self):
+        for html in (
+            '<input type="radio" name="goreecloud_sources" value="working" checked disabled>'
+            '<input type="radio" name="goreecloud_sources" value="all">',
+            '<input type="radio" name="goreecloud_sources" value="working" checked>'
+            '<input type="radio" name="goreecloud_sources" value="all" disabled>',
+        ):
+            with self.subTest(html=html):
+                opener = FakeOpener(modified={'/preferences': FakeResponse(html)})
+                code, result, _ = execute(['--expected-revision', REV], opener)
+                self.assertEqual(code, 2)
+                self.assertFalse(result['checks'][2]['passed'])
+                self.assertEqual(0, result['provider_requests_attempted'])
+
     def test_redirect_error_does_not_reach_external_host_or_log_url(self):
         failure = HTTPError('https://search-dev.goreecloud.com/readyz',
                             302, 'Moved to secret.example', {}, None)
