@@ -42,9 +42,14 @@ class GeneratorParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.values = []
+        self.ambiguous = False
 
     def handle_starttag(self, tag, attrs):
         if tag == 'meta':
+            names = [key for key, _ in attrs]
+            if names.count('name') > 1 or names.count('content') > 1:
+                self.ambiguous = True
+                return
             attributes = dict(attrs)
             name = attributes.get('name')
             if isinstance(name, str) and name.lower() == 'generator':
@@ -52,7 +57,7 @@ class GeneratorParser(HTMLParser):
                 self.values.append(content if isinstance(content, str) else '')
 
     def matches(self, expected_revision):
-        if len(self.values) != 1:
+        if self.ambiguous or len(self.values) != 1:
             return False
         match = re.fullmatch(r'searxng/[^<>]*\+([0-9a-f]{10,12})', self.values[0])
         return match is not None and expected_revision.startswith(match.group(1))
@@ -64,9 +69,14 @@ class SourcePreferenceParser(HTMLParser):
         self.options = []
         self.checked = []
         self.disabled = []
+        self.ambiguous = False
 
     def handle_starttag(self, tag, attrs):
         if tag != 'input':
+            return
+        names = [key for key, _ in attrs]
+        if any(names.count(key) > 1 for key in ('name', 'type', 'value', 'checked', 'disabled')):
+            self.ambiguous = True
             return
         item = dict(attrs)
         # Only radio controls represent a selectable preference. A hidden
@@ -128,7 +138,7 @@ def core_audit(opener, *, expected_revision: str, timeout: float) -> list[dict]:
                 ok = (status == 200 and parser.checked == ['working']
                       and parser.options.count('all') == 1
                       and parser.options.count('working') == 1
-                      and not parser.disabled)
+                      and not parser.disabled and not parser.ambiguous)
             results.append({'check': name, 'passed': bool(ok),
                             'reason': 'ok' if ok else 'unexpected_response'})
         except (HTTPError, URLError, OSError, ValueError, TypeError) as error:
