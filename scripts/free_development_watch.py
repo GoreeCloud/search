@@ -73,6 +73,8 @@ class SourcePreferenceParser(HTMLParser):
         # or duplicate input must not make an unsafe default look healthy.
         if item.get('name') == 'goreecloud_sources' and item.get('type', '').lower() == 'radio':
             self.options.append(item.get('value'))
+            if 'disabled' in item:
+                self.disabled.append(item.get('value'))
             if 'checked' in item:
                 self.checked.append(item.get('value'))
 
