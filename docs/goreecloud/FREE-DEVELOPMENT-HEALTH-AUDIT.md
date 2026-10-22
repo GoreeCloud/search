@@ -1,6 +1,6 @@
 # GoreeCloud Search — zero-fee Development health audit
 
-**October 20, 2026 — opt-in operational tool, not a new background service.**
+**Updated October 21, 2026 — opt-in operational tool, not a new background service.**
 
 GoreeCloud Search's verified *NetBird-only Development* hostname is
 `https://search-dev.goreecloud.com`, currently served by source
@@ -25,8 +25,9 @@ hostname:
 
 1. `/readyz` must return HTTP 200 with `READY`.
 2. The homepage must return HTTP 200 and identify the expected source build.
-3. `/preferences` must show the explicit **Tested free sources** selection
-   for a fresh browser, while retaining **All Sources**.
+3. `/preferences` must show the explicit, usable **Tested free sources**
+   selection for a fresh browser, while retaining **All Sources**. Disabled
+   fieldsets and inert template controls do not qualify as usable options.
 
 It uses standard certificate verification, explicitly ignores proxy environment
 variables, rejects redirects, caps response sizes, and never follows result
@@ -51,10 +52,12 @@ python3 scripts/free_development_watch.py \
 Only after all three baseline checks pass, this submits **exactly one fixed,
 nonpersonal, synthetic query** for each of Web, Images, Videos and News,
 **sequentially** and **without alternate-engine retries**. It checks the
-transparent selected-source lists, at least one returned result, and zero
-reported upstream failures. It prints only per-category aggregate result/error
-counts. HTTP 403/429 aborts remaining synthetic checks: do not bypass provider
-protections, CAPTCHAs, blocks or rate limits.
+transparent selected-source lists, at least one validated public HTTP(S) result
+link with a nonempty title, and zero reported upstream failures. Malformed,
+private-address, credential-bearing and placeholder links are not counted.
+It prints only per-category aggregate **usable link**/error counts, never raw
+provider URLs or titles. HTTP 403/429 aborts remaining synthetic checks: do not
+bypass provider protections, CAPTCHAs, blocks or rate limits.
 
 Source choices are DuckDuckGo/Bing/Startpage for Web, Bing Images,
 DuckDuckGo/Bing Videos and DuckDuckGo News. Their availability can change and
