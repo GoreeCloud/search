@@ -11,11 +11,14 @@ from __future__ import annotations
 import argparse
 from http.cookiejar import CookieJar
 from html.parser import HTMLParser
+from ipaddress import ip_address
 import json
 import re
+from socket import inet_aton
 import ssl
+from unicodedata import category as unicode_category
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from urllib.request import (HTTPCookieProcessor, HTTPRedirectHandler, HTTPSHandler,
                             ProxyHandler, Request, build_opener)
 
@@ -70,8 +73,18 @@ class SourcePreferenceParser(HTMLParser):
         self.checked = []
         self.disabled = []
         self.ambiguous = False
+        self.disabled_fieldsets = []
+        self.template_depth = 0
 
     def handle_starttag(self, tag, attrs):
+        if tag == 'template':
+            self.template_depth += 1
+            return
+        if self.template_depth:
+            return
+        if tag == 'fieldset':
+            self.disabled_fieldsets.append('disabled' in dict(attrs))
+            return
         if tag != 'input':
             return
         names = [key for key, _ in attrs]
@@ -83,10 +96,59 @@ class SourcePreferenceParser(HTMLParser):
         # or duplicate input must not make an unsafe default look healthy.
         if item.get('name') == 'goreecloud_sources' and item.get('type', '').lower() == 'radio':
             self.options.append(item.get('value'))
-            if 'disabled' in item:
+            if 'disabled' in item or any(self.disabled_fieldsets):
                 self.disabled.append(item.get('value'))
             if 'checked' in item:
                 self.checked.append(item.get('value'))
+
+    def handle_endtag(self, tag):
+        if tag == 'template' and self.template_depth:
+            self.template_depth -= 1
+        elif not self.template_depth and tag == 'fieldset' and self.disabled_fieldsets:
+            self.disabled_fieldsets.pop()
+
+
+def usable_result_link(item: object) -> bool:
+    """Count real, public HTTP(S) links without fetching or reporting their URLs."""
+    if not isinstance(item, dict):
+        return False
+    url, title = item.get('url'), item.get('title')
+    if (not isinstance(url, str) or not isinstance(title, str) or not title.strip()
+            or not url or len(url) > 4096 or '\\' in url
+            or any(ch.isspace() or ord(ch) <= 32 or ord(ch) == 127
+                   or unicode_category(ch) in ('Cc', 'Cf', 'Cs', 'Zl', 'Zp')
+                   for ch in url)):
+        return False
+    try:
+        target = urlsplit(url)
+        port = target.port
+    except ValueError:
+        return False
+    if (target.scheme not in ('http', 'https') or not target.hostname
+            or target.username is not None or target.password is not None
+            or port == 0 or '%' in target.netloc):
+        return False
+    host = target.hostname
+    try:
+        return ip_address(inet_aton(host)).is_global
+    except OSError:
+        pass
+    try:
+        return ip_address(host).is_global
+    except ValueError:
+        pass
+    try:
+        ascii_host = host.encode('idna').decode('ascii').lower()
+    except UnicodeError:
+        return False
+    if (len(ascii_host) > 253 or ascii_host.endswith('.') or '.' not in ascii_host):
+        return False
+    if ascii_host.split('.')[-1] in ('local', 'localhost', 'internal', 'lan',
+                                    'invalid', 'test', 'example', 'onion', 'arpa'):
+        return False
+    return all(1 <= len(label) <= 63 and re.fullmatch(
+        r'[a-z0-9](?:[a-z0-9-]*[a-z0-9])?', label)
+        for label in ascii_host.split('.'))
 
 
 def locked_down_opener():
@@ -170,7 +232,8 @@ def synthetic_category_audit(opener, *, timeout: float) -> list[dict]:
                     errors = parsed.get('unresponsive_engines')
                     if (isinstance(actual, list) and all(isinstance(x, str) for x in actual)
                             and isinstance(hits, list) and isinstance(errors, list)):
-                        result['result_count'] = len(hits)
+                        valid_links = sum(usable_result_link(hit) for hit in hits)
+                        result['result_count'] = valid_links
                         result['provider_error_count'] = len(errors)
                         # Only display names that match explicitly configured
                         # free providers. Never echo upstream error messages.
@@ -182,7 +245,7 @@ def synthetic_category_audit(opener, *, timeout: float) -> list[dict]:
                         if recognized:
                             result['failed_engines'] = sorted({err[0] for err in errors})
                         result['passed'] = (sorted(actual) == sorted(expected)
-                                            and len(hits) > 0 and not errors)
+                                            and valid_links > 0 and not errors)
                         result['reason'] = ('ok' if result['passed'] else
                                             'invalid_error_attribution' if not recognized else
                                             'provider_or_selection_issue')

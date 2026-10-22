@@ -43,7 +43,7 @@ class FakeOpener:
             value = self.modified[path]
             if isinstance(value, Exception):
                 raise value
-            return value
+            return value(req) if callable(value) else value
         if path == '/readyz':
             return FakeResponse(b'READY\n')
         if path == '/':
@@ -62,7 +62,7 @@ class FakeOpener:
             engine_set = {c[0]: list(c[2]) for c in watch.CASES}[cat]
             return FakeResponse(json.dumps({
                 'goreecloud': {'selected_engines': engine_set},
-                'results': [{'url': 'https://example.org'}],
+                'results': [{'url': 'https://example.org', 'title': 'Public resource'}],
                 'unresponsive_engines': [],
             }))
         raise AssertionError('out-of-scope path')
@@ -155,6 +155,14 @@ class FreeDevelopmentWatchTests(unittest.TestCase):
             '<input type="radio" name="goreecloud_sources" value="all">',
             '<input type="radio" name="goreecloud_sources" value="working" checked>'
             '<input type="radio" name="goreecloud_sources" value="all" disabled>',
+            '<fieldset disabled>'
+            '<input type="radio" name="goreecloud_sources" value="working" checked>'
+            '<input type="radio" name="goreecloud_sources" value="all">'
+            '</fieldset>',
+            '<fieldset disabled><fieldset>'
+            '<input type="radio" name="goreecloud_sources" value="working" checked>'
+            '<input type="radio" name="goreecloud_sources" value="all">'
+            '</fieldset></fieldset>',
         ):
             with self.subTest(html=html):
                 opener = FakeOpener(modified={'/preferences': FakeResponse(html)})
@@ -162,6 +170,17 @@ class FreeDevelopmentWatchTests(unittest.TestCase):
                 self.assertEqual(code, 2)
                 self.assertFalse(result['checks'][2]['passed'])
                 self.assertEqual(0, result['provider_requests_attempted'])
+
+    def test_inert_template_controls_cannot_fake_a_live_source_preference(self):
+        markup = ('<template><input type="radio" name="goreecloud_sources" '
+                  'value="working" checked>'
+                  '<input type="radio" name="goreecloud_sources" value="all">'
+                  '</template>')
+        code, report, _ = execute(['--expected-revision', REV],
+                                  FakeOpener(modified={'/preferences': FakeResponse(markup)}))
+        self.assertEqual(2, code)
+        self.assertFalse(report['checks'][2]['passed'])
+        self.assertEqual(0, report['provider_requests_attempted'])
 
     def test_redirect_error_does_not_reach_external_host_or_log_url(self):
         failure = HTTPError('https://search-dev.goreecloud.com/readyz',
@@ -230,6 +249,49 @@ class FreeDevelopmentWatchTests(unittest.TestCase):
                 self.assertEqual(2, code)
                 self.assertFalse(report['checks'][3]['passed'])
                 self.assertNotIn('blocked', out)
+
+    def test_rejects_result_placeholders_and_unsafe_links_without_echoing_them(self):
+        invalid_results = (
+            {},
+            {'url': 'https://public.example.org', 'title': ''},
+            {'url': 'javascript:alert(1)', 'title': 'Unsafe'},
+            {'url': 'https://127.0.0.1/internal', 'title': 'Private'},
+            {'url': 'http://2130706433/secrets', 'title': 'Private numeric host'},
+            {'url': 'https://user:secret@public.example.org/', 'title': 'Credentials'},
+            {'url': 'https://public.example.org/\nprivate', 'title': 'Control character'},
+            {'url': 'https://public.example.org', 'title': None},
+        )
+        for hit in invalid_results:
+            with self.subTest(hit=hit):
+                payload = {'goreecloud': {'selected_engines': list(watch.CASES[0][2])},
+                           'results': [hit], 'unresponsive_engines': []}
+                code, report, output = execute(
+                    ['--expected-revision', REV, '--check-sources'],
+                    FakeOpener(modified={'/search': FakeResponse(json.dumps(payload))}))
+                self.assertEqual(2, code)
+                self.assertEqual(0, report['checks'][3]['result_count'])
+                self.assertFalse(report['checks'][3]['passed'])
+                self.assertNotIn('secret', output)
+                self.assertNotIn('javascript:', output)
+
+    def test_valid_links_are_counted_without_storing_raw_provider_results(self):
+        def mixed_results(req):
+            fields = parse_qs(req.data.decode())
+            cat = next(key[9:] for key in fields if key.startswith('category_'))
+            expected = next(engines for category, _, engines in watch.CASES
+                            if category == cat)
+            payload = {'goreecloud': {'selected_engines': list(expected)},
+                       'results': [
+                           {'url': 'https://public.example.org/guide', 'title': 'Guide'},
+                           {'url': 'https://127.0.0.1/admin', 'title': 'Private'},
+                       ], 'unresponsive_engines': []}
+            return FakeResponse(json.dumps(payload))
+        code, report, output = execute(
+            ['--expected-revision', REV, '--check-sources'],
+            FakeOpener(modified={'/search': mixed_results}))
+        self.assertEqual(0, code)
+        self.assertTrue(all(item['result_count'] == 1 for item in report['checks'][3:]))
+        self.assertNotIn('public.example.org', output)
 
     def test_reports_only_allowlisted_failing_engine_names(self):
         case = {
