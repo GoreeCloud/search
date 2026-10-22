@@ -175,6 +175,17 @@ class CategorySmokeTests(unittest.TestCase):
         self.assertEqual('below_minimum',outcome['state'])
         self.assertEqual(1,outcome['result_links'])
 
+    def test_boolean_counts_cannot_claim_one_engine_result(self):
+        test=smoke.CATEGORIES['news']
+        for location in ('selected_engine_count','represented_result_counts'):
+            doc=json.loads(document(test))
+            if location=='selected_engine_count':
+                doc['goreecloud'][location]=True
+            else:
+                doc['goreecloud'][location][test.engines[0]]=True
+            with self.subTest(location=location),self.assertRaises(ValueError):
+                smoke.inspect_results(json.dumps(doc).encode(),test)
+
     def test_no_results_and_reported_error_are_separately_classified(self):
         test=smoke.CATEGORIES["images"]
         result=smoke.inspect_results(document(test, results=[], failures=[

@@ -54,8 +54,14 @@ nonpersonal, synthetic query** for each of Web, Images, Videos and News,
 **sequentially** and **without alternate-engine retries**. It checks the
 transparent selected-source lists, at least one validated public HTTP(S) result
 link with a nonempty title, and zero reported upstream failures. Malformed,
-private-address, credential-bearing and placeholder links are not counted.
-It prints only per-category aggregate **usable link**/error counts, never raw
+private-address, credential-bearing and placeholder links invalidate the
+source check even when another valid result is present. Every returned
+result must credit only explicitly selected providers, and the visible
+primary/merged source labels must agree with represented-source counts and
+the explicit **not a provider-contact confirmation** metadata. Unknown or
+malformed provider-error attribution also fails the audit. These source
+checks operate locally on the existing response and add no DNS lookups or
+HTTP requests. It prints only per-category aggregate **usable link**/error counts, never raw
 provider URLs or titles. HTTP 403/429 aborts remaining synthetic checks: do not
 bypass provider protections, CAPTCHAs, blocks or rate limits.
 
