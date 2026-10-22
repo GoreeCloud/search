@@ -83,7 +83,9 @@ class ResultContainer:
         self, engine_name: str | None, results: list[Result | LegacyResult]
     ):  # pylint: disable=too-many-branches
         if self._closed:
-            log.debug("container is closed, ignoring results: %s", results)
+            # Results may contain query-derived URLs and titles.  A late worker
+            # must not copy that payload into logs, even at debug level.
+            log.debug("container is closed, ignoring late provider results")
             return
         main_count = 0
 
