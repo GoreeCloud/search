@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "authority": "GoreeCloud UI (GC UI)",
+  "disposition": "retired-ui-implementation-pending-controlled-migration",
+  "maximum_active_legacy_lines": {
+    "searx/static/themes/simple/goreecloud-mockup.css": 135,
+    "searx/static/themes/simple/goreecloud-results.css": 124,
+    "searx/static/themes/simple/goreecloud-search.css": 80,
+    "searx/static/themes/simple/goreecloud-settings-categories.css": 96,
+    "searx/templates/simple/base.html": 5
+  }
+}
