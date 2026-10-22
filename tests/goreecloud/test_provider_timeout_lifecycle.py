@@ -36,6 +36,25 @@ class LateProviderTests(TestCase):
         self.processor.suspended_status.resume.assert_not_called()
         self.processor._extend_container_basic.assert_not_called()
 
+    def test_closed_container_drops_late_results_without_logging_payload(self):
+        result = ResultContainer()
+        result.close()
+        sensitive_result = {
+            'url': 'https://example.invalid/search/private-query-marker',
+            'title': 'private-query-marker',
+            'content': 'private-query-marker',
+        }
+
+        with patch('searx.results.log') as logger:
+            result.extend('synthetic-timeout', [sensitive_result])
+
+        logger.debug.assert_called_once_with('container is closed, ignoring late provider results')
+        self.assertNotIn('private-query-marker', repr(logger.mock_calls))
+        self.assertEqual({}, result.main_results_map)
+        self.assertFalse(result.suggestions)
+        self.assertEqual({}, result.engine_data)
+        self.assertNotIn('engine', sensitive_result)
+
     def test_coordinator_records_exactly_one_timeout_after_deadline(self):
         started = threading.Event()
         resume = threading.Event()
