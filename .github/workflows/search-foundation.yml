@@ -32,6 +32,8 @@ jobs:
         run: python -m pip install -r requirements.txt
       - name: Compile imported search implementation
         run: python -m compileall -q searx
+      - name: Prevent new retired UI consumer dependencies
+        run: python scripts/gc_ui_consumer_audit.py
       - name: Private Search contract and runtime smoke
         run: python -m unittest discover -s tests/goreecloud -v
       - name: Install focused upstream test harness
@@ -58,7 +60,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: search-glaze-browser-smoke
+          name: search-legacy-ui-browser-smoke
           path: artifacts/search-browser/*.png
           retention-days: 7
           if-no-files-found: warn
