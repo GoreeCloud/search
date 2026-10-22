@@ -17,9 +17,22 @@ spec.loader.exec_module(smoke)
 
 def document(test, results=None, failures=None):
     if results is None:
-        results=[{"title":"Public learning resource","url":"https://example.org/education"}] * 6
+        results=[{"title":"Public learning resource","url":"https://example.org/education",
+                  "engine":test.engines[0],"engines":[test.engines[0]]}] * 6
+    represented={}
+    for result in results:
+        if isinstance(result,dict):
+            for name in set([result.get('engine'), *(result.get('engines') or [])]):
+                if isinstance(name,str) and name in test.engines:
+                    represented[name]=represented.get(name,0)+1
+    represented=dict(sorted(represented.items()))
     return json.dumps({
-        "goreecloud":{"selected_engines":list(test.engines)},
+        "goreecloud":{"selected_engines":list(test.engines),
+                     "selected_engine_count":len(test.engines),
+                     "selection_not_contact_confirmation":True,
+                     "represented_engines":list(represented),
+                     "represented_result_counts":represented,
+                     "representation_not_contact_confirmation":True},
         "results":results,
         "unresponsive_engines":failures if failures is not None else [],
     }).encode()
@@ -80,7 +93,8 @@ class CategorySmokeTests(unittest.TestCase):
     def test_some_results_can_be_below_minimum(self):
         test=smoke.CATEGORIES["news"]
         outcome=smoke.inspect_results(document(test,results=[
-            {"title":"NASA","url":"https://example.org/nasa"}]),test)
+            {"title":"NASA","url":"https://example.org/nasa",
+             "engine":test.engines[0],"engines":[test.engines[0]]}]),test)
         self.assertEqual("below_minimum",outcome["state"])
 
     def test_invalid_or_non_public_http_destinations_never_count(self):
@@ -99,9 +113,20 @@ class CategorySmokeTests(unittest.TestCase):
             {"title":"Local host","url":"http://localhost/path"},
             {"title":"Local domain","url":"http://machine.local/"},
             {"title":"Malformed IPv6","url":"https://[not-ipv6/path"},
+            {"title":"Numeric IPv4","url":"http://2130706433/internal"},
+            {"title":"Octal IPv4","url":"http://0177.0.0.1/internal"},
+            {"title":"Localdomain","url":"http://localhost.localdomain/"},
+            {"title":"Invalid host","url":"https://invalid.invalid/"},
+            {"title":"User info","url":"https://user:pass@example.org/"},
+            {"title":"Unsafe host","url":"https://example.org:65536/"},
+            {"title":"Unicode control","url":"https://example.org/\u200badmin"},
         ]
-        outcome=smoke.inspect_results(document(test,results=bad),test)
-        self.assertEqual(0,outcome["result_links"])
+        for result in bad:
+            with self.subTest(result=result):
+                if result.get('title'):
+                    self.assertFalse(smoke.safe_public_url(result.get('url')))
+                with self.assertRaisesRegex(ValueError,'invalid public result'):
+                    smoke.inspect_results(document(test,results=[result]),test)
 
     def test_partial_image_results_are_not_marked_fully_healthy(self):
         test=smoke.CATEGORIES["images"]
@@ -114,14 +139,41 @@ class CategorySmokeTests(unittest.TestCase):
         self.assertNotIn("private",str(outcome))
         self.assertNotIn("error URL",str(outcome))
 
-    def test_unknown_error_name_is_counted_but_never_echoed(self):
+    def test_unknown_error_name_fails_closed_and_is_never_echoed(self):
         test=smoke.CATEGORIES["images"]
         failure=[["unapproved provider HTTPS ?q=private", "secret"]]
-        outcome=smoke.inspect_results(document(test, failures=failure), test)
-        self.assertEqual("partial_results_with_provider_error",outcome["state"])
-        self.assertEqual([],outcome["unresponsive_selected_engines"])
-        self.assertEqual(1,outcome["unresponsive_engines"])
-        self.assertNotIn("private",str(outcome))
+        with self.assertRaisesRegex(ValueError,'invalid provider error attribution') as error:
+            smoke.inspect_results(document(test, failures=failure), test)
+        self.assertNotIn('private',str(error.exception))
+
+    def test_wrong_source_and_forged_representation_never_pass(self):
+        test=smoke.CATEGORIES['general']
+        valid={"title":"Public source","url":"https://example.org/resource",
+               "engine":test.engines[0],"engines":[test.engines[0]]}
+        for item in (
+            {**valid,"engine":"google","engines":["google"]},
+            {**valid,"engines":["google",test.engines[0]]},
+            {**valid,"engine":None},
+            {**valid,"engines":[]},
+        ):
+            with self.subTest(item=item),self.assertRaisesRegex(ValueError,'attribution'):
+                smoke.inspect_results(document(test, results=[item]),test)
+        forged=json.loads(document(test,results=[valid]))
+        forged['goreecloud']['represented_result_counts'][test.engines[0]]=2
+        with self.assertRaisesRegex(ValueError,'representation metadata'):
+            smoke.inspect_results(json.dumps(forged).encode(),test)
+        forged=json.loads(document(test,results=[valid]))
+        forged['goreecloud']['representation_not_contact_confirmation']=False
+        with self.assertRaisesRegex(ValueError,'representation metadata'):
+            smoke.inspect_results(json.dumps(forged).encode(),test)
+
+    def test_merged_result_representation_can_credit_two_selected_sources(self):
+        test=smoke.CATEGORIES['general']
+        result={"title":"Merged public page","url":"https://example.org/merged",
+                "engine":test.engines[0],"engines":[test.engines[0],test.engines[1]]}
+        outcome=smoke.inspect_results(document(test,results=[result]),test)
+        self.assertEqual('below_minimum',outcome['state'])
+        self.assertEqual(1,outcome['result_links'])
 
     def test_no_results_and_reported_error_are_separately_classified(self):
         test=smoke.CATEGORIES["images"]

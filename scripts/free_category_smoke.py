@@ -10,10 +10,13 @@ from __future__ import annotations
 import argparse
 import ipaddress
 import json
+import re
+from socket import inet_aton
 import ssl
 import sys
 import time
 from dataclasses import dataclass
+from unicodedata import category as unicode_category
 from urllib.parse import urlencode, urlsplit
 from urllib.request import HTTPSHandler, HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
@@ -69,6 +72,46 @@ def build_search_request(test: Category) -> Request:
     )
 
 
+def safe_public_url(href: object) -> bool:
+    """Check the reported URL without DNS, network access, or logging its contents."""
+    if (not isinstance(href, str) or not href or len(href) > 4096
+            or '\\' in href or any(ch.isspace() or ord(ch) <= 32 or ord(ch) == 127
+                                    or unicode_category(ch) in ('Cc', 'Cf', 'Cs', 'Zl', 'Zp')
+                                    for ch in href)):
+        return False
+    try:
+        parsed = urlsplit(href)
+        host, port = parsed.hostname, parsed.port
+    except ValueError:
+        return False
+    if (parsed.scheme not in ('http', 'https') or not host
+            or parsed.username is not None or parsed.password is not None
+            or port == 0 or '%' in parsed.netloc):
+        return False
+    # Numeric IPv4 aliases such as 2130706433 and 0177.0.0.1 can resolve
+    # to loopback despite not parsing with ipaddress.ip_address alone.
+    try:
+        return ipaddress.ip_address(inet_aton(host)).is_global
+    except OSError:
+        pass
+    try:
+        return ipaddress.ip_address(host).is_global
+    except ValueError:
+        pass
+    try:
+        ascii_host = host.encode('idna').decode('ascii').lower()
+    except UnicodeError:
+        return False
+    labels = ascii_host.split('.')
+    if (len(ascii_host) > 253 or ascii_host.endswith('.') or len(labels) < 2
+            or labels[-1] in ('local', 'localhost', 'internal', 'lan', 'invalid',
+                              'test', 'example', 'onion', 'arpa', 'localdomain',
+                              'home', 'corp')):
+        return False
+    return all(1 <= len(label) <= 63 and re.fullmatch(
+        r'[a-z0-9](?:[a-z0-9-]*[a-z0-9])?', label) for label in labels)
+
+
 def inspect_results(raw: bytes, test: Category) -> dict:
     """Fail closed on malformed/misattributed responses; return aggregate counts only."""
     try:
@@ -84,45 +127,40 @@ def inspect_results(raw: bytes, test: Category) -> dict:
         raise ValueError("incomplete search response")
     selected = metadata.get("selected_engines")
     if (not isinstance(selected, list) or any(not isinstance(x, str) for x in selected)
-            or sorted(selected) != sorted(test.engines)):
+            or sorted(selected) != sorted(test.engines)
+            or metadata.get('selected_engine_count') != len(test.engines)
+            or metadata.get('selection_not_contact_confirmation') is not True):
         raise ValueError("selected search sources differ from request")
-    valid = 0
+    represented = {}
     for result in results:
         if not isinstance(result, dict):
             raise ValueError("non-object result")
         href = result.get("url")
         title = result.get("title")
-        if not isinstance(href, str) or not isinstance(title, str):
-            continue
-        if not title.strip() or any(ord(x) < 32 for x in href):
-            continue
-        try:
-            url = urlsplit(href)
-            host = url.hostname
-            port = url.port
-        except ValueError:
-            continue
-        if (url.scheme.lower() not in ("http", "https") or not host
-                or port == 0 or url.username or url.password
-                or host.casefold().rstrip(".") == "localhost"
-                or host.casefold().endswith(".local")):
-            continue
-        try:
-            literal_ip = ipaddress.ip_address(host)
-        except ValueError:
-            pass
-        else:
-            if not literal_ip.is_global:
-                continue
-        valid += 1
+        if not isinstance(title, str) or not title.strip() or not safe_public_url(href):
+            raise ValueError("invalid public result link")
+        engine, credited = result.get('engine'), result.get('engines')
+        if (not isinstance(engine, str) or engine not in test.engines
+                or not isinstance(credited, list) or not credited
+                or any(not isinstance(name, str) or name not in test.engines
+                       for name in credited)):
+            raise ValueError("invalid result source attribution")
+        for name in set([engine, *credited]):
+            represented[name] = represented.get(name, 0) + 1
+    represented = dict(sorted(represented.items()))
+    if (metadata.get('represented_engines') != list(represented)
+            or metadata.get('represented_result_counts') != represented
+            or metadata.get('representation_not_contact_confirmation') is not True):
+        raise ValueError('invalid result representation metadata')
+    valid = len(results)
     # SearXNG's unresponsive_engines list can include exception messages,
     # URLs and provider-specific metadata. Never emit those raw fields.
     # Publish only approved engine labels already selected in this request.
-    safe_failed = sorted({
-        item[0] for item in failures
-        if isinstance(item, (list, tuple)) and item
-        and isinstance(item[0], str) and item[0] in test.engines
-    })
+    if any(not isinstance(item, (list, tuple)) or len(item) < 2
+           or not isinstance(item[0], str) or item[0] not in test.engines
+           or not isinstance(item[1], str) for item in failures):
+        raise ValueError('invalid provider error attribution')
+    safe_failed = sorted({item[0] for item in failures})
     if valid >= test.minimum_results:
         state = "partial_results_with_provider_error" if failures else "results_observed"
     elif valid == 0:
