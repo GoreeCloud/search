@@ -28,6 +28,7 @@ class PrivateRuntimeSmokeTests(unittest.TestCase):
         paths = {
             "/": "text/html",
             "/static/themes/simple/goreecloud-search.css": "text/css",
+            "/static/themes/simple/gc-ui/css/gc.v1.generated.css": "text/css",
             "/static/themes/simple/glaze/css/glaze-v1.4.1.css": "text/css",
             "/static/themes/simple/goreecloud/privacy.html": "text/html",
         }
