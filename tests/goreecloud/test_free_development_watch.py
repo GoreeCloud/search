@@ -16,6 +16,31 @@ SPEC.loader.exec_module(watch)
 REV = '40caeb47a1fd8fc15a60f54e5e383d1a9f280598'
 
 
+def synthetic_document(expected, results=None, errors=None):
+    if results is None:
+        results = [{'url': 'https://example.org', 'title': 'Public resource',
+                    'engine': expected[0], 'engines': [expected[0]]}]
+    counts = {}
+    for hit in results:
+        if isinstance(hit, dict):
+            for name in set([hit.get('engine'), *(hit.get('engines') or [])]):
+                if isinstance(name, str) and name in expected:
+                    counts[name] = counts.get(name, 0) + 1
+    counts = dict(sorted(counts.items()))
+    return {
+        'goreecloud': {
+            'selected_engines': list(expected),
+            'selected_engine_count': len(expected),
+            'selection_not_contact_confirmation': True,
+            'represented_engines': list(counts),
+            'represented_result_counts': counts,
+            'representation_not_contact_confirmation': True,
+        },
+        'results': results,
+        'unresponsive_engines': errors if errors is not None else [],
+    }
+
+
 class FakeResponse:
     def __init__(self, body, status=200):
         self.payload = body if isinstance(body, bytes) else body.encode()
@@ -60,11 +85,7 @@ class FakeOpener:
             data = parse_qs(req.data.decode())
             cat = next((key[9:] for key in data if key.startswith('category_')), 'general')
             engine_set = {c[0]: list(c[2]) for c in watch.CASES}[cat]
-            return FakeResponse(json.dumps({
-                'goreecloud': {'selected_engines': engine_set},
-                'results': [{'url': 'https://example.org', 'title': 'Public resource'}],
-                'unresponsive_engines': [],
-            }))
+            return FakeResponse(json.dumps(synthetic_document(engine_set)))
         raise AssertionError('out-of-scope path')
 
 
@@ -275,30 +296,85 @@ class FreeDevelopmentWatchTests(unittest.TestCase):
                 self.assertNotIn('javascript:', output)
 
     def test_valid_links_are_counted_without_storing_raw_provider_results(self):
-        def mixed_results(req):
+        def results_for_request(req, *, invalid=False):
             fields = parse_qs(req.data.decode())
             cat = next(key[9:] for key in fields if key.startswith('category_'))
             expected = next(engines for category, _, engines in watch.CASES
                             if category == cat)
-            payload = {'goreecloud': {'selected_engines': list(expected)},
-                       'results': [
-                           {'url': 'https://public.example.org/guide', 'title': 'Guide'},
-                           {'url': 'https://127.0.0.1/admin', 'title': 'Private'},
-                       ], 'unresponsive_engines': []}
+            hits = [{'url': 'https://public.example.org/guide', 'title': 'Guide',
+                     'engine': expected[0], 'engines': [expected[0]]}]
+            if invalid:
+                hits.append({'url': 'https://127.0.0.1/admin', 'title': 'Private',
+                             'engine': expected[0], 'engines': [expected[0]]})
+            payload = synthetic_document(expected, results=hits)
             return FakeResponse(json.dumps(payload))
         code, report, output = execute(
             ['--expected-revision', REV, '--check-sources'],
-            FakeOpener(modified={'/search': mixed_results}))
+            FakeOpener(modified={'/search': results_for_request}))
         self.assertEqual(0, code)
         self.assertTrue(all(item['result_count'] == 1 for item in report['checks'][3:]))
         self.assertNotIn('public.example.org', output)
+        code, report, output = execute(
+            ['--expected-revision', REV, '--check-sources'],
+            FakeOpener(modified={'/search': lambda req: results_for_request(req, invalid=True)}))
+        self.assertEqual(2, code)
+        self.assertTrue(all(item['result_count'] == 0 for item in report['checks'][3:]))
+        self.assertTrue(all(item['reason'] == 'invalid_result_attribution'
+                            for item in report['checks'][3:]))
+        self.assertNotIn('127.0.0.1', output)
+
+    def test_misattributed_results_and_forged_counts_never_pass(self):
+        expected = watch.CASES[0][2]
+        valid = {'url': 'https://public.example.org', 'title': 'Public',
+                 'engine': expected[0], 'engines': [expected[0]]}
+        cases = (
+            synthetic_document(expected, results=[{**valid, 'engine': 'google',
+                                                   'engines': ['google']}]),
+            synthetic_document(expected, results=[{**valid, 'engines': ['google', expected[0]]}]),
+            synthetic_document(expected, results=[{**valid, 'engine': None}]),
+            synthetic_document(expected, results=[{**valid, 'engines': []}]),
+        )
+        forged = synthetic_document(expected, results=[valid])
+        forged['goreecloud']['represented_result_counts'][expected[0]] = 2
+        cases += (forged,)
+        forged = synthetic_document(expected, results=[valid])
+        forged['goreecloud']['selection_not_contact_confirmation'] = False
+        cases += (forged,)
+        for payload in cases:
+            with self.subTest(payload=payload):
+                code, report, output = execute(
+                    ['--expected-revision', REV, '--check-sources'],
+                    FakeOpener(modified={'/search': FakeResponse(json.dumps(payload))}))
+                self.assertEqual(2, code)
+                self.assertEqual(0, report['checks'][3]['result_count'])
+                self.assertEqual('invalid_result_attribution', report['checks'][3]['reason'])
+                self.assertNotIn('public.example.org', output)
+
+    def test_merged_result_attribution_is_counted_once_per_visible_link(self):
+        expected = watch.CASES[0][2]
+        shared = {'url': 'https://example.org/merged', 'title': 'Merged',
+                  'engine': expected[0], 'engines': [expected[0], expected[1]]}
+        doc = synthetic_document(expected, results=[shared])
+        self.assertEqual(1, watch.attributed_result_count([shared], expected, doc['goreecloud']))
+        self.assertEqual({expected[0]:1, expected[1]:1},
+                         doc['goreecloud']['represented_result_counts'])
+
+    def test_boolean_source_counts_cannot_masquerade_as_one(self):
+        expected = watch.CASES[3][2]  # News has one selected source.
+        for location in ('selected_engine_count', 'represented_result_counts'):
+            doc = synthetic_document(expected)
+            if location == 'selected_engine_count':
+                doc['goreecloud'][location] = True
+            else:
+                doc['goreecloud'][location][expected[0]] = True
+            with self.subTest(location=location):
+                self.assertIsNone(watch.attributed_result_count(
+                    doc['results'], expected, doc['goreecloud']))
 
     def test_reports_only_allowlisted_failing_engine_names(self):
-        case = {
-            'goreecloud': {'selected_engines': ['bing','duckduckgo','startpage']},
-            'results': [{}],
-            'unresponsive_engines': [['startpage', 'access denied at https://secret.example/private']],
-        }
+        case = synthetic_document(
+            ('bing','duckduckgo','startpage'),
+            errors=[['startpage', 'access denied at https://secret.example/private']])
         opener = FakeOpener(modified={'/search': FakeResponse(json.dumps(case))})
         code, report, output = execute(['--expected-revision', REV, '--check-sources'], opener)
         self.assertEqual(2, code)

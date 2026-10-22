@@ -151,6 +151,39 @@ def usable_result_link(item: object) -> bool:
         for label in ascii_host.split('.'))
 
 
+def attributed_result_count(hits: list, expected: tuple[str, ...], metadata: dict) -> int | None:
+    """Accept only safe, selected-source links with truthful representation counts.
+
+    A selected source is *not* proof of provider contact; represented counts
+    describe visible result labels only. Never resolve, fetch, or log result URLs.
+    """
+    if (type(metadata.get('selected_engine_count')) is not int
+            or metadata.get('selected_engine_count') != len(expected)
+            or metadata.get('selection_not_contact_confirmation') is not True
+            or metadata.get('representation_not_contact_confirmation') is not True):
+        return None
+    counts = {}
+    for hit in hits:
+        if not usable_result_link(hit):
+            return None
+        engine, credited = hit.get('engine'), hit.get('engines')
+        if (not isinstance(engine, str) or engine not in expected
+                or not isinstance(credited, list) or not credited
+                or any(not isinstance(name, str) or name not in expected
+                       for name in credited)):
+            return None
+        for name in set([engine, *credited]):
+            counts[name] = counts.get(name, 0) + 1
+    counts = dict(sorted(counts.items()))
+    reported_counts = metadata.get('represented_result_counts')
+    if (not isinstance(reported_counts, dict)
+            or any(type(value) is not int for value in reported_counts.values())
+            or metadata.get('represented_engines') != list(counts)
+            or reported_counts != counts):
+        return None
+    return len(hits)
+
+
 def locked_down_opener():
     """Do not trust environment proxies, follow redirects, or disable TLS verification."""
     return build_opener(
@@ -232,8 +265,8 @@ def synthetic_category_audit(opener, *, timeout: float) -> list[dict]:
                     errors = parsed.get('unresponsive_engines')
                     if (isinstance(actual, list) and all(isinstance(x, str) for x in actual)
                             and isinstance(hits, list) and isinstance(errors, list)):
-                        valid_links = sum(usable_result_link(hit) for hit in hits)
-                        result['result_count'] = valid_links
+                        valid_links = attributed_result_count(hits, expected, metadata)
+                        result['result_count'] = valid_links if valid_links is not None else 0
                         result['provider_error_count'] = len(errors)
                         # Only display names that match explicitly configured
                         # free providers. Never echo upstream error messages.
@@ -245,9 +278,11 @@ def synthetic_category_audit(opener, *, timeout: float) -> list[dict]:
                         if recognized:
                             result['failed_engines'] = sorted({err[0] for err in errors})
                         result['passed'] = (sorted(actual) == sorted(expected)
+                                            and valid_links is not None
                                             and valid_links > 0 and not errors)
                         result['reason'] = ('ok' if result['passed'] else
                                             'invalid_error_attribution' if not recognized else
+                                            'invalid_result_attribution' if valid_links is None else
                                             'provider_or_selection_issue')
         except (HTTPError, URLError, OSError, ValueError, TypeError) as error:
             result['reason'] = 'http_denied' if isinstance(error, HTTPError) else type(error).__name__

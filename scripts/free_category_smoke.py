@@ -128,6 +128,7 @@ def inspect_results(raw: bytes, test: Category) -> dict:
     selected = metadata.get("selected_engines")
     if (not isinstance(selected, list) or any(not isinstance(x, str) for x in selected)
             or sorted(selected) != sorted(test.engines)
+            or type(metadata.get('selected_engine_count')) is not int
             or metadata.get('selected_engine_count') != len(test.engines)
             or metadata.get('selection_not_contact_confirmation') is not True):
         raise ValueError("selected search sources differ from request")
@@ -148,8 +149,11 @@ def inspect_results(raw: bytes, test: Category) -> dict:
         for name in set([engine, *credited]):
             represented[name] = represented.get(name, 0) + 1
     represented = dict(sorted(represented.items()))
-    if (metadata.get('represented_engines') != list(represented)
-            or metadata.get('represented_result_counts') != represented
+    reported_counts = metadata.get('represented_result_counts')
+    if (not isinstance(reported_counts, dict)
+            or any(type(value) is not int for value in reported_counts.values())
+            or metadata.get('represented_engines') != list(represented)
+            or reported_counts != represented
             or metadata.get('representation_not_contact_confirmation') is not True):
         raise ValueError('invalid result representation metadata')
     valid = len(results)
