@@ -194,6 +194,18 @@ def main() -> None:
             assert driver.execute_script(
                 "return [...document.styleSheets].some(s => s.href && s.href.includes('goreecloud-mockup.css'))"
             )
+            assert driver.execute_script(
+                "return [...document.styleSheets].some(s => s.href && s.href.includes('gc-ui/css/gc.v1.generated.css'))"
+            ), f"{label}: pinned local GC UI Foundations CSS did not load"
+            gc_geometry = driver.execute_script("""
+                const computed = getComputedStyle(document.documentElement);
+                return [
+                    computed.getPropertyValue('--gc-v1-foundation-radius-md').trim(),
+                    computed.getPropertyValue('--gc-v1-foundation-target-comfortable').trim(),
+                    computed.getPropertyValue('--gc-v1-component-focus-width').trim()
+                ];
+            """)
+            assert gc_geometry == ['18px', '44px', '3px'], f"{label}: GC UI Foundations token contract failed: {gc_geometry}"
             site_header = driver.find_element(By.CSS_SELECTOR, '.goreecloud-site-header')
             site_footer = driver.find_element(By.CSS_SELECTOR, '.goreecloud-site-footer')
             hero_mark = driver.find_element(By.CSS_SELECTOR, '.goreecloud-mark-hero')
@@ -229,7 +241,7 @@ def main() -> None:
                 print(f'OFFSCREEN {label}: {offscreen}', flush=True)
             assert spill <= 2, f"{label}: horizontal overflow of {spill}px"
             driver.save_screenshot(str(artifacts / f"{label}.png"))
-            print(f"PASS {label} {width}x{height}; overflow={spill}px; POST and Glaze styles verified")
+            print(f"PASS {label} {width}x{height}; overflow={spill}px; POST and local GC UI Foundations geometry verified (legacy UI remains)")
             if label == 'desktop':
                 skip = driver.find_element(By.CSS_SELECTOR, '.goreecloud-skip-link')
                 driver.execute_script('arguments[0].focus()', skip)

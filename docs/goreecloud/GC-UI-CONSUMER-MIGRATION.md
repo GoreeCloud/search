@@ -15,6 +15,12 @@
 
 The source inventory counts **440 legacy-token-bearing first-party lines in five active files** at the pinned Development baseline. The count is a migration metric, not a measure of visual quality. The baseline is stored at `docs/goreecloud/gc-ui-legacy-baseline.json`.
 
+## Foundations 1.0.1 integration — initial, non-conformant increment
+
+The official `GoreeCloud/gc-ui` GitHub release `foundations-v1.0.1` was downloaded and verified before integration. Source archive: `goreecloud-gc-ui-1.0.1.tgz`, SHA-256 `275d7e6dc9503b2e74b3190bcecf176d73d2345860e8a20fa5faa3b326cd2298`. Its Apache-2.0 generated CSS token artifact (SHA-256 `0334a004bf55470f6e99ff938b54a94f83c4765ab44b098e25af9de9d00f6d50`) and original license (SHA-256 `b1d2870f1a00e4d7f56576e5f0870cba109e041f8af66866cf5b499478e654e7`) are checked in locally under `searx/static/themes/simple/gc-ui/` and validated in offline tests. Neither CDN nor npm registry access is required at Search runtime.
+
+The stylesheet is linked before the retained legacy styles. Search now consumes immutable GC UI Foundations geometry, touch-target, focus and typography tokens with compatible local fallbacks; its existing brand palette, dark/auto theme modes and legacy styling are deliberately preserved. This is a **real but limited token dependency**, not a new component library, a functional replacement of Glaze, complete accessible theme-controller adoption, native OS integration or GC UI consumer acceptance. The strict legacy gate remains open until separate visual and behavior work replaces the remaining contract.
+
 ## Contract and automation
 
 - CI runs `python scripts/gc_ui_consumer_audit.py` and **fails on new legacy consumer files or increased legacy-token-bearing lines**. Legitimate migration can shrink any count without changing the baseline. Changing an allowance needs a separately justified migration review; do not raise the baseline merely to satisfy CI.
@@ -24,7 +30,7 @@ The source inventory counts **440 legacy-token-bearing first-party lines in five
 
 ## Controlled migration and separate acceptance gates
 
-1. **Pin a real supported GC UI Foundations release.** The upstream scoped `foundations-v1.0.1` release has stable theme/token/contrast helpers and CSS/JSON tokens, but does **not** certify an entire component library or native implementations. Verify an exact package archive, checksum, license, exports and runtime compatibility before adoption. Do not import unqualified alpha workspaces or assume public npm availability.
+1. **Pin a real supported GC UI Foundations release.** The scoped `foundations-v1.0.1` release has stable theme/token/contrast helpers and CSS/JSON tokens, but does **not** certify an entire component library or native implementations. The exact CSS and license have been verified and adopted for Search's invariant geometry; complete theme-controller integration and all visual compatibility checks remain open. Do not import unqualified alpha workspaces or assume public npm availability.
 2. **Map semantics instead of renaming selectors.** Inventory actual CSS cascade/DOM behavior and source-specific layout, implement the corresponding GC UI token/theme contract, remove the retired runtime import, then shrink the five first-party legacy surfaces without blindly replacing names.
 3. **Prove Search functionality.** Maintain safe POST navigation, selected-provider continuity, explicit source error and partial-result disclosure, privacy, translation, accessible focus, contrast, reduced-motion, forced-colors, screen-reader announcement and small-device no-overflow behavior.
 4. **Verify rendered experience.** Produce fresh authenticated Development screenshots at desktop and phone breakpoints, use approved owner references for comparison, test keyboard/assistive technology and real devices. A source edit or a synthetic screenshot alone is insufficient.
