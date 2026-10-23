@@ -25,34 +25,36 @@ html[data-glaze-consumer] body.preferences_endpoint #search_form {
   box-sizing: border-box; width: 100%; max-width: none;
   display: block; margin: 0;
 }
-html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs {
+html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form > .tabs {
   box-sizing: border-box; display: flex; flex-wrap: wrap;
   gap: 0 7px; align-items: flex-start;
   width: 100%; padding: 7px 8px 0;
   background: var(--gc-surface); border: 1px solid var(--gc-outline);
   border-radius: 18px; box-shadow: 0 8px 30px rgba(31,65,116,.05);
 }
-html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > input[type="radio"] {
+html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form > .tabs > input[type="radio"] {
   position: absolute; width: 1px; height: 1px; opacity: 0;
   pointer-events: none;
 }
-html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > label[role="tab"] {
+html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form > .tabs > label[role="tab"] {
   box-sizing: border-box; display: inline-flex; align-items: center;
-  min-height: 45px; padding: 9px 15px; margin: 0;
+  min-height: max(45px, var(--gc-v1-foundation-target-comfortable, 44px));
+  padding: 9px 15px; margin: 0;
   border: 0; border-bottom: 3px solid transparent;
   color: var(--gc-muted); background: transparent;
   font-size: 13px; font-weight: 650; line-height: 1.3;
   border-radius: 9px 9px 0 0; cursor: pointer;
 }
-html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > input[type="radio"]:checked + label {
+html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form > .tabs > input[type="radio"]:checked + label {
   color: var(--gc-accent-strong);
   background: color-mix(in srgb, var(--gc-accent-strong) 7%, var(--gc-surface));
   border-bottom-color: var(--gc-accent-strong);
 }
-html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > input[type="radio"]:focus-visible + label {
-  outline: 3px solid var(--gc-ring); outline-offset: -3px;
+html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form > .tabs > input[type="radio"]:focus-visible + label {
+  outline: var(--gc-v1-component-focus-width, 3px) solid var(--gc-v1-color-focus-ring, var(--gc-ring));
+  outline-offset: -3px;
 }
-html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > section[role="tabpanel"] {
+html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form > .tabs > section[role="tabpanel"] {
   box-sizing: border-box; width: 100%; flex: 1 0 100%;
   min-width: 0; margin: 0; padding: clamp(18px, 2.6vw, 28px);
   border-top: 1px solid var(--gc-outline); background: var(--gc-surface);
@@ -170,30 +172,31 @@ html[data-glaze-consumer] body.results_endpoint .goreecloud-category-form button
   outline: 3px solid var(--gc-ring); outline-offset: -3px;
 }
 @media (max-width: 650px) {
-  html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs {
+  html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form > .tabs {
     display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0 2px;
   }
-  html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > label[role="tab"] {
+  html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form > .tabs > label[role="tab"] {
     display: flex; width: 100%; min-width: 0;
     justify-content: center; text-align: center;
     white-space: normal; overflow-wrap: anywhere;
     font-size: 11px;
   }
-  html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > section[role="tabpanel"] {
+  html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form > .tabs > section[role="tabpanel"] {
     grid-column: 1 / -1; grid-row: 3;
     width: 100%; min-width: 0;
   }
   html[data-glaze-consumer] body.preferences_endpoint #main_preferences {
     padding: 2px 12px 42px;
   }
-  html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs {
+  html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form > .tabs {
     padding: 6px 5px 0; gap: 0 2px;
   }
-  html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > label[role="tab"] {
-    font-size: 12px; padding: 8px 10px; min-height: 44px;
+  html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form > .tabs > label[role="tab"] {
+    font-size: 12px; padding: 8px 10px;
+    min-height: var(--gc-v1-foundation-target-comfortable, 44px);
   }
-  html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > section[role="tabpanel"] {
+  html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form > .tabs > section[role="tabpanel"] {
     padding: 14px 10px;
   }
   html[data-glaze-consumer] body.preferences_endpoint #search_form fieldset {
@@ -204,7 +207,7 @@ html[data-glaze-consumer] body.results_endpoint .goreecloud-category-form button
   }
 }
 @media (forced-colors: active) {
-  html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs,
+  html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form > .tabs,
   html[data-glaze-consumer] body.preferences_endpoint #search_form fieldset,
   html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-actions {
     background: Canvas; color: CanvasText; border-color: CanvasText;
@@ -411,7 +414,7 @@ html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results .
 
 /* Keep narrow Settings labels legible without allowing mid-word wrapping. */
 @media (max-width: 360px) {
-  html[data-glaze-consumer] body.preferences_endpoint #search_form > .tabs > label[role="tab"] {
+  html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form > .tabs > label[role="tab"] {
     padding-inline: 3px;
     overflow-wrap: normal;
     word-break: normal;
