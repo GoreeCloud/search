@@ -150,7 +150,12 @@ def collect(root: Path = Path("/")) -> dict:
 def main() -> int:
     try:
         print(json.dumps(collect(), sort_keys=True, separators=(",", ":")))
-    except (InventoryError, OSError, ValueError, TypeError):
+    except InventoryError as error:
+        # All InventoryError messages are fixed, code-authored diagnostic
+        # categories. They never include package data, paths or source text.
+        print("OS_PACKAGE_INVENTORY_BLOCKED: " + str(error), file=sys.stderr)
+        return 2
+    except (OSError, ValueError, TypeError):
         print("OS_PACKAGE_INVENTORY_BLOCKED", file=sys.stderr)
         return 2
     return 0
