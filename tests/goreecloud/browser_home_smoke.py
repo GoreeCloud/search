@@ -580,7 +580,26 @@ def main() -> None:
                 "const r=arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;",
                 retry
             ))
-            retry.click()
+            # Keyboard users must see GC UI's visible focus and may retry via
+            # the same native POST without a pointer or changing providers.
+            retry.send_keys(Keys.ARROW_LEFT)
+            retry_focus = driver.execute_script("""
+              const retry=arguments[0];
+              const css=getComputedStyle(retry);
+              const root=document.documentElement;
+              return {visible:retry.matches(':focus-visible'), focused:document.activeElement===retry,
+                outline:css.outlineStyle, outlineWidth:parseFloat(css.outlineWidth),
+                height:retry.getBoundingClientRect().height,
+                buttonToken:getComputedStyle(root).getPropertyValue('--gc-v1-component-button-height-medium').trim(),
+                method:retry.form?.method, type:retry.type,
+                viewport:root.clientWidth, scroll:root.scrollWidth};
+            """, retry)
+            assert retry_focus['visible'] and retry_focus['focused'], retry_focus
+            assert retry_focus['outline'] == 'solid' and retry_focus['outlineWidth'] >= 3, retry_focus
+            assert retry_focus['height'] >= 44 and retry_focus['buttonToken'] == '44px', retry_focus
+            assert retry_focus['method'] == 'post' and retry_focus['type'] == 'submit', retry_focus
+            assert retry_focus['scroll'] <= retry_focus['viewport'] + 1, retry_focus
+            retry.send_keys(Keys.SPACE)
             WebDriverWait(driver, 12).until(lambda page: failed.call_count == 2)
             assert driver.current_url.endswith('/search'), 'Retry left the private result route'
             assert not driver.execute_script('return location.search'), 'Retry leaked search terms into URL'
