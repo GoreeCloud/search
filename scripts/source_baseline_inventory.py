@@ -33,6 +33,7 @@ RELEASE_INPUTS = (
     "deploy/vps/compose.free-metasearch-working.yaml",
     "requirements.txt",
     "scripts/build_pinned_staging_image.sh",
+    "scripts/candidate_image_evidence.py",
     "scripts/free_upgrade_preflight.py",
 )
 
