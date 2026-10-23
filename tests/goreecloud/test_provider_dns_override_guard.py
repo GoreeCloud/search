@@ -60,7 +60,9 @@ class ProviderDnsOverrideGuardTests(unittest.TestCase):
     def test_normal_free_first_https_request_remains_compatible(self):
         client = Mock(is_closed=False)
         client.request = AsyncMock(return_value=SimpleNamespace(status_code=200))
-        with patch('searx.network.network.new_client', return_value=client):
+        with patch('searx.network.network.new_client', return_value=client), patch.object(
+            Network, 'resolve_public_provider', new=AsyncMock(return_value=('search.example.org', ('8.8.8.8',)))
+        ):
             response = asyncio.run(guarded_network().request(
                 'GET', 'https://search.example.org/',
                 allow_redirects=True, raise_for_httperror=False,

@@ -127,8 +127,9 @@ class FreeProviderEgressGuardTests(unittest.TestCase):
                 )
                 client = Mock(is_closed=False)
                 with patch('searx.network.network.new_client', return_value=client) as factory:
-                    self.assertIs(client, asyncio.run(net.get_client(enable_http3=True)))
-                    self.assertIs(client, asyncio.run(net.get_client()))
+                    pin = ('search.example.org', ('8.8.8.8',))
+                    self.assertIs(client, asyncio.run(net.get_client(enable_http3=True, _trusted_dns_pin=pin)))
+                    self.assertIs(client, asyncio.run(net.get_client(_trusted_dns_pin=pin)))
                 factory.assert_called_once()
                 self.assertIs(factory.call_args.args[2], True)  # HTTP/2 enabled.
                 self.assertIs(factory.call_args.args[3], False)  # QUIC disabled.
@@ -140,7 +141,9 @@ class FreeProviderEgressGuardTests(unittest.TestCase):
         )
         client = Mock(is_closed=False)
         client.request = AsyncMock(return_value=SimpleNamespace(status_code=200))
-        with patch('searx.network.network.new_client', return_value=client) as factory:
+        with patch('searx.network.network.new_client', return_value=client) as factory, patch.object(
+            Network, 'resolve_public_provider', new=AsyncMock(return_value=('search.example.org', ('8.8.8.8',)))
+        ):
             response = asyncio.run(net.request(
                 'GET', 'https://search.example.org/',
                 enable_http3=True, raise_for_httperror=False,
@@ -162,7 +165,9 @@ class FreeProviderEgressGuardTests(unittest.TestCase):
                 client = Mock(is_closed=False)
                 client.request = AsyncMock(return_value=SimpleNamespace(status_code=status))
                 client.stream = Mock(return_value='synthetic-stream')
-                with patch('searx.network.network.new_client', return_value=client):
+                with patch('searx.network.network.new_client', return_value=client), patch.object(
+                    Network, 'resolve_public_provider', new=AsyncMock(return_value=('search.example.org', ('8.8.8.8',)))
+                ):
                     response = asyncio.run(net.request(
                         'GET', 'https://search.example.org/path',
                         allow_redirects=True,
