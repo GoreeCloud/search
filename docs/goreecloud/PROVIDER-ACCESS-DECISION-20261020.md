@@ -1,9 +1,65 @@
 # GoreeCloud Search — approved-provider access and release-evidence decision
 
 **Reviewed:** 2026-10-20
-**Environment:** seven-provider Development, *not* deployed; live VPS unchanged
+**Environment at original review:** seven-provider candidate, *not* deployed on October 20 at the time of the initial probe. Later private Development deployments are documented below.
 **Decision:** provider-results reliability NOT QUALIFIED; keep issues #26, #21 and #1 OPEN
 **Owner clarification (2026-10-20):** Prefer Zero Data Retention (ZDR) for authenticated upstream APIs, but do not make ZDR an absolute blocker to stabilizing GoreeCloud Search. This is a priority trade-off, **not authorization to activate a standard-retention provider, purchase a plan, or weaken private egress**.
+
+## October 23, 2026 — native fusion rights checkpoint
+
+GoreeCloud's owner has specified **one GoreeCloud-owned metasearch result stream**
+combining Google, Bing and Brave where lawfully possible. This is the target
+product contract, **not** permission to call, merge, cache or redistribute
+these providers' results today. Source selection, result acquisition, right to
+transform/rerank, display, storage and query disclosure are separate decisions.
+
+First-party vendor documentation was checked again on October 23:
+
+| Intended source | Official status/term observed | Current native fusion admission |
+| --- | --- | --- |
+| **Google** | Custom Search JSON API is **unavailable to new customers** and scheduled to stop January 1, 2027, including its Web and Images offerings. | **Deny** new API onboarding; only a separately identified, actually available product with explicit category/usage rights could be reconsidered. |
+| **Microsoft Bing** | Standalone Bing Search APIs were retired August 11, 2025; Azure AI Grounding with Bing is described for AI agents and is **not verified as a raw-result metasearch feed**. | **Deny** retired API integration; investigate an authorized replacement only with documentary evidence of SERP access and reuse. |
+| **Brave Search API** | Terms last updated September 1, 2026 grant bounded use with customer applications but prohibit non-transient result storage, derivative works of Search Results, redistribution/resale/sublicensing and using results to replace API functionality. | **Deny by default** for fusion/reranking until Brave's applicable agreement or written approval explicitly covers GoreeCloud's exact metasearch output and handling. Mere API-key availability is insufficient. |
+
+This is a conservative engineering admission decision, **not a legal opinion**
+or a claim that every hypothetical arrangement is prohibited. Terms and actual
+entitlements may differ under a signed order or amendment. The public product
+must never imply it obtains all three feeds unless representative authorized
+results from each source have passed independent live acceptance.
+
+### Provider-specific evidence required before an adapter can leave fixture mode
+
+Record one independently verifiable authorization decision **per source and
+category**, containing the approved exact endpoint/product, account or order
+scope (without secret material), permission to request results, permission to
+combine and rerank, permission to display the combined cards, derivative-work
+conditions, mandatory attribution, allowed transient cache lifetime, result
+retention/deletion, query privacy and applicable geographical limits. Also
+record effective terms date, provider contact/contract reference and renewal
+review. A generic `enabled: true` or a successful network response does not
+provide this evidence.
+
+The runtime must default to **no upstream request** when any mandatory right
+or endpoint cannot be established. License-denied, 401/403, 429, CAPTCHA,
+timeout, malformed response and empty-but-successful search are different
+states; never disguise a denial as zero results or silently replace one source
+with another. Never persist provider results beyond an expressly authorized
+transient operational window. These policies apply to images, thumbnails,
+videos, news, shopping/local data and snippets separately, not just Web URLs.
+
+Official sources (accessed October 23, 2026):
+
+- https://developers.google.com/custom-search/v1/overview
+- https://learn.microsoft.com/en-us/lifecycle/announcements/bing-search-api-retirement
+- https://api-dashboard.search.brave.com/documentation/resources/terms-of-service
+
+**Source/runtime distinction:** the offline GoreeCloud-owned fusion primitive
+on Development is synthetic-only. The private deployed Search runtime still
+uses the earlier SearXNG-derived Working preset; its Bing Images results are
+not evidence of a supported Microsoft Bing JSON API or of licensed native
+fusion. `search-dev.goreecloud.com` remains private through NetBird. A public
+`search.goreecloud.com` release requires independent acceptance and has **not**
+been established by this document.
 
 ## Evidence and supported-access options
 
@@ -52,11 +108,15 @@ A supported integration must satisfy **all** of these independently:
 1. Provider grants rights to retrieve and display relevant Web/Images/Videos/News
    results through the contemplated API/endpoint under the actual account and
    use case. Review terms and permitted storage, display, attribution and quota.
-2. The provider works through the isolated Tor/SOCKS5H path with verified
-   circuit use and a non-leaky resolver, firewall-enforced DNS/metadata/IPv6
-   isolation and fail-closed checks. Do not replace Tor with clear/direct egress.
+2. The provider works through the **approved egress profile of the exact
+   candidate** with verified firewall, DNS/metadata/IPv6 boundaries and
+   fail-closed checks. For the historical Tor-only candidate, separately
+   verify SOCKS5H/Tor circuit use and absolutely no direct fallback; for the
+   currently deployed free-first/direct-HTTPS Development profile, disclose
+   that upstream providers can observe the VPS IP and submitted query. Never
+   silently switch a candidate's promised egress model.
 3. Decide whether an account-bound API key is acceptable to GoreeCloud's
-   anonymity promise. Tor may hide the server IP while the token still links
+   specific privacy promise. Where Tor is used it may hide the server IP while the token still links
    query history to one subscriber. Document this accurately and obtain
    applicable authorization for such a change in privacy model.
 4. Strictly credit the actual provider (do not call one provider's result
@@ -159,5 +219,7 @@ Keep separate signed/pinned operational evidence, source image IDs, environment
 logs (sanitized), independent network isolation and rollback acceptance.
 
 Until supported access is negotiated/verified, do not rerun known 403/429
-providers or seek circumvention. The existing public/live Search VPS remains
-on its older Development image; no Stable release or user-traffic cutover.
+providers or seek circumvention. The paragraph above describing the October 20
+probe is historical: a later private Development cutover to the free Working
+preset is separately verified in `FREE-WORKING-SOURCES-CUTOVER.md`. That cutover
+did **not** qualify public launch, native fusion or Stable release.

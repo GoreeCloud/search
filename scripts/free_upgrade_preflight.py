@@ -16,6 +16,11 @@ from pathlib import Path
 
 import yaml
 
+try:  # importable from tests at repository root and executable as a script
+    from scripts.search_development_ingress_guard import private_search_ingress_is_safe
+except ModuleNotFoundError:
+    from search_development_ingress_guard import private_search_ingress_is_safe
+
 OLD = "goreecloud-search-free-canary-gateway:8080"
 NEW = "goreecloud-search-free-upgrade-gateway:8080"
 OLD_SEARCH = "goreecloud-search-free-canary-search-1"
@@ -174,9 +179,8 @@ def evaluate(
     old_route = "reverse_proxy " + route.old
     new_route = "reverse_proxy " + route.new
     add("unique_netbird_only_host", block is not None
-        and "remote_ip 100.64.0.0/10" in block
-        and 'respond "Forbidden" 403' in block,
-        "single Search host must retain NetBird matcher and explicit 403")
+        and private_search_ingress_is_safe(text, route.old),
+        "single Search host must gate its sole upstream behind NetBird and deny all other clients")
     add("active_route_remains_old", block is not None
         and block.count(old_route) == 1 and new_route not in block
         and text.count(old_route) == 1 and text.count(new_route) == 0,

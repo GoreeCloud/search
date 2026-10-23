@@ -1,0 +1,229 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""Deterministic offline contract checks for fusion source dispatch."""
+
+import asyncio
+from dataclasses import asdict
+import unittest
+
+from native_search.dispatch import (
+    ProviderBinding, ProviderRights, dispatch_fusion as real_dispatch_fusion,
+)
+from native_search.fusion import SourceResult
+
+
+def allowed(category='web'):
+    # Synthetic fixture rights, NOT a real provider agreement.
+    return ProviderRights(frozenset({category}), True, True, True,
+                          'offline-fixture', 'synthetic_fixture')
+
+
+async def dispatch_fusion(*args, **kwargs):
+    """Exercise fixture admission explicitly; real call defaults to deny."""
+    return await real_dispatch_fusion(*args, allow_synthetic_fixtures=True, **kwargs)
+
+
+def binding(name, callback, rights=None):
+    return ProviderBinding(name, callback, allowed() if rights is None else rights)
+
+
+def hit(name, rank=1, url='https://example.com/shared', *, category='web'):
+    return SourceResult(name, category, rank, url, name.title())
+
+
+class DispatchTests(unittest.IsolatedAsyncioTestCase):
+    async def test_synthetic_sources_default_deny_without_test_switch(self):
+        calls = []
+
+        async def fake(*_args):
+            calls.append(True)
+            return [hit('alpha')]
+
+        reply = await real_dispatch_fusion('fixture', category='web',
+                                           providers=[binding('alpha', fake)])
+        self.assertEqual(reply.providers[0].status, 'blocked')
+        self.assertEqual(calls, [])
+
+    async def test_real_fanout_merges_to_one_native_result(self):
+        calls = []
+
+        async def alpha(query, category, limit):
+            calls.append(('alpha', query, category, limit))
+            return [hit('alpha', 3)]
+
+        async def beta(query, category, limit):
+            calls.append(('beta', query, category, limit))
+            return [hit('beta', 1, 'https://EXAMPLE.com/shared#fragment')]
+
+        reply = await dispatch_fusion('test results', category='web',
+                                      providers=[binding('alpha', alpha), binding('beta', beta)],
+                                      limit=10, per_provider=8)
+        self.assertEqual(reply.schema_version, 1)
+        self.assertEqual(reply.status, 'ok')
+        self.assertEqual(len(reply.results), 1)
+        self.assertEqual(reply.results[0].source_ranks, (('alpha', 3), ('beta', 1)))
+        self.assertEqual(sorted(calls), [('alpha', 'test results', 'web', 8),
+                                         ('beta', 'test results', 'web', 8)])
+        self.assertNotIn('test results', str(asdict(reply)))
+
+    async def test_denied_source_is_never_called_even_if_registered(self):
+        calls = []
+
+        async def would_call(*_args):
+            calls.append(True)
+            return [hit('brave')]
+
+        fake_brave = ProviderBinding('brave', would_call)
+        reply = await dispatch_fusion('bounded test', category='web', providers=[fake_brave])
+        self.assertEqual(reply.status, 'unavailable')
+        self.assertEqual(reply.providers[0].status, 'blocked')
+        self.assertEqual(calls, [])
+
+    async def test_missing_each_right_disallows_dispatch(self):
+        async def forbidden(*_args):
+            self.fail('Rights-closed adapter was invoked')
+
+        for rights in (
+            ProviderRights(frozenset({'web'}), False, True, True, 'evidence'),
+            ProviderRights(frozenset({'web'}), True, False, True, 'evidence'),
+            ProviderRights(frozenset({'web'}), True, True, False, 'evidence'),
+            ProviderRights(frozenset({'web'}), True, True, True, ''),
+            ProviderRights(frozenset({'images'}), True, True, True, 'evidence'),
+            ProviderRights('web', True, True, True, 'evidence'),
+            ProviderRights(frozenset({'web'}), 'yes', True, True, 'evidence'),
+            ProviderRights(frozenset({'web'}), True, True, True, 'evidence', 'unverified'),
+        ):
+            with self.subTest(rights=rights):
+                reply = await dispatch_fusion('fixture', category='web',
+                                              providers=[binding('alpha', forbidden, rights)])
+                self.assertEqual(reply.providers[0].status, 'blocked')
+
+    async def test_degraded_state_does_not_drop_healthy_source(self):
+        async def good(*_args):
+            return [hit('good')]
+
+        async def bad(*_args):
+            raise RuntimeError('private query appears only in upstream failure')
+
+        reply = await dispatch_fusion('private query', category='web',
+                                      providers=[binding('good', good), binding('bad', bad)])
+        self.assertEqual(reply.status, 'partial')
+        self.assertEqual(len(reply.results), 1)
+        self.assertEqual([p.status for p in reply.providers], ['ok', 'failed'])
+        self.assertNotIn('private query', str(reply))
+        self.assertNotIn('upstream failure', str(reply))
+
+    async def test_legal_denial_does_not_trigger_hidden_fallback(self):
+        async def permitted(*_args):
+            return [hit('alpha')]
+
+        async def denied(*_args):
+            self.fail('Denied provider was invoked as fallback')
+
+        reply = await dispatch_fusion('fixture', category='web', providers=[
+            binding('brave', denied, ProviderRights()), binding('alpha', permitted),
+        ])
+        self.assertEqual(reply.status, 'partial')
+        self.assertEqual([p.status for p in reply.providers], ['blocked', 'ok'])
+        self.assertEqual(len(reply.results), 1)
+
+    async def test_timeout_is_classified_without_retry(self):
+        started = []
+
+        async def slow(*_args):
+            started.append(True)
+            await asyncio.sleep(1)
+            return [hit('slow')]
+
+        reply = await dispatch_fusion('fixture', category='web',
+                                      providers=[binding('slow', slow)],
+                                      timeout_seconds=0.05)
+        self.assertEqual(reply.status, 'unavailable')
+        self.assertEqual(reply.providers[0].status, 'timeout')
+        self.assertEqual(len(started), 1)
+
+    async def test_empty_source_is_not_provider_failure(self):
+        async def empty(*_args):
+            return []
+
+        reply = await dispatch_fusion('fixture', category='web',
+                                      providers=[binding('zero', empty)])
+        self.assertEqual(reply.status, 'empty')
+        self.assertEqual(reply.providers[0].status, 'empty')
+
+    async def test_bad_payload_does_not_poison_other_sources(self):
+        async def invalid(*_args):
+            return [hit('bad', 0)]
+
+        async def valid(*_args):
+            return [hit('good')]
+
+        reply = await dispatch_fusion('fixture', category='web',
+                                      providers=[binding('bad', invalid), binding('good', valid)])
+        self.assertEqual(reply.status, 'partial')
+        self.assertEqual([p.status for p in reply.providers], ['failed', 'ok'])
+        self.assertEqual(len(reply.results), 1)
+
+    async def test_wrong_source_identity_and_oversized_cards_are_rejected(self):
+        async def wrong(*_args):
+            return [hit('different')]
+
+        async def too_many(*_args):
+            return [hit('large', n + 1) for n in range(3)]
+
+        reply = await dispatch_fusion('fixture', category='web', per_provider=2,
+                                      providers=[binding('wrong', wrong), binding('large', too_many)])
+        self.assertEqual(reply.status, 'unavailable')
+        self.assertEqual([p.status for p in reply.providers], ['failed', 'failed'])
+
+    async def test_provider_inventory_and_user_request_validation(self):
+        async def empty(*_args):
+            return []
+
+        good = binding('alpha', empty)
+        invalid = (
+            {'query': '', 'category': 'web', 'providers': [good]},
+            {'query': 'a\nsecret', 'category': 'web', 'providers': [good]},
+            {'query': 'x' * 513, 'category': 'web', 'providers': [good]},
+            {'query': 'test', 'category': 'shopping', 'providers': [good]},
+            {'query': 'test', 'category': 'web', 'providers': []},
+            {'query': 'test', 'category': 'web', 'providers': [good, good]},
+            {'query': 'test', 'category': 'web', 'providers': [good], 'per_provider': 41},
+            {'query': 'test', 'category': 'web', 'providers': [good], 'max_concurrency': 5},
+            {'query': 'test', 'category': 'web', 'providers': [good], 'timeout_seconds': 0},
+            {'query': 'test', 'category': 'web', 'providers': [good], 'limit': True},
+        )
+        for kwargs in invalid:
+            with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
+                await dispatch_fusion(**kwargs)
+
+    async def test_max_concurrency_is_enforced(self):
+        active = 0
+        observed = 0
+
+        async def make(*_args):
+            nonlocal active, observed
+            active += 1
+            observed = max(observed, active)
+            await asyncio.sleep(0.01)
+            active -= 1
+            return []
+
+        reply = await dispatch_fusion('fixture', category='web',
+                                      providers=[binding('p%d' % i, make) for i in range(8)],
+                                      max_concurrency=2, timeout_seconds=1)
+        self.assertEqual(reply.status, 'empty')
+        self.assertEqual(observed, 2)
+
+    async def test_images_supported_with_explicit_vertical_rights(self):
+        async def image(*_args):
+            return [SourceResult('visual', 'images', 1, 'https://example.org/page',
+                                 'Image', media_url='https://example.org/pic.jpg')]
+
+        reply = await dispatch_fusion('fixture', category='images',
+                                      providers=[binding('visual', image, allowed('images'))])
+        self.assertEqual(reply.status, 'ok')
+        self.assertEqual(reply.results[0].media_url, 'https://example.org/pic.jpg')
+
+
+if __name__ == '__main__':
+    unittest.main()
