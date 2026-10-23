@@ -102,7 +102,10 @@ import dateutil.parser
 
 from searx.enginelib import EngineCache
 from searx.enginelib.traits import EngineTraits
-from searx.exceptions import SearxEngineCaptchaException, SearxEngineAccessDeniedException, SearxEngineXPathException
+from searx.exceptions import (
+    SearxEngineAPIException, SearxEngineCaptchaException,
+    SearxEngineAccessDeniedException, SearxEngineXPathException,
+)
 from searx.locales import region_tag
 from searx.network import get, post  # see https://github.com/searxng/searxng/issues/762
 from searx.utils import (
@@ -185,7 +188,10 @@ def is_startpage_blocked_response(resp) -> bool:
     A blocked response must not be reported as a successful empty search.
     """
     for target in (str(resp.url), resp.headers.get("Location", "")):
-        parsed = urlsplit(target)
+        try:
+            parsed = urlsplit(target)
+        except (TypeError, ValueError):
+            continue
         if parsed.scheme != "https":
             continue
         if (parsed.hostname in ("www.startpage.com", "startpage.com")
@@ -195,6 +201,26 @@ def is_startpage_blocked_response(resp) -> bool:
                 and parsed.path == "/sp/cdn/error-pages/blocked.html"):
             return True
     return False
+
+
+def require_startpage_response_origin(resp) -> None:
+    """Reject off-provider response bodies before parsing or caching tokens.
+
+    An apparent result is not attributable to Startpage when a redirect,
+    proxy error or malformed authority delivered it from another origin.
+    This is an offline syntax check, not proof of provider contact.
+    """
+    try:
+        parsed = urlsplit(str(resp.url))
+        allowed = (parsed.scheme == "https"
+                   and parsed.hostname in ("startpage.com", "www.startpage.com")
+                   and parsed.username is None and parsed.password is None
+                   and parsed.port in (None, 443) and "%" not in parsed.netloc)
+    except (TypeError, ValueError):
+        allowed = False
+    if not allowed:
+        # Do not echo the off-provider URL; it may contain search terms.
+        raise SearxEngineAPIException("Startpage returned unexpected response origin")
 
 
 sc_code_cache_sec = 3600
@@ -265,11 +291,13 @@ def get_sc_code(params):
     resp = get(get_sc_url, headers=headers)
     if is_startpage_blocked_response(resp):
         raise SearxEngineAccessDeniedException(message="Startpage blocked this request")
+    require_startpage_response_origin(resp)
 
     if 'id="anubis_challenge"' in resp.text:
         resp = get(get_sc_url, headers=headers, cookies={"spchal-auth": _solve_anubis(resp)})
         if is_startpage_blocked_response(resp):
             raise SearxEngineAccessDeniedException(message="Startpage blocked this request")
+        require_startpage_response_origin(resp)
 
     # ?? x = network.get('https://www.startpage.com/sp/cdn/images/filter-chevron.svg', headers=headers)
     # ?? https://www.startpage.com/sp/cdn/images/filter-chevron.svg
@@ -480,6 +508,7 @@ def _get_image_result(result) -> dict[str, t.Any] | None:
 def response(resp):
     if is_startpage_blocked_response(resp):
         raise SearxEngineAccessDeniedException(message="Startpage blocked this request")
+    require_startpage_response_origin(resp)
     if 'id="anubis_challenge"' in resp.text:
         params = resp.search_params
         params["cookies"]["spchal-auth"] = _solve_anubis(resp)
@@ -491,6 +520,7 @@ def response(resp):
         )
         if is_startpage_blocked_response(resp):
             raise SearxEngineAccessDeniedException(message="Startpage blocked this request")
+        require_startpage_response_origin(resp)
         if 'id="anubis_challenge"' in resp.text:
             raise SearxEngineCaptchaException()
 
