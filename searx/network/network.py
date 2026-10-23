@@ -321,7 +321,14 @@ class Network:
         do_raise_for_httperror = Network.extract_do_raise_for_httperror(kwargs)
         kwargs_clients = Network.extract_kwargs_clients(kwargs)
         if self.provider_target_guard_required:
-            if any(key in kwargs for key in ('proxy', 'proxies', 'interface', 'curl_options')):
+            # curl_cffi accepts these per-request controls in addition to
+            # client options.  In particular, doh_url can silently replace
+            # the resolver and make a second outbound request to an unvetted
+            # endpoint even when the provider URL itself passes validation.
+            if any(key in kwargs for key in (
+                'proxy', 'proxies', 'proxy_auth', 'interface',
+                'curl_options', 'doh_url', 'http_version',
+            )):
                 raise ProxyError('Search provider egress blocked: per-request transport override')
             if not safe_external_media_url(url):
                 raise ProxyError('Search provider egress blocked: unsafe HTTPS destination')
