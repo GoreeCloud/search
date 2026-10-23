@@ -146,6 +146,18 @@ alongside DuckDuckGo/Startpage errors is only point-in-time evidence, not
 proof that either provider is consistently available. No additional probe,
 provider bypass, retry or default-source change was introduced here.
 
+The subsequent offline Startpage response-attribution guard now rejects any
+search response or form-token homepage response that arrives from a different
+or ambiguously encoded origin, even if its body resembles valid Startpage
+markup. Explicit recognized CDN access-denial pages retain their bounded
+`SearxEngineAccessDeniedException` classification; other off-origin responses
+use a fixed engine API error without printing the response URL or caching a
+foreign form token. Synthetic tests cover lookalike hosts, HTTP downgrade,
+credential-bearing authorities, unexpected ports, malformed URLs, legitimate
+Startpage hosts, and protected blocked-page behavior. This validates only
+source-contract resilience; actual Startpage access and provider rights remain
+unqualified until separately authorized, representative live evidence exists.
+
 ## Next release acceptance gates
 
 - Confirm a sustainable provider access path that preserves GoreeCloud's
