@@ -144,6 +144,118 @@ class SyntheticBrowserImageResultsCollection(SyntheticBrowserSearch):
         return response
 
 
+def assert_gc_search_controls(driver, context: str) -> None:
+    """Computed browser acceptance for both private home/results search forms."""
+    geometry = driver.execute_script(r"""
+        const root = document.documentElement;
+        const field = document.querySelector('form#search .search_box');
+        const query = document.querySelector('form#search #q');
+        const clear = document.querySelector('form#search #clear_search');
+        const submit = document.querySelector('form#search #send_search');
+        const r = node => node.getBoundingClientRect();
+        const luminance = cssColor => {
+            const rgb = cssColor.match(/[\d.]+/g).slice(0, 3).map(v => Number(v) / 255);
+            const linear = rgb.map(v => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+            return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+        };
+        const foreground = luminance(getComputedStyle(query, '::placeholder').color);
+        const background = luminance(getComputedStyle(field).backgroundColor);
+        return {
+            consumer: root.getAttribute('data-gc-consumer'),
+            role: document.querySelector('form#search').getAttribute('role'),
+            accessibleQuery: !!document.querySelector('label[for="q"]'),
+            accessibleClear: !!clear.getAttribute('aria-label'),
+            accessibleSubmit: !!submit.getAttribute('aria-label'),
+            field: {left:r(field).left, right:r(field).right, height:r(field).height},
+            query: {width:r(query).width},
+            clear: {left:r(clear).left, right:r(clear).right, width:r(clear).width, height:r(clear).height},
+            submit: {left:r(submit).left, right:r(submit).right, width:r(submit).width, height:r(submit).height},
+            placeholderContrast: (Math.max(foreground, background) + 0.05) /
+                (Math.min(foreground, background) + 0.05),
+            viewport: root.clientWidth,
+            overflow: root.scrollWidth - root.clientWidth,
+        };
+    """)
+    assert geometry['consumer'] == 'goreecloud-search', (context, geometry)
+    assert geometry['role'] == 'search', (context, geometry)
+    assert all(geometry[name] for name in ('accessibleQuery', 'accessibleClear', 'accessibleSubmit')), (context, geometry)
+    assert geometry['field']['height'] >= 48, (context, geometry)
+    assert geometry['query']['width'] >= 75, (context, geometry)
+    assert geometry['placeholderContrast'] >= 4.5, (context, geometry)
+    for control in ('clear', 'submit'):
+        measured = geometry[control]
+        assert measured['width'] >= 44 and measured['height'] >= 44, (context, geometry)
+        assert measured['left'] >= geometry['field']['left'] - 2, (context, geometry)
+        assert measured['right'] <= geometry['field']['right'] + 2, (context, geometry)
+    assert geometry['overflow'] <= 2, (context, geometry)
+
+    # Keyboard/programmatic focus is perceptible on the entire field while the
+    # individual actionable buttons retain their own visible focus indicator.
+    for control in ('q', 'clear_search', 'send_search'):
+        element = driver.find_element(By.CSS_SELECTOR, f'form#search #{control}')
+        focus = driver.execute_script("""
+            arguments[0].focus();
+            const field = document.querySelector('form#search .search_box');
+            const outline = getComputedStyle(field);
+            const token = getComputedStyle(document.documentElement).getPropertyValue('--gc-v1-color-focus-ring').trim();
+            const probe = document.createElement('span');
+            probe.style.color = 'var(--gc-v1-color-focus-ring)';
+            document.body.appendChild(probe);
+            const expected = getComputedStyle(probe).color;
+            probe.remove();
+            return {
+                active: document.activeElement === arguments[0],
+                style: outline.outlineStyle,
+                width: parseFloat(outline.outlineWidth),
+                color: outline.outlineColor,
+                expected, token,
+            };
+        """, element)
+        assert focus['active'] and focus['style'] == 'solid', (context, control, focus)
+        assert focus['width'] >= 3 and focus['color'] == focus['expected'], (context, control, focus)
+        assert focus['token'], (context, control, focus)
+
+
+def assert_gc_search_forced_colors(driver, context: str) -> None:
+    """Chrome's actual forced-colors media emulation, not a CSS text check."""
+    driver.execute_cdp_cmd('Emulation.setEmulatedMedia', {
+        'features': [{'name': 'forced-colors', 'value': 'active'}],
+    })
+    try:
+        result = driver.execute_script("""
+            const field = document.querySelector('form#search .search_box');
+            const query = document.querySelector('form#search #q');
+            const submit = document.querySelector('form#search #send_search');
+            query.focus();
+            const probe = document.createElement('span');
+            probe.style.cssText = 'color:CanvasText;background:ButtonFace;outline:3px solid Highlight';
+            document.body.appendChild(probe);
+            const expected = getComputedStyle(probe);
+            const colors = {
+                canvasText: expected.color,
+                buttonFace: expected.backgroundColor,
+                highlight: expected.outlineColor,
+            };
+            probe.remove();
+            return {
+                enabled: matchMedia('(forced-colors: active)').matches,
+                fieldShadow: getComputedStyle(field).boxShadow,
+                fieldBorder: getComputedStyle(field).borderStyle,
+                focusColor: getComputedStyle(field).outlineColor,
+                queryColor: getComputedStyle(query).color,
+                buttonColor: getComputedStyle(submit).backgroundColor,
+                colors,
+            };
+        """)
+        assert result['enabled'], (context, result)
+        assert result['fieldShadow'] == 'none' and result['fieldBorder'] == 'solid', (context, result)
+        assert result['focusColor'] == result['colors']['highlight'], (context, result)
+        assert result['queryColor'] == result['colors']['canvasText'], (context, result)
+        assert result['buttonColor'] == result['colors']['buttonFace'], (context, result)
+    finally:
+        driver.execute_cdp_cmd('Emulation.setEmulatedMedia', {'features': []})
+
+
 def main() -> None:
     # Record only request-boundary metadata from this synthetic browser fixture.
     # Never collect query text or request bodies in CI diagnostics.
@@ -217,6 +329,7 @@ def main() -> None:
             why = driver.find_element(By.CSS_SELECTOR, '#why-goreecloud-search')
             search_box = driver.find_element(By.CSS_SELECTOR, '.goreecloud-hero .search_box')
             assert all(part.is_displayed() for part in (site_header, site_footer, hero_mark, why, search_box))
+            assert_gc_search_controls(driver, f'home-{label}')
             assert len(driver.find_elements(By.CSS_SELECTOR, '.goreecloud-home-benefits li')) == 4
             assert hero_mark.rect['width'] >= 64, hero_mark.rect
             assert 260 <= search_box.rect['width'] <= 820, search_box.rect
@@ -280,6 +393,7 @@ def main() -> None:
         assert driver.execute_script("return getComputedStyle(document.documentElement).getPropertyValue('--gc-v1-color-focus-ring').trim()") == '#D8D2FF', 'GC UI dark semantic focus token not active'
         assert theme_button.get_attribute('aria-label') == 'Switch to light mode'
         assert theme_button.get_attribute('aria-pressed') == 'true', 'Dark toggle ARIA state not synchronized'
+        assert_gc_search_controls(driver, 'home-dark')
         driver.save_screenshot(str(artifacts / 'phone-dark.png'))
         driver.refresh()
         assert driver.execute_script("return document.documentElement.classList.contains('theme-dark')"), 'Session appearance did not persist'
@@ -288,7 +402,10 @@ def main() -> None:
         assert driver.execute_script("return document.documentElement.classList.contains('theme-light')"), 'Light toggle failed'
         assert driver.execute_script("return document.documentElement.getAttribute('data-gc-mode')") == 'light', 'GC UI light mode not synchronized'
         assert driver.execute_script("return getComputedStyle(document.documentElement).getPropertyValue('--gc-v1-color-focus-ring').trim()") == '#4132B3', 'GC UI light semantic focus token not active'
+        assert_gc_search_controls(driver, 'home-light')
         print('PASS moon button toggles light/dark appearance for this browser tab')
+        assert_gc_search_forced_colors(driver, 'home-forced-colors')
+        print('PASS homepage field, clear/search targets, visible focus and forced colors')
         # The slash shortcut is an optional focus aid, not a query-submission action.
         driver.get(url)
         driver.find_element(By.TAG_NAME, 'body').send_keys('/')
@@ -394,6 +511,8 @@ def main() -> None:
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').is_displayed()
             assert not driver.find_elements(By.CSS_SELECTOR, '.goreecloud-source-switch')
             assert not driver.execute_script('return location.search')
+            assert_gc_search_controls(driver, 'results-phone')
+            assert_gc_search_forced_colors(driver, 'results-phone-forced-colors')
             driver.save_screenshot(str(artifacts / 'phone-synthetic-results.png'))
             print('PASS results-first no-results state with collapsible provider diagnostics')
             driver.get(url)
