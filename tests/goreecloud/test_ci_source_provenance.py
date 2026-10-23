@@ -65,6 +65,32 @@ class SourceProvenanceContracts(unittest.TestCase):
         self.assertEqual('error', upload['with']['if-no-files-found'])
         self.assertEqual('30', upload['with']['retention-days'])
 
+    def test_expensive_candidate_image_isolated_to_integrated_development_push(self):
+        workflow = yaml.load(
+            (ROOT / '.github/workflows/search-foundation.yml').read_text(),
+            Loader=yaml.BaseLoader,
+        )
+        job = workflow['jobs']['local-image-candidate-evidence']
+        self.assertEqual(
+            "github.event_name == 'push' && github.ref == 'refs/heads/feature/search-working-free-sources-20261020'",
+            job['if'],
+        )
+        self.assertEqual('read', job['permissions']['contents'])
+        self.assertEqual('35', job['timeout-minutes'])
+        steps = job['steps']
+        self.assertEqual('${{ github.sha }}', steps[0]['with']['ref'])
+        self.assertEqual('false', steps[0]['with']['persist-credentials'])
+        self.assertIn('source_baseline_inventory.py', steps[1]['run'])
+        self.assertIn('scripts/build_pinned_staging_image.sh', steps[2]['run'])
+        self.assertIn('docker image inspect', steps[3]['run'])
+        self.assertIn('scripts/candidate_image_evidence.py', steps[3]['run'])
+        self.assertIn('search-unsigned-local-image-candidate', steps[4]['with']['name'])
+        self.assertEqual('error', steps[4]['with']['if-no-files-found'])
+        self.assertEqual('30', steps[4]['with']['retention-days'])
+        runs = '\n'.join(step.get('run', '') for step in steps)
+        for unsafe in ('docker push', 'docker run', 'docker compose up'):
+            self.assertNotIn(unsafe, runs)
+
     def test_dist_image_has_explicit_commit_label_build_argument(self):
         content = (ROOT / 'container/dist.dockerfile').read_text()
         self.assertRegex(content, r'(?m)^ARG VCS_REVISION=')

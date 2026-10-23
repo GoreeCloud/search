@@ -57,6 +57,36 @@ GC UI, nine-system integration, security and privacy, recovery,
 production acceptance, and Seal/Anchor qualification. It must not be
 interpreted as a positive acceptance verdict for any of them.
 
+## Local candidate image identity gate (unsigned, Development only)
+
+The Foundation workflow also includes `local-image-candidate-evidence` **only
+for a push to the integrated Development branch**. This isolates the expensive
+Docker candidate build from draft PRs and does not publish or deploy anything.
+It runs the existing clean-checkout, commit-pinned build command, then pipes
+the resulting `docker image inspect` JSON into
+`scripts/candidate_image_evidence.py`. The verifier independently recomputes
+the source inventory and refuses any mismatch with the recorded source tree,
+release-input hashes, exact commit, local image tag, OCI source/revision/version
+labels, or local `sha256:` image configuration ID. A passing run retains
+`search-unsigned-local-image-candidate.json` for 30 days.
+
+This creates an auditable **local image configuration digest**, **not a
+registry manifest digest**. The builder and runtime base references currently
+use mutable upstream tags, so it does not establish pinned dependency closure
+or reproducible build inputs. Labels are assertions made by the build, not
+independently signed provenance. The job does not create an SBOM, sign an
+image, retain a distributable rollback image, inspect a VPS container or
+perform real provider tests. The JSON explicitly marks those unproven gates.
+The image record belongs to its exact integrated Development commit; it must
+not be paired with a different SHA or treated as live-deployment identity.
+
+**Acceptance sequence:** observe a green exact-head post-merge run and retain
+the JSON; independently fix/pin dependencies and generate signed provenance
+plus SBOM where required; create a controlled release line and rollback
+artifact; then compare an approved deployed image digest to the release
+artifact through private-ingress/security and restore drills. There is no
+promotion from these source/CI checks alone.
+
 ## Candidate convergence and Anchor blockers
 
 | Gate | Current decision and necessary evidence |
