@@ -110,6 +110,51 @@ class FreeProviderEgressGuardTests(unittest.TestCase):
                 asyncio.run(net.get_client(curl_options={1: 1}))
             factory.assert_not_called()
 
+    def test_guarded_transport_disables_http3_for_engine_and_request_overrides(self):
+        # Several engines enable HTTP/3 while the standard GoreeCloud profile
+        # enables HTTP/2.  QUIC/UDP must not be allowed around TCP egress ACLs.
+        for overrides in (
+            {'enable_http3': True},  # Engine/network configuration.
+            {'enable_http3': False},
+        ):
+            with self.subTest(overrides=overrides):
+                net = Network(
+                    enable_http=False,
+                    verify=True,
+                    enable_http2=True,
+                    provider_target_guard_required=True,
+                    **overrides,
+                )
+                client = Mock(is_closed=False)
+                with patch('searx.network.network.new_client', return_value=client) as factory:
+                    self.assertIs(client, asyncio.run(net.get_client(enable_http3=True)))
+                    self.assertIs(client, asyncio.run(net.get_client()))
+                factory.assert_called_once()
+                self.assertIs(factory.call_args.args[2], True)  # HTTP/2 enabled.
+                self.assertIs(factory.call_args.args[3], False)  # QUIC disabled.
+
+    def test_http3_request_override_cannot_select_quic_for_guarded_provider(self):
+        net = Network(
+            enable_http=False, verify=True, enable_http2=True,
+            provider_target_guard_required=True,
+        )
+        client = Mock(is_closed=False)
+        client.request = AsyncMock(return_value=SimpleNamespace(status_code=200))
+        with patch('searx.network.network.new_client', return_value=client) as factory:
+            response = asyncio.run(net.request(
+                'GET', 'https://search.example.org/',
+                enable_http3=True, raise_for_httperror=False,
+            ))
+        self.assertEqual(200, response.status_code)
+        self.assertIs(factory.call_args.args[3], False)
+        self.assertNotIn('enable_http3', client.request.call_args.kwargs)
+
+    def test_non_guarded_http3_opt_in_remains_unchanged(self):
+        net = Network(enable_http=False, verify=True, enable_http2=True)
+        with patch('searx.network.network.new_client', return_value=Mock(is_closed=False)) as factory:
+            asyncio.run(net.get_client(enable_http3=True))
+        self.assertIs(factory.call_args.args[3], True)
+
     def test_redirect_responses_never_trigger_automatic_next_hop(self):
         for status in (301, 302, 307, 308):
             with self.subTest(status=status):
