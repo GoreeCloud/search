@@ -25,6 +25,7 @@ os.environ["SEARXNG_SECRET"] = secrets.token_hex(32)
 
 from gc_ui_preview_offline import offline_preview_app  # noqa: E402
 from selenium import webdriver  # noqa: E402
+from selenium.common.exceptions import WebDriverException  # noqa: E402
 from selenium.webdriver.chrome.options import Options  # noqa: E402
 from selenium.webdriver.common.by import By  # noqa: E402
 from selenium.webdriver.common.keys import Keys  # noqa: E402
@@ -69,6 +70,16 @@ def post_synthetic_preview(driver, url: str) -> None:
     assert "?" not in driver.current_url
 
 
+def set_css_viewport(driver, width: int, height: int) -> None:
+    """Force real CSS pixels: headless Chrome may clamp outer windows below 500px."""
+    driver.set_window_size(width, height)
+    driver.execute_cdp_cmd("Emulation.setDeviceMetricsOverride", {
+        "width": width, "height": height, "deviceScaleFactor": 1, "mobile": False,
+    })
+    actual = driver.execute_script("return {width:innerWidth, height:innerHeight}")
+    assert actual == {"width": width, "height": height}, (width, height, actual)
+
+
 def assert_preview_geometry(driver, label: str) -> None:
     geometry = driver.execute_script("""
       const panel = document.querySelector('.goreecloud-preview');
@@ -101,6 +112,104 @@ def assert_preview_geometry(driver, label: str) -> None:
     assert len(geometry["buttonHeights"]) == 2, (label, geometry)
     assert all(height >= 44 for height in geometry["buttonHeights"]), (label, geometry)
     assert geometry["overflow"] <= 2, (label, geometry)
+
+
+def pointer_geometry(driver, selector: str) -> dict:
+    """Diagnose scroll containers and the actual browser hit target, without query data."""
+    return driver.execute_script("""
+      const target = document.querySelector(arguments[0]);
+      const rect = target.getBoundingClientRect();
+      const centerX = (rect.left + rect.right) / 2;
+      const centerY = (rect.top + rect.bottom) / 2;
+      const hit = document.elementFromPoint(centerX, centerY);
+      const scroller = document.scrollingElement;
+      const ancestors = [];
+      for (let node = target; node && ancestors.length < 7; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        ancestors.push({tag:node.tagName, id:node.id, position:style.position,
+          overflowY:style.overflowY, height:style.height,
+          scrollTop:node.scrollTop, scrollHeight:node.scrollHeight,
+          clientHeight:node.clientHeight});
+      }
+      return {
+        innerWidth:window.innerWidth, innerHeight:window.innerHeight,
+        scrollY:window.scrollY, scrollingElement:scroller?.tagName,
+        scrollTop:scroller?.scrollTop, scrollHeight:scroller?.scrollHeight,
+        clientHeight:scroller?.clientHeight,
+        htmlOverflow:getComputedStyle(document.documentElement).overflowY,
+        htmlScrollBehavior:getComputedStyle(document.documentElement).scrollBehavior,
+        htmlHeight:getComputedStyle(document.documentElement).height,
+        bodyOverflow:getComputedStyle(document.body).overflowY,
+        bodyHeight:getComputedStyle(document.body).height,
+        ancestors,
+        targetTop:rect.top, targetBottom:rect.bottom,
+        targetHeight:rect.height, centerX, centerY,
+        hitTag:hit?.tagName, hitId:hit?.id,
+        hitClass:typeof hit?.className === 'string' ? hit.className : '',
+        hitWithinTarget:hit === target || target.contains(hit),
+      };
+    """, selector)
+
+
+def assert_pointer_hit(driver, selector: str, label: str) -> dict:
+    geometry = pointer_geometry(driver, selector)
+    assert geometry["scrollHeight"] > geometry["clientHeight"] + 5, (label, geometry)
+    assert geometry["htmlScrollBehavior"] == "auto", (label, geometry)
+    visible = (0 <= geometry["centerX"] < geometry["innerWidth"] and
+               0 <= geometry["centerY"] < geometry["innerHeight"] and
+               geometry["hitWithinTarget"])
+    if not visible:
+        # Diagnostic only: do not turn a failed click into a JS-activated pass.
+        # Test whether root scrolling can move at all, then fail with both probes.
+        scroll_to_probe = driver.execute_script("""
+          const root = document.scrollingElement;
+          const before = {scrollY:scrollY, scrollTop:root.scrollTop};
+          const reachable = Math.max(0, root.scrollHeight - root.clientHeight);
+          window.scrollTo({top:Math.min(reachable,root.scrollTop + 240),behavior:'instant'});
+          return {before, after:{scrollY:scrollY,scrollTop:root.scrollTop},reachable};
+        """)
+        raise AssertionError((label, geometry, {"scrollToProbe": scroll_to_probe}))
+    return geometry
+
+
+def click_native_pointer(driver, selector: str, label: str, *, navigates: bool = False) -> None:
+    """Scroll to an actual hit target, then click with WebDriver's native pointer."""
+    target = driver.find_element(By.CSS_SELECTOR, selector)
+    before = pointer_geometry(driver, selector)
+    # Chrome's implicit WebDriver scrolling can stop almost immediately when
+    # the document root has an auto-height scrollport. Verify usable scrolling
+    # and actual hit-testing before sending any pointer activation.
+    driver.execute_script("arguments[0].scrollIntoView({block:'center',inline:'nearest'})", target)
+    scrolled = assert_pointer_hit(driver, selector, label)
+    if before["targetTop"] >= before["innerHeight"]:
+        assert scrolled["scrollTop"] > before["scrollTop"], (label, before, scrolled)
+    try:
+        target.click()
+    except WebDriverException as error:
+        after = pointer_geometry(driver, selector)
+        raise AssertionError(f"{label}: real pointer click failed: {before}; {after}") from error
+    if navigates:
+        # An actual POST replaces the document; the caller checks its results.
+        return
+    assert_pointer_hit(driver, selector, label)
+
+
+def tap_native_touch(driver, selector: str, label: str) -> None:
+    """Inject a trusted Chromium touch pointer at the hit-tested visible target."""
+    target = driver.find_element(By.CSS_SELECTOR, selector)
+    driver.execute_script("arguments[0].scrollIntoView({block:'center',inline:'nearest'})", target)
+    geometry = assert_pointer_hit(driver, selector, label)
+    point = {"x": round(geometry["centerX"]), "y": round(geometry["centerY"]), "id": 1}
+    driver.execute_cdp_cmd("Emulation.setTouchEmulationEnabled", {"enabled": True, "maxTouchPoints": 1})
+    try:
+        driver.execute_cdp_cmd("Input.dispatchTouchEvent", {
+            "type": "touchStart", "touchPoints": [point],
+        })
+        driver.execute_cdp_cmd("Input.dispatchTouchEvent", {
+            "type": "touchEnd", "touchPoints": [],
+        })
+    finally:
+        driver.execute_cdp_cmd("Emulation.setTouchEmulationEnabled", {"enabled": False})
 
 
 def assert_keyboard_and_tokens(driver) -> None:
@@ -192,36 +301,44 @@ def main() -> None:
             for width, height, label in (
                 (1440, 900, "desktop"), (390, 844, "phone"), (320, 760, "small-phone"),
             ):
-                driver.set_window_size(width, height)
+                set_css_viewport(driver, width, height)
                 post_synthetic_preview(driver, url)
-                # Native details are deliberately closed before the first keyboard interaction.
-                driver.find_element(By.CSS_SELECTOR, ".goreecloud-preview-single summary").send_keys(Keys.ENTER)
+                # Details must be reachable by real pointer input below the initial fold.
+                assert driver.find_element(By.CSS_SELECTOR, "details.goreecloud-preview-single").get_attribute("open") is None
+                if label == "small-phone":
+                    tap_native_touch(driver, ".goreecloud-preview-single summary", label)
+                else:
+                    click_native_pointer(driver, ".goreecloud-preview-single summary", label)
+                assert driver.find_element(By.CSS_SELECTOR, "details.goreecloud-preview-single").get_attribute("open") is not None
                 assert_preview_geometry(driver, label)
+            set_css_viewport(driver, 1440, 900)
             post_synthetic_preview(driver, url)
             assert_keyboard_and_tokens(driver)
             assert_forced_colors(driver)
             network.assert_not_called()
-            print("PASS private preflight no-egress, GC UI tokens, 320/390/1440 geometry, keyboard, forced colors")
+            print("PASS private preflight no-egress, GC UI tokens, 320/390/1440 pointer/touch, keyboard, forced colors")
 
         # Actual provider-choice submission, still without a provider call.
         with patch("searx.search.SearchWithPlugins", SyntheticSearch):
-            # Submit from a fresh desktop page: the responsive-width assertions
-            # above intentionally leave Chrome at 320px with a long page scroll.
-            driver.set_window_size(1440, 900)
-            post_synthetic_preview(driver, url)
-            summary = driver.find_element(By.CSS_SELECTOR, ".goreecloud-preview-single summary")
-            summary.send_keys(Keys.ENTER)
-            assert driver.find_element(By.CSS_SELECTOR, "details.goreecloud-preview-single").get_attribute("open") is not None
-            selected = driver.find_element(By.ID, "goreecloud-provider-choice")
-            first_provider = selected.find_elements(By.CSS_SELECTOR, 'option[value]:not([value=""])')[0]
-            Select(selected).select_by_value(first_provider.get_attribute("value"))
-            submit = driver.find_element(By.CSS_SELECTOR, ".goreecloud-preview-single button[type=submit]")
-            driver.execute_script("arguments[0].scrollIntoView({block: 'center'})", submit)
-            submit.send_keys(Keys.ENTER)
-            WebDriverWait(driver, 12).until(lambda browser: browser.current_url.endswith("/search"))
-            assert "?" not in driver.current_url
-            assert driver.find_elements(By.CSS_SELECTOR, ".goreecloud-source-diagnostics")
-        print("PASS native single-provider POST to isolated synthetic Search results; no query URL")
+            for width, height, label in ((1440, 900, "desktop"), (320, 760, "small-phone")):
+                set_css_viewport(driver, width, height)
+                post_synthetic_preview(driver, url)
+                if label == "small-phone":
+                    tap_native_touch(driver, ".goreecloud-preview-single summary", label)
+                else:
+                    click_native_pointer(driver, ".goreecloud-preview-single summary", label)
+                assert driver.find_element(By.CSS_SELECTOR, "details.goreecloud-preview-single").get_attribute("open") is not None
+                selected = driver.find_element(By.ID, "goreecloud-provider-choice")
+                first_provider = selected.find_elements(By.CSS_SELECTOR, 'option[value]:not([value=""])')[0]
+                Select(selected).select_by_value(first_provider.get_attribute("value"))
+                if label == "small-phone":
+                    tap_native_touch(driver, ".goreecloud-preview-single button[type=submit]", label)
+                else:
+                    click_native_pointer(driver, ".goreecloud-preview-single button[type=submit]", label, navigates=True)
+                WebDriverWait(driver, 12).until(lambda browser: browser.current_url.endswith("/search"))
+                assert "?" not in driver.current_url
+                assert driver.find_elements(By.CSS_SELECTOR, ".goreecloud-source-diagnostics")
+        print("PASS real pointer/touch native single-provider POST at 320/1440; no query URL")
     finally:
         if driver is not None:
             driver.quit()

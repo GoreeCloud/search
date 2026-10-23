@@ -13,6 +13,7 @@ from gc_ui_preview_offline import offline_preview_app
 
 ROOT = Path(__file__).resolve().parents[2]
 CSS = ROOT / "searx/static/themes/simple/goreecloud-search.css"
+LAYOUT_CSS = ROOT / "searx/static/themes/simple/goreecloud-mockup.css"
 FOUNDATIONS = ROOT / "searx/static/themes/simple/gc-ui/css/gc.v1.generated.css"
 BROWSER = ROOT / "tests/goreecloud/browser_preview_smoke.py"
 GC = 'html[data-gc-consumer="goreecloud-search"]'
@@ -132,14 +133,26 @@ class GCUISearchPreviewTests(unittest.TestCase):
                 self.assertNotIn("Location", result.headers)
                 result.close()
 
-    def test_browser_regression_covers_native_keyboard_phone_and_forced_colors(self):
+    def test_browser_regression_covers_real_pointer_touch_keyboard_and_forced_colors(self):
         browser = BROWSER.read_text(encoding="utf-8")
         for evidence in (
             "Keys.ENTER", "Keys.TAB", "matchMedia", "setEmulatedMedia",
             "getBoundingClientRect", "--gc-v1-color-primary",
             "320, 760", "390, 844", "1440, 900", "network.assert_not_called()",
+            "elementFromPoint", "scrollingElement", "target.click()",
+            "Input.dispatchTouchEvent", "hitWithinTarget", "WebDriverWait",
         ):
             self.assertIn(evidence, browser)
+
+    def test_private_preview_root_scrollport_stays_viewport_sized(self):
+        css = LAYOUT_CSS.read_text(encoding="utf-8")
+        preview_root = css.split(
+            "html[data-glaze-consumer]:has(> body.goreecloud_preview_endpoint) {", 1
+        )[1].split("}", 1)[0]
+        self.assertIn("overflow-y: auto !important", preview_root)
+        self.assertIn("scroll-behavior: auto !important", preview_root)
+        self.assertIn("height: 100% !important", preview_root)
+        self.assertNotIn("height: auto !important", preview_root)
 
     def test_gc_ui_debt_goes_down_without_certifying_full_acceptance(self):
         report = audit(ROOT, ROOT / "docs/goreecloud/gc-ui-legacy-baseline.json")
