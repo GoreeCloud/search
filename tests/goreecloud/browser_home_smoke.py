@@ -718,6 +718,29 @@ def main() -> None:
             labels = [button.text.strip() for button in driver.find_elements(
                 By.CSS_SELECTOR, '.goreecloud-category-tab')]
             assert labels == ['Web', 'Images', 'Videos', 'News'], labels
+            # Verify the actual computed GC UI category touch geometry and
+            # native POST forms before following a category transition.
+            category_contract = driver.execute_script("""
+                const root=document.documentElement;
+                const nav=document.querySelector('nav.goreecloud-category-tabs');
+                const buttons=[...nav.querySelectorAll('form button.goreecloud-category-tab')];
+                const current=buttons.filter(b=>b.getAttribute('aria-current')==='page');
+                const tokens=getComputedStyle(root);
+                return {
+                    gcConsumer:root.dataset.gcConsumer,
+                    comfortableTarget:tokens.getPropertyValue('--gc-v1-foundation-target-comfortable').trim(),
+                    categoryTargetHeights:buttons.map(b=>b.getBoundingClientRect().height),
+                    postOnly:[...nav.querySelectorAll('form')].every(f=>f.method==='post' &&
+                        f.action.endsWith('/search') && !f.action.includes('?')),
+                    currentCount:current.length,
+                    disabled:[...nav.querySelectorAll('[aria-disabled="true"]')].length
+                };
+            """)
+            assert category_contract['gcConsumer'] == 'goreecloud-search', category_contract
+            assert category_contract['comfortableTarget'] == '44px', category_contract
+            assert min(category_contract['categoryTargetHeights']) >= 44, category_contract
+            assert category_contract['postOnly'], category_contract
+            assert category_contract['currentCount'] == 1, category_contract
             driver.save_screenshot(str(artifacts / 'desktop-category-tabs.png'))
             driver.find_element(By.XPATH,
                 "//nav[contains(@class,'goreecloud-category-tabs')]//button[normalize-space()='Images']").click()
@@ -736,6 +759,11 @@ def main() -> None:
             overflow = driver.execute_script(
                 'return document.documentElement.scrollWidth - document.documentElement.clientWidth')
             assert overflow <= 1, f'Category tabs overflow phone width: {overflow}'
+            mobile_heights = driver.execute_script("""
+                return [...document.querySelectorAll('.goreecloud-category-tab')]
+                    .map(tab=>tab.getBoundingClientRect().height)
+            """)
+            assert min(mobile_heights) >= 44, mobile_heights
         print('PASS category tabs Web/Images/Videos/News, private POST navigation and phone overflow')
 
 
