@@ -338,15 +338,20 @@ html[data-gc-consumer="goreecloud-search"] .goreecloud-preview-single select {
   }
 }
 @media (forced-colors: active) {
-  html[data-gc-consumer="goreecloud-search"] .goreecloud-preview {
+  html[data-gc-consumer="goreecloud-search"] .goreecloud-preview,
+  html[data-gc-consumer="goreecloud-search"][data-gc-mode] .goreecloud-preview {
     background: Canvas; color: CanvasText; border-color: CanvasText; box-shadow: none;
   }
-  html[data-gc-consumer="goreecloud-search"] :is(.goreecloud-preview-trigger, .goreecloud-preview-continue, .goreecloud-preview-single select) {
+  html[data-gc-consumer="goreecloud-search"] :is(.goreecloud-preview-trigger, .goreecloud-preview-continue, .goreecloud-preview-single select),
+  html[data-gc-consumer="goreecloud-search"][data-gc-mode] :is(.goreecloud-preview-trigger, .goreecloud-preview-continue, .goreecloud-preview-single select) {
     background: ButtonFace; color: ButtonText; border-color: ButtonText;
   }
-  html[data-gc-consumer="goreecloud-search"] .goreecloud-preview-single { border-color: CanvasText; }
+  html[data-gc-consumer="goreecloud-search"] .goreecloud-preview-single,
+  html[data-gc-consumer="goreecloud-search"][data-gc-mode] .goreecloud-preview-single { border-color: CanvasText; }
   html[data-gc-consumer="goreecloud-search"] .goreecloud-preview :is(summary, select, .goreecloud-preview-continue):focus-visible,
-  html[data-gc-consumer="goreecloud-search"] .goreecloud-preview-trigger:focus-visible {
+  html[data-gc-consumer="goreecloud-search"] .goreecloud-preview-trigger:focus-visible,
+  html[data-gc-consumer="goreecloud-search"][data-gc-mode] .goreecloud-preview :is(summary, select, .goreecloud-preview-continue):focus-visible,
+  html[data-gc-consumer="goreecloud-search"][data-gc-mode] .goreecloud-preview-trigger:focus-visible {
     outline-color: Highlight;
   }
 }
