@@ -277,7 +277,8 @@ class OnlineProcessor(EngineProcessor):
         except ssl.SSLError as e:
             # requests timeout (connect or read)
             self.handle_exception(result_container, e, suspend=True)
-            self.logger.debug("SSLError {}, verify={}".format(e, searx.network.get_network(self.engine.name).verify))
+            # SSL exception text can contain the upstream URL and query.
+            self.logger.debug("HTTPS TLS failure (type=%s)", type(e).__name__)
         except (Timeout, asyncio.TimeoutError) as e:
             # requests timeout (connect or read)
             self.handle_exception(result_container, e, suspend=True)
@@ -302,7 +303,9 @@ class OnlineProcessor(EngineProcessor):
             SearxEngineAccessDeniedException,
         ) as e:
             self.handle_exception(result_container, e, suspend=True)
-            self.logger.debug(e.message)
+            # Adapter-supplied failure messages must never enter query logs.
+            self.logger.debug("Provider denied request (type=%s)", type(e).__name__)
         except Exception as e:  # pylint: disable=broad-except
             self.handle_exception(result_container, e)
-            self.logger.debug("exception : {0}".format(e))
+            # Parser exceptions may embed response fragments or search terms.
+            self.logger.debug("Provider parsing/processing failure (type=%s)", type(e).__name__)

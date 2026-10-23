@@ -122,6 +122,18 @@ still rebind to private IPs, so a verified network egress firewall remains
 mandatory; syntax checks cannot prove DNS safety. No provider queries are
 authorized or triggered by these source-only changes.
 
+Further source-only negative tests now enforce the complete private JSON
+selection/representation metadata on **empty results and upstream failures**,
+not only successful result lists. Missing or contradictory selection counts,
+proof disclaimers or zero-result representation labels return bounded invalid
+contract states, never `no_results` or `provider_error` evidence. The online
+engine processor also omits raw SSL, access-denial and parser exception text
+from its debug messages: these strings may embed upstream URLs, response
+fragments or search terms. Existing exception classes and suspension behavior
+are retained; this redaction is not a claim that all possible server logs or
+metrics are sanitized. These checks exercised only synthetic local failures,
+with no real provider requests or changes to the isolated VPS.
+
 ## Next release acceptance gates
 
 - Confirm a sustainable provider access path that preserves GoreeCloud's

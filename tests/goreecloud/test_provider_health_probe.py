@@ -13,6 +13,18 @@ mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 
 
+def source_metadata(engine, count=0):
+    represented = {engine: count} if count else {}
+    return {
+        'selected_engines': [engine],
+        'selected_engine_count': 1,
+        'selection_not_contact_confirmation': True,
+        'represented_engines': list(represented),
+        'represented_result_counts': represented,
+        'representation_not_contact_confirmation': True,
+    }
+
+
 class ProviderProbeContractTests(unittest.TestCase):
     def test_remote_urls_and_query_urls_are_rejected(self):
         urls = (
@@ -35,10 +47,7 @@ class ProviderProbeContractTests(unittest.TestCase):
         def fake_transport(req, timeout):
             seen.append(req)
             return BytesIO(json.dumps({
-                'goreecloud': {'selected_engines': ['brave'],
-                               'represented_engines': ['brave'],
-                               'represented_result_counts': {'brave': 1},
-                               'representation_not_contact_confirmation': True},
+                'goreecloud': source_metadata('brave', count=1),
                 'results': [{'url': 'https://example.org', 'engine': 'brave', 'engines': ['brave']}],
                 'unresponsive_engines': [],
             }).encode())
@@ -53,7 +62,7 @@ class ProviderProbeContractTests(unittest.TestCase):
         def fake_transport(req, timeout):
             captured.append(req)
             return BytesIO(json.dumps({
-                'goreecloud': {'selected_engines': ['qwant']},
+                'goreecloud': source_metadata('qwant'),
                 'results': [],
                 'unresponsive_engines': [['qwant', 'blocked']],
             }).encode())
@@ -81,12 +90,7 @@ class ProviderProbeContractTests(unittest.TestCase):
             'brave', 'http://localhost:8888', transport=fake_transport)['state'])
 
     def test_results_require_selected_engine_and_public_safe_link(self):
-        good_meta = {
-            'selected_engines': ['brave'],
-            'represented_engines': ['brave'],
-            'represented_result_counts': {'brave': 1},
-            'representation_not_contact_confirmation': True,
-        }
+        good_meta = source_metadata('brave', count=1)
         cases = (
             ({'url': 'https://example.org', 'engine': 'google', 'engines': ['google']},
              'invalid_result_attribution'),
@@ -113,16 +117,61 @@ class ProviderProbeContractTests(unittest.TestCase):
     def test_mismatched_representation_count_cannot_report_success(self):
         def fake_transport(req, timeout):
             return BytesIO(json.dumps({
-                'goreecloud': {'selected_engines': ['brave'],
-                               'represented_engines': ['brave'],
-                               'represented_result_counts': {'brave': 2},
-                               'representation_not_contact_confirmation': True},
+                'goreecloud': {**source_metadata('brave', count=1),
+                               'represented_result_counts': {'brave': 2}},
                 'results': [{'url': 'https://example.org',
                              'engine': 'brave', 'engines': ['brave']}],
                 'unresponsive_engines': [],
             }).encode())
         self.assertEqual('invalid_representation_contract', mod.probe(
             'brave', 'http://127.0.0.1:8888', transport=fake_transport)['state'])
+
+    def test_empty_results_require_empty_representation_even_on_provider_error(self):
+        for errors, expected in (([], 'no_results'),
+                                 ([['brave', 'TimeoutException']], 'provider_error')):
+            def transport(document):
+                return lambda req, timeout: BytesIO(json.dumps(document).encode())
+
+            good = {
+                'goreecloud': source_metadata('brave'),
+                'results': [], 'unresponsive_engines': errors,
+            }
+            with self.subTest(errors=errors):
+                self.assertEqual(expected, mod.probe('brave', 'http://localhost:8888',
+                                                     transport=transport(good))['state'])
+                for representation in (
+                    {'represented_engines': ['brave']},
+                    {'represented_result_counts': {'brave': 1}},
+                    {'representation_not_contact_confirmation': False},
+                    {'represented_engines': None},
+                ):
+                    forged = {**good, 'goreecloud': {**good['goreecloud'], **representation}}
+                    self.assertEqual('invalid_representation_contract', mod.probe(
+                        'brave', 'http://localhost:8888', transport=transport(forged))['state'])
+
+    def test_selected_source_metadata_cannot_omit_or_forge_selection_proof(self):
+        good = source_metadata('brave', count=1)
+        for forged_field in (
+            {'selected_engine_count': 0},
+            {'selected_engine_count': True},
+            {'selected_engine_count': '1'},
+            {'selected_engine_count': None},
+            {'selection_not_contact_confirmation': False},
+            {'selection_not_contact_confirmation': None},
+        ):
+            def fake_transport(req, timeout):
+                return BytesIO(json.dumps({
+                    'goreecloud': {**good, **forged_field},
+                    'results': [{'url': 'https://public.example.org',
+                                 'engine': 'brave', 'engines': ['brave']}],
+                    'unresponsive_engines': [],
+                }).encode())
+
+            with self.subTest(forged=forged_field):
+                output = mod.probe('brave', 'http://localhost:8888',
+                                   transport=fake_transport)
+                self.assertEqual('invalid_response_contract', output['state'])
+                self.assertNotIn('https://', str(output))
 
     def test_nonpublic_hostname_aliases_and_numeric_ipv4_are_rejected(self):
         forbidden = (
@@ -201,10 +250,7 @@ class ProviderProbeContractTests(unittest.TestCase):
     def test_mixed_results_and_errors_are_reported_as_partial_not_success(self):
         def fake_transport(req, timeout):
             return BytesIO(json.dumps({
-                'goreecloud': {'selected_engines': ['startpage'],
-                               'represented_engines': ['startpage'],
-                               'represented_result_counts': {'startpage': 1},
-                               'representation_not_contact_confirmation': True},
+                'goreecloud': source_metadata('startpage', count=1),
                 'results': [{'url': 'https://public.example.org',
                              'engine': 'startpage', 'engines': ['startpage']}],
                 'unresponsive_engines': [['startpage', 'TimeoutException']],
@@ -234,7 +280,7 @@ class ProviderProbeContractTests(unittest.TestCase):
             with self.subTest(category=category):
                 def fake_transport(req, timeout):
                     return BytesIO(json.dumps({
-                        'goreecloud': {'selected_engines': ['bing']},
+                        'goreecloud': source_metadata('bing'),
                         'results': [],
                         'unresponsive_engines': [['bing', message]],
                     }).encode())
@@ -255,7 +301,7 @@ class ProviderProbeContractTests(unittest.TestCase):
             with self.subTest(errors=errors):
                 def fake_transport(req, timeout):
                     return BytesIO(json.dumps({
-                        'goreecloud': {'selected_engines': ['brave']},
+                        'goreecloud': source_metadata('brave'),
                         'results': [],
                         'unresponsive_engines': errors,
                     }).encode())
@@ -284,10 +330,7 @@ class ProviderProbeContractTests(unittest.TestCase):
                     def respond(req, timeout):
                         captured.append(req)
                         return BytesIO(json.dumps({
-                            'goreecloud': {'selected_engines': [engine],
-                                           'represented_engines': [engine],
-                                           'represented_result_counts': {engine: 1},
-                                           'representation_not_contact_confirmation': True},
+                            'goreecloud': source_metadata(engine, count=1),
                             'results': [{'url': 'https://public.example.org',
                                          'engine': engine, 'engines': [engine]}],
                             'unresponsive_engines': [],
@@ -321,8 +364,8 @@ class ProviderProbeContractTests(unittest.TestCase):
                                      (True, 'invalid_error_contract')):
             def respond(req, timeout):
                 return BytesIO(json.dumps({
-                    'goreecloud': {'selected_engines':
-                                   ['qwant images'] if error_case else ['qwant']},
+                    'goreecloud': (source_metadata('qwant images') if error_case else
+                                   source_metadata('qwant')),
                     'results': [],
                     'unresponsive_engines': [['qwant', 'timeout']] if error_case else [],
                 }).encode())
