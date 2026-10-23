@@ -178,9 +178,16 @@ class ResultContainer:
                 self.main_results_map[result_hash] = result
                 return
 
+            # A Web provider may return the same URL more than once.  Merging
+            # its text is useful, but each Web source earns just one ranking
+            # vote for that URL.  Preserve other result types' scoring policy.
+            # Check before merging, which adds the provider to ``engines``.
+            new_vote = result.template != "default.html" or (
+                bool(result.engine) and result.engine not in merged.engines
+            )
             merge_two_main_results(merged, result)
-            # add the new position
-            merged.positions.append(position)
+            if new_vote:
+                merged.positions.append(position)
 
     def close(self):
         self._closed = True
