@@ -1,10 +1,13 @@
 """Offline OS package observation and exact local candidate evidence checks."""
 
 from copy import deepcopy
+from contextlib import redirect_stderr
+from io import StringIO
 from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -15,6 +18,7 @@ from runtime_os_inventory import (
 )
 from verify_runtime_os_inventory import OSPackageEvidenceError, verify
 from verify_runtime_python_inventory import verify as verify_python
+import runtime_os_inventory
 
 
 SHA = "a" * 40
@@ -50,6 +54,15 @@ OS = {
 
 
 class RuntimeOSInventoryTests(unittest.TestCase):
+    def test_runner_reports_bounded_code_owned_reason_without_package_details(self):
+        error_stream = StringIO()
+        with patch.object(runtime_os_inventory, "collect", side_effect=InventoryError(
+            "expected exactly one supported OS package database"
+        )), redirect_stderr(error_stream):
+            self.assertEqual(2, runtime_os_inventory.main())
+        self.assertEqual("OS_PACKAGE_INVENTORY_BLOCKED: expected exactly one supported OS "
+                         "package database\n", error_stream.getvalue())
+
     def test_realistic_alpine_package_database_is_sorted(self):
         raw = ("P:ca-certificates-bundle\nV:20241010-r0\nA:noarch\nT:certs\n\n"
                "P:alpine-baselayout\nV:3.7.0-r0\nA:x86_64\nC:checksum\n\n")
