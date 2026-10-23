@@ -46,8 +46,16 @@ class GeneratorParser(HTMLParser):
         super().__init__()
         self.values = []
         self.ambiguous = False
+        self.template_depth = 0
 
     def handle_starttag(self, tag, attrs):
+        # Browser-inert template markup must not attest the running image.
+        # The meta tag may be present in an unrendered component example.
+        if tag == 'template':
+            self.template_depth += 1
+            return
+        if self.template_depth:
+            return
         if tag == 'meta':
             names = [key for key, _ in attrs]
             if names.count('name') > 1 or names.count('content') > 1:
@@ -58,6 +66,10 @@ class GeneratorParser(HTMLParser):
             if isinstance(name, str) and name.lower() == 'generator':
                 content = attributes.get('content')
                 self.values.append(content if isinstance(content, str) else '')
+
+    def handle_endtag(self, tag):
+        if tag == 'template' and self.template_depth:
+            self.template_depth -= 1
 
     def matches(self, expected_revision):
         if self.ambiguous or len(self.values) != 1:

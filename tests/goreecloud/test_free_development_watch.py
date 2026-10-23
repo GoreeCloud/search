@@ -170,6 +170,32 @@ class FreeDevelopmentWatchTests(unittest.TestCase):
                 self.assertFalse(report['checks'][2]['passed'])
                 self.assertEqual(0, report['provider_requests_attempted'])
 
+    def test_inert_template_generator_cannot_attest_image_revision(self):
+        valid_revision = 'searxng/2026.10.20+40caeb47a1f'
+        for markup in (
+            '<template><meta name="generator" content="'+valid_revision+'"></template>',
+            '<template><template><meta name="generator" content="'+valid_revision
+            +'"></template></template>',
+        ):
+            with self.subTest(markup=markup):
+                code, report, _ = execute(
+                    ['--expected-revision', REV, '--check-sources'],
+                    FakeOpener(modified={'/': FakeResponse(markup)}),
+                )
+                self.assertEqual(2, code)
+                self.assertFalse(report['checks'][1]['passed'])
+                self.assertEqual(0, report['provider_requests_attempted'])
+        # A real head meta remains authoritative even when sample component
+        # markup contains a conflicting, non-rendered generator tag.
+        markup = ('<head><meta name="generator" content="'+valid_revision+'"></head>'
+                  '<template><meta name="generator" content="stale"></template>')
+        code, report, _ = execute(
+            ['--expected-revision', REV],
+            FakeOpener(modified={'/': FakeResponse(markup)}),
+        )
+        self.assertEqual(0, code)
+        self.assertTrue(report['checks'][1]['passed'])
+
     def test_disabled_source_controls_are_not_usable_preferences(self):
         for html in (
             '<input type="radio" name="goreecloud_sources" value="working" checked disabled>'
