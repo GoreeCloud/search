@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Observe OS package-manager records from an isolated local image.
+"""Observe OS package-manager records or an explicitly stripped Void runtime.
 
-Only preselected OS metadata and package database paths are read. There is no
-network, subprocess, package installation, application import or token access.
-This inventory omits manually copied binaries and is NOT a complete SBOM.
+Only preselected OS metadata and package database paths are inspected. There
+is no network, subprocess, installation, application import or token access.
+The Void SearXNG base deliberately removes its XBPS registry; that observation
+is NOT an inventory of installed packages or a complete SBOM.
 """
 
 from __future__ import annotations
@@ -108,7 +109,7 @@ def parse_apk_installed(contents: str) -> list[dict[str, str]]:
     return _canonical(records)
 
 
-def parse_os_release(contents: str) -> dict[str, str]:
+def parse_os_release(contents: str) -> dict[str, str | None]:
     fields: dict[str, str] = {}
     for line in contents.splitlines():
         if not line or line.startswith("#"):
@@ -122,10 +123,34 @@ def parse_os_release(contents: str) -> dict[str, str]:
             if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
                 value = value[1:-1]
             fields[key] = value
-    if (not RELEASE_FIELD.fullmatch(fields.get("ID", ""))
-            or not RELEASE_VERSION.fullmatch(fields.get("VERSION_ID", ""))):
+    if not RELEASE_FIELD.fullmatch(fields.get("ID", "")):
         raise InventoryError("OS release identity missing or invalid")
-    return {"id": fields["ID"], "version_id": fields["VERSION_ID"]}
+    # Rolling-release Void legitimately omits VERSION_ID. No other OS may omit
+    # it, and only that exact absence may enter the stripped-registry branch.
+    version_id = fields.get("VERSION_ID")
+    if version_id is None:
+        if fields["ID"] != "void":
+            raise InventoryError("OS release identity missing or invalid")
+    elif not RELEASE_VERSION.fullmatch(version_id):
+        raise InventoryError("OS release identity missing or invalid")
+    return {"id": fields["ID"], "version_id": version_id}
+
+
+def _xbps_registry_absent(root: Path) -> bool:
+    """Check for XBPS registration files, including unexpected xbps* entries.
+
+    The known SearXNG Void runtime explicitly removes /var/db, but avoid
+    silently misclassifying future images that retain XBPS state.
+    """
+    database_root = root / "var/db"
+    if database_root.is_symlink() or (database_root.exists() and not database_root.is_dir()):
+        raise InventoryError("Void package registry path is ambiguous")
+    if not database_root.exists():
+        return True
+    try:
+        return not any(entry.name.lower().startswith("xbps") for entry in database_root.iterdir())
+    except OSError:
+        raise InventoryError("Void package registry path is unreadable") from None
 
 
 def collect(root: Path = Path("/")) -> dict:
@@ -133,6 +158,20 @@ def collect(root: Path = Path("/")) -> dict:
     dpkg = root / "var/lib/dpkg/status"
     apk = root / "lib/apk/db/installed"
     dpkg_exists, apk_exists = dpkg.is_file(), apk.is_file()
+    if os_release == {"id": "void", "version_id": None}:
+        if dpkg_exists or apk_exists or not _xbps_registry_absent(root):
+            raise InventoryError("Void image retains an unexpected package registry")
+        return {
+            "schema": "goreecloud.search.runtime-os-registry-unavailable.v1",
+            "os": sys.platform,
+            "machine": platform.machine(),
+            "release": os_release,
+            "package_manager": "xbps",
+            "package_inventory_status": "unavailable",
+            "reason": "runtime_xbps_package_registry_removed",
+        }
+    if os_release["id"] == "void":
+        raise InventoryError("unrecognized Void package registry state")
     if dpkg_exists == apk_exists:
         raise InventoryError("expected exactly one supported OS package database")
     manager = "dpkg" if dpkg_exists else "apk"
