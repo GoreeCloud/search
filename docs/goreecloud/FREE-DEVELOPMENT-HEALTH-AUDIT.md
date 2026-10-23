@@ -25,6 +25,8 @@ hostname:
 
 1. `/readyz` must return HTTP 200 with `READY`.
 2. The homepage must return HTTP 200 and identify the expected source build.
+   A generator tag inside an inert HTML `template` is ignored; sample markup
+   cannot certify the served image revision.
 3. `/preferences` must show the explicit, usable **Tested free sources**
    selection for a fresh browser, while retaining **All Sources**. Disabled
    fieldsets and inert template controls do not qualify as usable options.
