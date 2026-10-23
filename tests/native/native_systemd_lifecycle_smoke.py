@@ -282,7 +282,10 @@ def _cleanup_created_unit(unit: str, unit_path: Path) -> None:
         after_control = int(_show(unit, "ControlPID"))
         if after_state not in ("inactive", "failed") or after_main != 0 or after_control != 0:
             raise LifecycleBlocked("disposable unit still has unaccounted processes")
-    if load_state == "loaded":
+    # reset-failed is for a genuinely failed unit, not an already stopped,
+    # healthy transient unit. Some hosted systemd versions reject resetting
+    # an inactive unit with no recorded failure.
+    if load_state == "loaded" and after_state == "failed":
         with _stage("teardown-reset"):
             _run("systemctl", "reset-failed", unit)
     with _stage("teardown-unlink"):

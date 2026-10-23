@@ -157,6 +157,8 @@ class NativeSystemdLifecycleOfflineTests(unittest.TestCase):
             self.assertFalse(unit_path.exists())
             self.assertEqual(1, sum(call.args[:2] == ("systemctl", "stop")
                                     for call in runner.call_args_list))
+            self.assertFalse(any(call.args[:2] == ("systemctl", "reset-failed")
+                                 for call in runner.call_args_list))
 
     def test_unaccounted_process_prevents_unlink(self):
         state = {
