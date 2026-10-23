@@ -43,6 +43,8 @@ RELEASE_INPUTS = (
     "scripts/verify_runtime_python_inventory.py",
     "scripts/runtime_os_inventory.py",
     "scripts/verify_runtime_os_inventory.py",
+    "scripts/runtime_binary_hash_inventory.py",
+    "scripts/verify_runtime_binary_hash_inventory.py",
 )
 
 
