@@ -456,10 +456,22 @@ def main() -> None:
             assert not driver.find_elements(By.CSS_SELECTOR, '#main_preferences > a img.logo')
             assert len(driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')) == 9
             prefs_geom = driver.execute_script("""
-              return {width:document.documentElement.clientWidth,
+              const root = document.documentElement;
+              const radio = document.querySelector('#tab-ui');
+              const label = document.querySelector('#tab-label-ui');
+              const tabs = document.querySelector('#search_form > .tabs');
+              const token = getComputedStyle(root).getPropertyValue('--gc-v1-foundation-target-comfortable').trim();
+              return {consumer: root.getAttribute('data-gc-consumer'),
+                token, tabHeight: label.getBoundingClientRect().height,
+                tabRelation: label.control === radio && tabs.getAttribute('role') === 'tablist',
+                tabPanel: !!document.querySelector('#tab-content-ui[role="tabpanel"]'),
+                width:document.documentElement.clientWidth,
                 scroll:document.documentElement.scrollWidth,
                 title:document.querySelector('#main_preferences h1').getBoundingClientRect().width}
             """)
+            assert prefs_geom['consumer'] == 'goreecloud-search', (label, prefs_geom)
+            assert prefs_geom['token'] == '44px' and prefs_geom['tabHeight'] >= 44, (label, prefs_geom)
+            assert prefs_geom['tabRelation'] and prefs_geom['tabPanel'], (label, prefs_geom)
             assert prefs_geom['scroll'] <= prefs_geom['width'] + 1, (label, prefs_geom)
             if width == 320:
                 # The visible word 'Interface' must remain intact at 320px.
