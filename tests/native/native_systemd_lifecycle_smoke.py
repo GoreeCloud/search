@@ -11,6 +11,7 @@ system manager's start, crash-restart, stop and failure handling.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 from hashlib import sha256
 import http.client
 import json
@@ -47,6 +48,35 @@ SOURCE_EXEC = ("ExecStart=/usr/bin/python3 " + str(SOURCE_ARCHIVE) +
 
 class LifecycleBlocked(Exception):
     """The ephemeral system manager cannot safely qualify the candidate."""
+
+
+# The CI log is intentionally limited to these fixed, non-content categories.
+# Never print arbitrary subprocess output, exceptions, paths, source, or data.
+DIAGNOSTIC_STAGES = frozenset((
+    "host", "provenance", "fixture", "unit-render", "unit-create",
+    "unit-verify", "manager-reload", "unit-identity", "start", "readiness",
+    "query", "process-identity", "failure-injection", "restart", "stop",
+    "missing-index", "restore", "listener-closed", "teardown", "unknown",
+))
+
+
+@contextmanager
+def _stage(name: str):
+    """Collapse arbitrary errors to a stable, non-sensitive failure category."""
+    if name not in DIAGNOSTIC_STAGES:
+        raise AssertionError("diagnostic category must be allowlisted")
+    try:
+        yield
+    except (LifecycleBlocked, OSError, ValueError, KeyError, TypeError,
+            subprocess.TimeoutExpired):
+        raise LifecycleBlocked(name) from None
+
+
+def blocked_message(error: Exception) -> str:
+    """Output never includes exception text unless it is a fixed stage token."""
+    diagnostic = str(error)
+    stage = diagnostic if diagnostic in DIAGNOSTIC_STAGES else "unknown"
+    return f"NATIVE_SYSTEMD_LIFECYCLE_BLOCKED stage={stage}: no managed-service acceptance\n"
 
 
 def _run(*args: str, accepted: tuple[int, ...] = (0,), timeout: int = 20) -> str:
@@ -195,95 +225,115 @@ def _assert_unprivileged_process(pid: int, uid: int, gid: int) -> None:
 
 
 def exercise(archive: Path, expected_sha: str) -> None:
-    _require_ephemeral_host()
-    _validate_archive(archive, expected_sha)
-    template = UNIT_SOURCE.read_text(encoding="utf-8")
-    nobody = pwd.getpwnam("nobody").pw_uid
-    nogroup = grp.getgrnam("nogroup").gr_gid
+    with _stage("host"):
+        _require_ephemeral_host()
+    with _stage("provenance"):
+        _validate_archive(archive, expected_sha)
+    with _stage("fixture"):
+        template = UNIT_SOURCE.read_text(encoding="utf-8")
+        nobody = pwd.getpwnam("nobody").pw_uid
+        nogroup = grp.getgrnam("nogroup").gr_gid
     unit = f"goreecloud-native-ci-{secrets.token_hex(6)}.service"
     unit_path = UNIT_DIRECTORY / unit
     installed = False
     with tempfile.TemporaryDirectory(prefix="gc-search-native-ci-", dir=RUNTIME_DIRECTORY) as tmp:
-        directory = Path(tmp)
-        staged_bundle = directory / "search-native.pyz"
-        database = directory / "index.db"
-        shutil.copyfile(archive, staged_bundle)
-        with SearchIndex(database) as index:
-            index.add(url="https://example.org/native-fixture", title="Synthetic Native Fixture",
-                      body="Disposably managed by Linux systemd without upstream providers")
-        os.chown(directory, nobody, nogroup)
-        os.chmod(directory, 0o700)
-        for owned in (staged_bundle, database):
-            os.chown(owned, nobody, nogroup)
-            os.chmod(owned, 0o600)
-        port = _reserve_port()
-        unit_text = render_temporary_unit(template, directory, staged_bundle, database, port)
+        with _stage("fixture"):
+            directory = Path(tmp)
+            staged_bundle = directory / "search-native.pyz"
+            database = directory / "index.db"
+            shutil.copyfile(archive, staged_bundle)
+            with SearchIndex(database) as index:
+                index.add(url="https://example.org/native-fixture", title="Synthetic Native Fixture",
+                          body="Disposably managed by Linux systemd without upstream providers")
+            os.chown(directory, nobody, nogroup)
+            os.chmod(directory, 0o700)
+            for owned in (staged_bundle, database):
+                os.chown(owned, nobody, nogroup)
+                os.chmod(owned, 0o600)
+            port = _reserve_port()
+        with _stage("unit-render"):
+            unit_text = render_temporary_unit(template, directory, staged_bundle, database, port)
         try:
             # O_EXCL protects any preexisting unrelated unit even if a random
             # identifier unexpectedly collides. /run is volatile, not /etc.
-            descriptor = os.open(unit_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
-            installed = True
-            with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-                stream.write(unit_text)
-            _run("systemd-analyze", "verify", str(unit_path))
-            _run("systemctl", "daemon-reload")
-            if _show(unit, "FragmentPath") != str(unit_path):
-                raise LifecycleBlocked("systemd loaded a different native unit")
-            _run("systemctl", "start", unit)
-            first_pid = _wait_healthy(unit, port)
-            _assert_unprivileged_process(first_pid, nobody, nogroup)
-            status, body = _request(port, "POST", "/v1/search", b'{"query":"disposably"}')
-            if (status != 200 or json.loads(body).get("total_displayed") != 1):
-                raise LifecycleBlocked("systemd service did not return owned fixture search")
-            if _show(unit, "User") != "nobody" or _show(unit, "Restart") != "on-failure":
-                raise LifecycleBlocked("systemd did not apply the test identity or restart policy")
-            _run("systemctl", "kill", "--signal=SIGKILL", "--kill-whom=main", unit)
-            restarted_pid = _wait_healthy(unit, port, prior_pid=first_pid)
-            _assert_unprivileged_process(restarted_pid, nobody, nogroup)
-            _run("systemctl", "stop", unit)
-            if _show(unit, "ActiveState") != "inactive":
-                raise LifecycleBlocked("systemd did not cleanly stop the native service")
+            with _stage("unit-create"):
+                descriptor = os.open(unit_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+                installed = True
+                with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+                    stream.write(unit_text)
+            with _stage("unit-verify"):
+                _run("systemd-analyze", "verify", str(unit_path))
+            with _stage("manager-reload"):
+                _run("systemctl", "daemon-reload")
+            with _stage("unit-identity"):
+                if _show(unit, "FragmentPath") != str(unit_path):
+                    raise LifecycleBlocked("systemd loaded a different native unit")
+            with _stage("start"):
+                _run("systemctl", "start", unit)
+            with _stage("readiness"):
+                first_pid = _wait_healthy(unit, port)
+            with _stage("process-identity"):
+                _assert_unprivileged_process(first_pid, nobody, nogroup)
+            with _stage("query"):
+                status, body = _request(port, "POST", "/v1/search", b'{"query":"disposably"}')
+                if (status != 200 or json.loads(body).get("total_displayed") != 1):
+                    raise LifecycleBlocked("systemd service did not return owned fixture search")
+            with _stage("unit-identity"):
+                if _show(unit, "User") != "nobody" or _show(unit, "Restart") != "on-failure":
+                    raise LifecycleBlocked("systemd did not apply the test identity or restart policy")
+            with _stage("failure-injection"):
+                _run("systemctl", "kill", "--signal=SIGKILL", "--kill-whom=main", unit)
+            with _stage("restart"):
+                restarted_pid = _wait_healthy(unit, port, prior_pid=first_pid)
+                _assert_unprivileged_process(restarted_pid, nobody, nogroup)
+            with _stage("stop"):
+                _run("systemctl", "stop", unit)
+                if _show(unit, "ActiveState") != "inactive":
+                    raise LifecycleBlocked("systemd did not cleanly stop the native service")
 
             # A missing approved index MUST fail closed. This checks the
             # actual unit's ConditionPathExists, not an emulated error path.
-            absent_db = directory / "index-db-temporarily-absent"
-            database.rename(absent_db)
-            try:
-                _run("systemctl", "start", unit)
-                if (_show(unit, "ConditionResult") != "no"
-                        or _show(unit, "ActiveState") != "inactive"):
-                    raise LifecycleBlocked("missing index did not block OS-managed service")
-            finally:
-                absent_db.rename(database)
+            with _stage("missing-index"):
+                absent_db = directory / "index-db-temporarily-absent"
+                database.rename(absent_db)
+                try:
+                    _run("systemctl", "start", unit)
+                    if (_show(unit, "ConditionResult") != "no"
+                            or _show(unit, "ActiveState") != "inactive"):
+                        raise LifecycleBlocked("missing index did not block OS-managed service")
+                finally:
+                    absent_db.rename(database)
 
             # Restore a real fixture and show that OS management can resume.
-            _run("systemctl", "start", unit)
-            restored_pid = _wait_healthy(unit, port)
-            _assert_unprivileged_process(restored_pid, nobody, nogroup)
-            _run("systemctl", "stop", unit)
-            try:
-                _request(port, "GET", "/healthz")
-            except OSError:
-                pass
-            else:
-                raise LifecycleBlocked("stopped systemd service still accepts requests")
+            with _stage("restore"):
+                _run("systemctl", "start", unit)
+                restored_pid = _wait_healthy(unit, port)
+                _assert_unprivileged_process(restored_pid, nobody, nogroup)
+                _run("systemctl", "stop", unit)
+            with _stage("listener-closed"):
+                try:
+                    _request(port, "GET", "/healthz")
+                except OSError:
+                    pass
+                else:
+                    raise LifecycleBlocked("stopped systemd service still accepts requests")
         finally:
             if installed:
-                # Stop and confirm process exit before removing the unit. If
-                # normal stop fails, explicitly kill only this managed unit.
-                # Do not unlink a unit whose process cannot be accounted for.
-                try:
-                    _run("systemctl", "stop", unit)
-                except LifecycleBlocked:
-                    _run("systemctl", "kill", "--signal=SIGKILL",
-                         "--kill-whom=all", unit, accepted=(0, 1))
-                    _run("systemctl", "stop", unit)
-                if _show(unit, "ActiveState") not in ("inactive", "failed"):
-                    raise LifecycleBlocked("disposable unit could not be stopped safely")
-                _run("systemctl", "reset-failed", unit)
-                # Only this random O_EXCL-created unit can ever be removed.
-                unit_path.unlink()
-                _run("systemctl", "daemon-reload")
+                with _stage("teardown"):
+                    # Stop and confirm process exit before removing the unit.
+                    # Do not unlink a unit whose process is unaccounted for.
+                    try:
+                        _run("systemctl", "stop", unit)
+                    except LifecycleBlocked:
+                        _run("systemctl", "kill", "--signal=SIGKILL",
+                             "--kill-whom=all", unit, accepted=(0, 1))
+                        _run("systemctl", "stop", unit)
+                    if _show(unit, "ActiveState") not in ("inactive", "failed"):
+                        raise LifecycleBlocked("disposable unit could not be stopped safely")
+                    _run("systemctl", "reset-failed", unit)
+                    # Only this random O_EXCL-created unit can ever be removed.
+                    unit_path.unlink()
+                    _run("systemctl", "daemon-reload")
 
 
 def main() -> int:
@@ -293,8 +343,8 @@ def main() -> int:
     args = parser.parse_args()
     try:
         exercise(args.archive, args.expected_sha)
-    except (LifecycleBlocked, OSError, ValueError, KeyError, PermissionError):
-        parser.exit(2, "NATIVE_SYSTEMD_LIFECYCLE_BLOCKED: no managed-service acceptance\n")
+    except (LifecycleBlocked, OSError, ValueError, KeyError, PermissionError) as error:
+        parser.exit(2, blocked_message(error))
     print("NATIVE_SYSTEMD_DISPOSABLE_PASS: real ephemeral systemd start/restart/stop; "
           "no installation, update, rollback, production or Anchor acceptance")
     return 0

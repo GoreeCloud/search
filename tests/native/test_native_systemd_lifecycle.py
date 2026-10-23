@@ -12,10 +12,13 @@ import tempfile
 import unittest
 
 from native_systemd_lifecycle_smoke import (
+    DIAGNOSTIC_STAGES,
     LifecycleBlocked,
     UNIT_SOURCE,
+    _stage,
     _require_ephemeral_host,
     _validate_archive,
+    blocked_message,
     render_temporary_unit,
 )
 
@@ -86,6 +89,32 @@ class NativeSystemdLifecycleOfflineTests(unittest.TestCase):
                 _validate_archive(candidate, "a" * 40)
             with self.assertRaises(LifecycleBlocked):
                 _validate_archive(candidate, "not-a-commit")
+
+    def test_fixed_stage_diagnostic_excludes_arbitrary_exception_content(self):
+        secret = "do-not-leak:/private/path?query=confidential"
+        self.assertEqual("NATIVE_SYSTEMD_LIFECYCLE_BLOCKED stage=unknown: "
+                         "no managed-service acceptance\n",
+                         blocked_message(RuntimeError(secret)))
+        for stage in DIAGNOSTIC_STAGES:
+            with self.subTest(stage=stage):
+                self.assertEqual(
+                    f"NATIVE_SYSTEMD_LIFECYCLE_BLOCKED stage={stage}: "
+                    "no managed-service acceptance\n",
+                    blocked_message(LifecycleBlocked(stage)))
+        self.assertNotIn(secret, blocked_message(LifecycleBlocked(secret)))
+
+    def test_stage_context_discards_sensitive_os_and_management_errors(self):
+        secret = "sensitive systemd output /mnt/internal/file"
+        with self.assertRaises(LifecycleBlocked) as failure:
+            with _stage("manager-reload"):
+                raise OSError(secret)
+        self.assertEqual("manager-reload", str(failure.exception))
+        self.assertNotIn(secret, blocked_message(failure.exception))
+
+    def test_stage_context_cannot_emit_new_unreviewed_categories(self):
+        with self.assertRaises(AssertionError):
+            with _stage("unexpected-checkout-path"):
+                pass
 
 
 if __name__ == "__main__":
