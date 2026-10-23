@@ -142,6 +142,44 @@ qualification remains blocked** until trusted pre-stripping build-stage or
 independently verified static image analysis becomes available. No Seal/Anchor,
 deployed-image, security or OS-hardening qualification follows.
 
+### Bounded selected ELF-file hash observation (unsigned; still no OS package inventory)
+
+For the exact same isolated Development-only image, a further read-only and
+unprivileged, network-disabled run hashes **regular ELF-magic files** in a
+strictly scoped path selection: recognized core executable filenames directly
+under `/usr/bin` (including `/usr/bin/busybox`) and regular shared-library
+filenames directly under `/usr/lib`. The Python standard-library scanner only
+reads candidate files, hashes them in chunks and emits sorted absolute path,
+byte size and SHA-256 records. It does not execute discovered binaries, query
+package managers, inspect credentials or traverse arbitrary directories.
+Symlinks and non-ELF files are excluded; root/system-directory symlinks are
+rejected. Directory entries, selected files, per-file size and total bytes are
+strictly bounded; unreadable, changed or unexpectedly structured input fails
+closed. This selection is intentionally **not** an exhaustive runtime ELF
+inventory or a transitive shared-library dependency graph.
+
+`scripts/verify_runtime_binary_hash_inventory.py` independently reruns the
+exact-source/image/Python/Void registry-gap checks, then validates sorted
+unique allowlisted paths, file sizes, SHA-256 values and aggregate count. Its
+result includes the full selected hash rows, an independent selected-manifest
+hash, the exact image configuration digest/source tree/commit/architecture,
+and a SHA-256 of the previously accepted OS-gap evidence. It can only succeed
+when that evidence says the Void XBPS registry was removed and **installed OS
+package identities and versions remain unavailable**. Passing integrated
+Development runs retain the separate
+`search-local-selected-elf-hashes.json` artifact for 30 days; all outputs are
+explicitly unsigned.
+
+File hashes may help compare two known local image candidates or detect a
+later content change at those selected paths. They **do not identify owning
+packages or versions**, prove upstream provenance, include symlink targets,
+include every executable/library, or establish complete SPDX/CycloneDX SBOM,
+vulnerability/license clearance, image signature, immutable base-image
+dependencies, reproducibility, deployment identity or Seal/Anchor acceptance.
+Until the integrated Development image job actually executes this additional
+step, these are implementation and test properties, **not observed runtime
+results**. The Void OS-package and full dependency-closure blockers remain.
+
 The initial integrated Docker build exposed a runner parser failure on the
 upstream builder's `COPY --exclude` instruction. The builder now uses a
 Dockerfile-specific context ignore file to exclude generated

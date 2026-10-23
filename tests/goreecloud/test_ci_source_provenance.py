@@ -106,6 +106,18 @@ class SourceProvenanceContracts(unittest.TestCase):
         self.assertEqual('search-local-os-observation', steps[8]['with']['name'])
         self.assertEqual('error', steps[8]['with']['if-no-files-found'])
         self.assertEqual('30', steps[8]['with']['retention-days'])
+        elf_run = steps[9]['run']
+        self.assertIn('docker run --rm --network none --read-only --cap-drop ALL', elf_run)
+        self.assertIn('--security-opt no-new-privileges', elf_run)
+        self.assertIn('--user 977:977', elf_run)
+        self.assertIn('--entrypoint /usr/local/searxng/.venv/bin/python "$IMAGE_ID"', elf_run)
+        self.assertIn('scripts/verify_runtime_binary_hash_inventory.py', elf_run)
+        self.assertIn('--os-evidence "$RUNNER_TEMP/search-local-os-observation.json"', elf_run)
+        self.assertIn('--python-evidence "$RUNNER_TEMP/search-local-python-distributions.json"', elf_run)
+        self.assertIn('--local-image-evidence "$RUNNER_TEMP/search-local-image-candidate.json"', elf_run)
+        self.assertEqual('search-local-selected-elf-hashes', steps[10]['with']['name'])
+        self.assertEqual('error', steps[10]['with']['if-no-files-found'])
+        self.assertEqual('30', steps[10]['with']['retention-days'])
         runs = '\n'.join(step.get('run', '') for step in steps)
         for unsafe in ('docker push', 'docker compose up', '--network host'):
             self.assertNotIn(unsafe, runs)
