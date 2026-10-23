@@ -4,7 +4,8 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-PROVIDERS = ('searx/engines/brave.py', 'searx/engines/startpage.py')
+PROVIDERS = ('searx/engines/brave.py', 'searx/engines/startpage.py',
+             'searx/engines/duckduckgo.py')
 SENSITIVE = {'query', 'params', 'args', 'headers', 'cookies', 'sc_code', 'resp', 'response'}
 
 

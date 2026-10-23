@@ -176,7 +176,7 @@ import babel
 from searx import locales
 from searx.enginelib import EngineCache
 from searx.enginelib.traits import EngineTraits
-from searx.exceptions import SearxEngineCaptchaException
+from searx.exceptions import SearxEngineAPIException, SearxEngineCaptchaException
 from searx.external_bang import EXTERNAL_BANGS, get_node  # type: ignore
 from searx.result_types import EngineResults
 from searx.utils import (
@@ -247,7 +247,8 @@ def get_vqd(
     key = cache.secret_hash(f"{query}//{params['headers']['User-Agent']}")
     value: str = cache.get(key=key) or ""
     if value:
-        logger.debug("get_vqd: re-use cached value: %s", value)
+        # The digest is derived from a user query and an upstream session.
+        logger.debug("get_vqd: cached token available")
     return value
 
 
@@ -451,9 +452,9 @@ def request(query: str, params: "OnlineParams") -> None:
     params["headers"]["Content-Type"] = "application/x-www-form-urlencoded"
     params["headers"]["Referer"] = ddg_url
 
-    logger.debug("param headers: %s", params["headers"])
-    logger.debug("param data: %s", params["data"])
-    logger.debug("param cookies: %s", params["cookies"])
+    # Never log the POST body, cookie or headers: they can contain the user's
+    # entire query, region preferences and upstream continuation token.
+    logger.debug("DuckDuckGo Web request prepared")
 
 
 def is_ddg_captcha(dom: ElementType):
@@ -467,7 +468,9 @@ def response(resp: "SXNG_Response") -> EngineResults:
     res = EngineResults()
 
     if resp.status_code == 303:
-        return res
+        # Redirects are disabled for this adapter. A 303 is not proof of an
+        # empty result set, and following it could send a query elsewhere.
+        raise SearxEngineAPIException("DuckDuckGo Web returned unexpected redirect")
 
     doc = resp.html()
     params = resp.search_params

@@ -134,6 +134,18 @@ are retained; this redaction is not a claim that all possible server logs or
 metrics are sanitized. These checks exercised only synthetic local failures,
 with no real provider requests or changes to the isolated VPS.
 
+An October 23 offline DuckDuckGo Web follow-up removed adapter DEBUG logs
+that previously included the full form body (including a user's query),
+headers, cookies, and cached `vqd` continuation token. The adapter now emits
+only fixed messages. A returned HTTP 303 redirect, previously misrepresented
+by the Web parser as an empty successful result, instead yields a bounded
+engine API error without following the redirect. Synthetic tests verify
+redaction and redirect rejection; these source changes were **not** validated
+against live providers. A previous Development staging query showing results
+alongside DuckDuckGo/Startpage errors is only point-in-time evidence, not
+proof that either provider is consistently available. No additional probe,
+provider bypass, retry or default-source change was introduced here.
+
 ## Next release acceptance gates
 
 - Confirm a sustainable provider access path that preserves GoreeCloud's
