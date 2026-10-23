@@ -277,38 +277,38 @@ html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-acti
 
 /* Media-specific GoreeCloud gallery. The original SearXNG image detail
    interaction, source links, and image proxy remain intact. */
-html[data-glaze-consumer] body.results_endpoint #main_results #results:has(#urls.goreecloud-image-results) {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint #main_results #results:has(#urls.goreecloud-image-results) {
   grid-template-columns: minmax(0, 1fr);
 }
-html[data-glaze-consumer] body.results_endpoint #results:has(#urls.goreecloud-image-results) > #sidebar {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint #results:has(#urls.goreecloud-image-results) > #sidebar {
   grid-column: 1; grid-row: 3;
   display: flex; flex-direction: row; flex-wrap: wrap;
 }
-html[data-glaze-consumer] body.results_endpoint #results:has(#urls.goreecloud-image-results) > #sidebar > * {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint #results:has(#urls.goreecloud-image-results) > #sidebar > * {
   flex: 1 1 220px;
 }
-html[data-glaze-consumer] body.results_endpoint #main_results #results > #urls.goreecloud-image-results {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint #main_results #results > #urls.goreecloud-image-results {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
   align-content: start; align-items: start;
   column-gap: clamp(10px, 1.5vw, 18px);
   row-gap: clamp(10px, 1.5vw, 18px);
 }
-html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results > :not(.result-images) {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint #urls.goreecloud-image-results > :not(.result-images) {
   grid-column: 1 / -1;
 }
-html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results > article.result-images {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint #urls.goreecloud-image-results > article.result-images {
   display: flex; flex-direction: column; box-sizing: border-box;
   width: 100%; min-width: 0; max-width: none; height: auto; flex-grow: 0;
-  padding: 7px; margin: 0; border: 1px solid var(--gc-outline); border-radius: 14px;
-  background: var(--gc-surface); overflow: hidden;
+  padding: 7px; margin: 0; border: 1px solid var(--gc-v1-color-outline, var(--gc-outline)); border-radius: 14px;
+  background: var(--gc-v1-color-surface-raised, var(--gc-surface)); overflow: hidden;
   box-shadow: 0 3px 14px rgba(25,55,100,.06);
 }
-html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results > article.result-images > a:first-child {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint #urls.goreecloud-image-results > article.result-images > a:first-child {
   display: flex; flex-direction: column; min-width: 0; width: 100%;
-  color: var(--gc-ink); text-decoration: none; position: relative;
+  color: var(--gc-v1-color-on-surface, var(--gc-ink)); text-decoration: none; position: relative;
 }
-html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results .image_thumbnail {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint #urls.goreecloud-image-results .image_thumbnail {
   display: block; width: 100%; height: auto; aspect-ratio: 4 / 3;
   object-fit: cover; object-position: center; border-radius: 9px;
   background: color-mix(in srgb, var(--gc-muted) 10%, var(--gc-surface));
@@ -335,15 +335,15 @@ html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-ima
   outline: var(--gc-v1-component-focus-width, 3px) solid var(--gc-v1-color-focus-ring, var(--gc-accent-strong));
   outline-offset: var(--gc-v1-component-focus-offset, 3px);
 }
-html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results article.goreecloud-thumbnail-unavailable .image_thumbnail {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint #urls.goreecloud-image-results article.goreecloud-thumbnail-unavailable .image_thumbnail {
   visibility: hidden;
 }
-html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results article.goreecloud-thumbnail-unavailable > a:first-child::before {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint #urls.goreecloud-image-results article.goreecloud-thumbnail-unavailable > a:first-child::before {
   content: "Preview unavailable";
   position: absolute; top: 0; left: 0; right: 0;
   aspect-ratio: 4 / 3; display: grid; place-items: center;
   padding: 10px; border-radius: 9px; box-sizing: border-box;
-  color: var(--gc-muted); font-size: 12px; text-align: center;
+  color: var(--gc-v1-color-on-surface-muted, var(--gc-muted)); font-size: 12px; text-align: center;
   background: color-mix(in srgb, var(--gc-muted) 10%, var(--gc-surface));
   pointer-events: none;
 }
@@ -355,30 +355,31 @@ html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results a
     outline-color: Highlight;
   }
 }
-html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results .title {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint #urls.goreecloud-image-results .title {
   display: -webkit-box; position: static; width: auto; padding: 0; white-space: normal;
   -webkit-box-orient: vertical; -webkit-line-clamp: 2;
   overflow: hidden; margin: 9px 6px 3px; min-height: 2.6em;
-  color: var(--gc-ink); font-size: 13px; line-height: 1.3;
+  color: var(--gc-v1-color-on-surface, var(--gc-ink)); font-size: 13px; line-height: 1.3;
   font-weight: 650; overflow-wrap: anywhere;
 }
-html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results .source {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint #urls.goreecloud-image-results .source {
   display: block; position: static; width: auto; padding: 0;
-  margin: 0 6px 7px; color: var(--gc-muted); font-size: 11px;
+  margin: 0 6px 7px; color: var(--gc-v1-color-on-surface-muted, var(--gc-muted)); font-size: 11px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results .image_resolution {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint #urls.goreecloud-image-results .image_resolution {
   position: absolute; top: 8px; right: 8px; bottom: auto; left: auto;
   width: auto; height: auto; padding: 3px 7px;
   background: rgba(10,18,32,.78); color: #fff;
   border-radius: 6px; font-size: 11px; line-height: 1.4;
 }
-html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results article.result-images:hover {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint #urls.goreecloud-image-results article.result-images:hover {
   border-color: var(--gc-accent-strong);
   box-shadow: 0 6px 18px rgba(24,55,98,.12);
 }
-html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results article.result-images a:focus-visible {
-  outline: 3px solid var(--gc-accent-strong); outline-offset: 2px;
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint #urls.goreecloud-image-results article.result-images a:focus-visible {
+  outline: var(--gc-v1-component-focus-width, 3px) solid var(--gc-v1-color-focus-ring, var(--gc-accent-strong));
+  outline-offset: var(--gc-v1-component-focus-offset, 3px);
 }
 /* All four categories must fit a 320px phone without a visible scrollbar.
    Disabled categories remain discoverable through aria-disabled and title. */
@@ -402,18 +403,21 @@ html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results a
 }
 
 @media (max-width: 410px) {
-  html[data-glaze-consumer] body.results_endpoint #main_results #results > #urls.goreecloud-image-results {
+  html[data-gc-consumer="goreecloud-search"] body.results_endpoint #main_results #results > #urls.goreecloud-image-results {
     grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px;
   }
-  html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results > article.result-images { padding: 5px; }
+  html[data-gc-consumer="goreecloud-search"] body.results_endpoint #urls.goreecloud-image-results > article.result-images { padding: 5px; }
 }
 @media (forced-colors: active) {
-  html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results > article.result-images {
+  html[data-gc-consumer="goreecloud-search"] body.results_endpoint #urls.goreecloud-image-results > article.result-images {
     border-color: CanvasText; box-shadow: none;
+  }
+  html[data-gc-consumer="goreecloud-search"] body.results_endpoint #urls.goreecloud-image-results article.result-images a:focus-visible {
+    outline-color: Highlight;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results > article.result-images { transition: none; }
+  html[data-gc-consumer="goreecloud-search"] body.results_endpoint #urls.goreecloud-image-results > article.result-images { transition: none; }
 }
 
 html[data-glaze-consumer] body.info_endpoint #main_info,

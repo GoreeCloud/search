@@ -5,6 +5,11 @@
 ## Architecture
 
 - Domain: `search-dev.goreecloud.com`, with Caddy DNS-01 TLS and **NetBird-only HTTP access**.
+- The private Caddy route's **structure** is checked by the read-only
+  `scripts/search_development_ingress_guard.py` and the established free-upgrade
+  review checker; see [Development ingress security and public-release hold](../../docs/goreecloud/SEARCH-DEVELOPMENT-INGRESS-RELEASE-HOLD.md).
+  Passing static checks is not live non-NetBird denial evidence or authorization
+  to expose the separate `search.goreecloud.com` public service.
 - Docker network: external `proxy`; no published Search or Tor ports.
 - Application source: pinned GoreeCloud Search commit. Runtime secret in a protected, untracked env file on the VPS.
 - Tor: local SOCKS5H relay with application process in the same network namespace. The Search application must refuse direct provider egress if that proxy is unavailable or misconfigured.

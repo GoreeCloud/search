@@ -45,6 +45,30 @@ The Web/Images/Videos/News navigation rail now uses `data-gc-consumer="goreeclou
 
 This slice lowers observed active first-party legacy-token-bearing lines **392 → 377** without raising the frozen 440-line allowance. Offline contracts exercise selector removal, token provenance, semantic POST markup, baseline reduction and existing category dispatch regression tests. The synthetic Chromium browser smoke additionally inspects the computed desktop/phone category touch geometry and same-origin POST actions. This is **source-only candidate evidence**, not a fresh private Development rendering or assistive-technology review. Full light/dark, narrow viewport, forced-colors, keyboard/screen-reader and owner-reference screenshot acceptance remain pending, as do broader legacy CSS elimination and controlled release. **Search remains an unqualified GC UI consumer.**
 
+## Image-gallery cards — bounded consumer migration (October 23, 2026; source candidate)
+
+The Images results gallery's card grid, image/preview surface, card metadata,
+link affordances, focus styles and compact-phone layout now use the current
+`data-gc-consumer="goreecloud-search"` boundary and supported Foundations
+light/dark semantic colors, comfortable touch targets and focus-ring tokens.
+Explicit forced-colors rules preserve navigability for system high-contrast
+themes. The result's primary external link now respects the existing
+**open results in a new tab** preference while retaining safe `rel` attributes.
+Link-only attributes are no longer emitted on a nested `<img>` element, and
+the current image-proxy behavior remains unchanged.
+
+The exact combined Development candidate's static audit reports **325 active
+first-party legacy-token-bearing lines**, down from the preceding **377**
+without relaxing the frozen 440-line allowance; the 66 historical bundled CSS
+files remain. Three focused offline tests cover rendered new-tab choices,
+safe external-link attributes, proxy markup and selector/token migration.
+The full source-only audit passes in non-strict mode; strict GC UI conformance
+still fails by design. These are code and synthetic-template checks **only**:
+the owner's image-gallery mockup was not re-presented in this task and actual
+rendered desktop/phone, reduced-motion, keyboard, screen-reader, forced-colors,
+Light/Dark and Dev-runtime visual acceptance remain unverified. The gallery
+change does not establish completed GC UI consumer migration or release status.
+
 ## Contract and automation
 
 - CI runs `python scripts/gc_ui_consumer_audit.py` and **fails on new legacy consumer files or increased legacy-token-bearing lines**. Legitimate migration can shrink any count without changing the baseline. Changing an allowance needs a separately justified migration review; do not raise the baseline merely to satisfy CI.
