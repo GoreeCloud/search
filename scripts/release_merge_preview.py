@@ -39,10 +39,14 @@ def _sha(value: str) -> str:
 
 def _git(repo: Path, *arguments: str, valid=(0,)) -> subprocess.CompletedProcess[bytes]:
     try:
-        result = subprocess.run(("git", "-C", str(repo), *arguments),
+        result = subprocess.run(("git", "--no-optional-locks", "-C", str(repo), *arguments),
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                 check=False, timeout=30,
-                                env={**os.environ, "GIT_NO_LAZY_FETCH": "1"})
+                                # Local replace refs must never forge ancestry
+                                # or merge-tree results for an unchanged SHA.
+                                env={**os.environ, "GIT_NO_LAZY_FETCH": "1",
+                                     "GIT_NO_REPLACE_OBJECTS": "1",
+                                     "GIT_OPTIONAL_LOCKS": "0"})
     except (OSError, subprocess.TimeoutExpired):
         raise MergePreviewError("local Git audit is unavailable") from None
     if result.returncode not in valid or len(result.stdout) > MAX_OUTPUT:

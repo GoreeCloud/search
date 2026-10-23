@@ -128,6 +128,17 @@ class ReleaseMergePreviewTests(unittest.TestCase):
         with self.assertRaisesRegex(preview.MergePreviewError, "must differ"):
             preview.inspect(self.fixture.path, self.fixture.dev, self.fixture.root, self.fixture.dev)
 
+    def test_local_replace_ref_cannot_forge_merge_ancestry_or_conflict(self):
+        actual = self.fixture.inspect()
+        refs_before = self.fixture.git("show-ref")
+        # A replacement aliases the main object but does not move main's ref.
+        self.fixture.git("replace", self.fixture.main, self.fixture.root)
+        refs_with_replace = self.fixture.git("show-ref")
+        self.assertNotEqual(refs_before, refs_with_replace)
+        result = self.fixture.inspect()
+        self.assertEqual(actual, result)
+        self.assertEqual(refs_with_replace, self.fixture.git("show-ref"))
+
     def test_cli_writes_new_report_once_and_never_overwrites(self):
         output_dir = tempfile.TemporaryDirectory()
         self.addCleanup(output_dir.cleanup)

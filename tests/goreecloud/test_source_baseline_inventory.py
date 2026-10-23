@@ -81,6 +81,22 @@ class SourceBaselineInventoryTests(unittest.TestCase):
         with self.assertRaisesRegex(inventory.BaselineError, "clean"):
             inventory.collect(self.repo, self.sha)
 
+    def test_local_replace_ref_cannot_rewrite_source_tree_identity(self):
+        authentic_tree = run(self.repo, "rev-parse", "HEAD^{tree}")
+        spoofed_path = self.repo / "synthetic-added-file.txt"
+        spoofed_path.write_text("untrusted replacement tree\n", encoding="utf-8")
+        run(self.repo, "add", spoofed_path.name)
+        spoofed_tree = run(self.repo, "write-tree")
+        forged_commit = run(self.repo, "commit-tree", spoofed_tree, "-m", "forged tree")
+        # Restore index and filesystem before collecting actual source.
+        run(self.repo, "read-tree", "HEAD")
+        spoofed_path.unlink()
+        run(self.repo, "replace", self.sha, forged_commit)
+        self.assertEqual(spoofed_tree, run(self.repo, "rev-parse", "HEAD^{tree}"))
+        self.assertEqual(authentic_tree, inventory.git(self.repo, "rev-parse", "HEAD^{tree}"))
+        baseline = inventory.collect(self.repo, self.sha)
+        self.assertEqual(authentic_tree, baseline["source_tree"])
+
 
 if __name__ == "__main__":
     unittest.main()

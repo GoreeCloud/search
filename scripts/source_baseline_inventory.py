@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -55,8 +56,12 @@ class BaselineError(Exception):
 def git(repo: Path, *args: str) -> str:
     try:
         result = subprocess.run(
-            ("git", "-C", str(repo), *args), check=True,
+            ("git", "--no-optional-locks", "-C", str(repo), *args), check=True,
             capture_output=True, text=True, timeout=15,
+            # A local replace ref can rewrite HEAD^{tree} without changing
+            # the caller-supplied commit SHA. Inspect literal Git objects.
+            env={**os.environ, "GIT_NO_REPLACE_OBJECTS": "1",
+                 "GIT_NO_LAZY_FETCH": "1", "GIT_OPTIONAL_LOCKS": "0"},
         )
     except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
         # Never echo Git stderr, remote URLs, or untracked filenames.
