@@ -94,7 +94,7 @@ import typing as t
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from json import loads
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 from unicodedata import combining, normalize
 
 import babel.localedata
@@ -473,31 +473,51 @@ def _get_news_result(result):
 
 def _get_image_result(result) -> dict[str, t.Any] | None:
     url = result.get("altClickUrl")
-    if not url:
+    image_url = result.get("rawImageUrl")
+    # A provider card without its page or actual image cannot be rendered.
+    # Do not let that card discard other valid images from the response.
+    if not (isinstance(url, str) and url.strip()
+            and isinstance(image_url, str) and image_url.strip()):
         return None
 
     thumbnailUrl = None
-    if result.get("thumbnailUrl"):
-        thumbnailUrl = base_url + result["thumbnailUrl"]
+    if isinstance(result.get("thumbnailUrl"), str) and result["thumbnailUrl"].strip():
+        # Upstream may return either a relative Startpage thumbnail path or
+        # an already absolute CDN URL. Concatenation corrupts the latter.
+        try:
+            candidate = urljoin(base_url, result["thumbnailUrl"])
+            parsed = urlsplit(candidate)
+            if parsed.scheme in ("http", "https") and parsed.hostname:
+                thumbnailUrl = candidate
+        except ValueError:
+            # Invalid URL syntax must not discard otherwise valid images.
+            pass
 
     resolution = None
     if result.get("width") and result.get("height"):
         resolution = f"{result['width']}x{result['height']}"
 
     filesize = None
-    if result.get("filesize"):
-        size_str = "".join(filter(str.isdigit, result["filesize"]))
-        filesize = humanize_bytes(int(size_str))
+    size_value = result.get("filesize")
+    if isinstance(size_value, str):
+        size_digits = "".join(filter(str.isdigit, size_value))
+        size_value = int(size_digits) if 0 < len(size_digits) <= 12 else None
+    # A malformed or too-large size must not crash the full image gallery.
+    if type(size_value) is int and 0 <= size_value <= 1024**4:
+        filesize = humanize_bytes(size_value)
 
-    img_format = result.get("format").upper()
+    format_value = result.get("format")
+    img_format = format_value.upper() if isinstance(format_value, str) else ""
     if img_format == "UNKNOWN":
         img_format = ""
+    raw_title = result.get("title")
+    title = html_to_text(raw_title) if isinstance(raw_title, str) else ""
     return {
         "template": "images.html",
         "url": url,
-        "title": html_to_text(result["title"]),
+        "title": title or "Image result",
         "content": "",
-        "img_src": result.get("rawImageUrl"),
+        "img_src": image_url,
         "thumbnail_src": thumbnailUrl,
         "resolution": resolution,
         "img_format": img_format,
