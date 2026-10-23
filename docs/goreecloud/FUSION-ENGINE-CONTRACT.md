@@ -31,15 +31,21 @@ query-free per-provider health states (`blocked`, `ok`, `empty`, `timeout`,
   synthetic fixture rights grant permission for Google, Bing, Brave, or any
   other real upstream.
 - Up to eight named providers may be registered; each can return at most 40
-  `SourceResult` cards, with at most four concurrent calls. A source receives
-  the query only if admitted; inaccessible or denied sources are not called.
+  `SourceResult` cards, with at most four concurrent calls **within one
+  invocation**. This does not impose a cross-request/service-wide concurrency
+  or in-flight request cap. A source receives the query only if admitted;
+  inaccessible or denied sources are not called.
 - The default cooperative per-provider deadline is three seconds (maximum
-  ten). Real adapters **must** be asynchronous, honor cancellation, enforce
+  ten), starting **after its semaphore slot is acquired** so a queued source
+  is not timed out without a chance to execute. Real adapters **must** be
+  asynchronous, honor cancellation, enforce
   their own socket/client deadline, upstream rate budget and egress policy,
   and never spawn unbounded blocking work. This module is not a process-level
   kill switch for a malicious or stuck third-party connector.
-- Invalid adapter shape, mixed source identity and invalid ranks fail that
-  **one provider** without sacrificing another admitted provider's result.
+- Invalid adapter shape, mixed source identity, invalid ranks and
+  unpublishable/unsafe result URLs fail that **one provider** with zero accepted
+  cards instead of treating filtered cards as healthy results. This preserves
+  other admitted providers' valid results.
   Source errors are counted, not logged or reflected with query-bearing
   exception messages; no hidden retries, substitute providers or user-query
   cache are implemented.

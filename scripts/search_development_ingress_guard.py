@@ -20,7 +20,13 @@ PUBLIC_HOST = "search.goreecloud.com"
 NETBIRD = "@netbird_client remote_ip 100.64.0.0/10"
 DENY = 'respond "Forbidden" 403'
 _ENV = re.compile(r"\{\$[A-Z][A-Z0-9_]*\}")
-_PUBLIC_UPSTREAM = re.compile(r"\breverse_proxy\s+goreecloud-search-(?:free-|gateway)")
+_PUBLIC_UPSTREAM = re.compile(r"\breverse_proxy\s+goreecloud-search-(?:free-|gateway)", re.IGNORECASE)
+_HOST_TOKEN_BOUNDARY = r"(?<![A-Za-z0-9.-]){}(?![A-Za-z0-9.-])"
+_PROXY = re.compile(r"^reverse_proxy\s+(.+)$", re.IGNORECASE)
+_DEV_GATEWAYS = re.compile(
+    r"\bgoreecloud-search-(?:gateway|(?:free|dev|private|staging)-[a-z0-9-]*gateway):8080\b",
+    re.IGNORECASE,
+)
 _ALLOWED_HEADERS = {
     'Strict-Transport-Security "max-age=31536000"',
     'X-Content-Type-Options nosniff',
@@ -39,7 +45,7 @@ def _clean(line: str) -> str:
 def _site_lines(config: str, hostname: str) -> list[str] | None:
     """Extract exactly one complete, top-level exact-host block, or fail."""
     starts = [i for i, line in enumerate(config.splitlines())
-              if line == hostname + " {"]
+              if _clean(line).casefold() == hostname.casefold() + " {"]
     if len(starts) != 1:
         return None
     lines = config.splitlines()
@@ -72,19 +78,46 @@ def private_search_ingress_is_safe(config: str, expected_upstream: str) -> bool:
         return False
     if not isinstance(config, str) or not config:
         return False
+    # Caddy `import` is evaluated before directive validation: an apparently
+    # safe inline host can be silently widened by a separate imported file or
+    # snippet. Fail until the exact adapted/fully expanded config is reviewed.
+    clean_config = "\n".join(_clean(line) for line in config.splitlines())
+    if any(re.match(r"import(?:\s|$)", line, flags=re.IGNORECASE)
+           for line in clean_config.splitlines()):
+        return False
     lines = _site_lines(config, PRIVATE_HOST)
     if lines is None:
         return False
     # A second alias containing the dev host (e.g. a combined public vhost)
     # must not silently bypass the private-only Caddy route under review.
-    clean_config = "\n".join(_clean(line) for line in config.splitlines())
-    if len(re.findall(r"(?<![A-Za-z0-9.-])" + re.escape(PRIVATE_HOST) +
-                      r"(?![A-Za-z0-9.-])", clean_config)) != 1:
+    private_host_token = _HOST_TOKEN_BOUNDARY.format(re.escape(PRIVATE_HOST))
+    if len(re.findall(private_host_token, clean_config, flags=re.IGNORECASE)) != 1:
+        return False
+    # The sole approved Development gateway must not appear in another site,
+    # even if hidden behind a Caddy map/vars alias instead of reverse_proxy.
+    if clean_config.casefold().count(expected_upstream.casefold()) != 1:
+        return False
+    # A second old/new Development gateway, even with a different alias, must
+    # not be reachable from another vhost. Keep independently named public
+    # Search backends valid.
+    if [item.casefold() for item in _DEV_GATEWAYS.findall(clean_config)] != [expected_upstream.casefold()]:
         return False
     public = _site_lines(config, PUBLIC_HOST)
-    if any(line == PUBLIC_HOST + " {" for line in config.splitlines()):
+    public_host_token = _HOST_TOKEN_BOUNDARY.format(re.escape(PUBLIC_HOST))
+    public_mentioned = bool(re.search(public_host_token, clean_config, flags=re.IGNORECASE))
+    if public_mentioned:
         if public is None or _PUBLIC_UPSTREAM.search("\n".join(public)):
             return False
+        # The separate public site is allowed, but it must route to an
+        # independently named literal backend. Dynamic reverse_proxy targets,
+        # maps and rewrites are not statically provable as distinct from Dev.
+        if any(line.startswith(("map ", "vars ", "rewrite ", "handle_path "))
+               for line in public):
+            return False
+        for line in public:
+            match = _PROXY.fullmatch(line)
+            if match and not re.fullmatch(r"[a-z][a-z0-9-]*:8080", match.group(1)):
+                return False
 
     children = {
         "site": {"tls", "header", "handle @netbird_client", "handle"},

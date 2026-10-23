@@ -141,6 +141,26 @@ class DispatchTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(reply.providers[0].status, 'timeout')
         self.assertEqual(len(started), 1)
 
+    async def test_queued_fast_adapters_receive_full_deadline_after_start(self):
+        started = []
+
+        async def source(query, category, limit):
+            import asyncio as aio
+            task_id = aio.current_task().get_name()
+            started.append(task_id)
+            # Each adapter stays within its personal 60-ms deadline, while
+            # the total two-wave request lasts over that limit.
+            await aio.sleep(0.045)
+            return []
+
+        response = await dispatch_fusion('fixture', category='web',
+                                         providers=[binding('p%d' % i, source)
+                                                    for i in range(4)],
+                                         timeout_seconds=0.06, max_concurrency=2)
+        self.assertEqual(len(started), 4)
+        self.assertEqual([p.status for p in response.providers], ['empty'] * 4)
+        self.assertEqual(response.status, 'empty')
+
     async def test_empty_source_is_not_provider_failure(self):
         async def empty(*_args):
             return []
@@ -162,6 +182,20 @@ class DispatchTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(reply.status, 'partial')
         self.assertEqual([p.status for p in reply.providers], ['failed', 'ok'])
         self.assertEqual(len(reply.results), 1)
+
+    async def test_unpublishable_url_fails_provider_instead_of_false_ok(self):
+        async def unsafe(*_args):
+            return [hit('bad', url='javascript:alert(1)')]
+
+        async def good(*_args):
+            return [hit('good')]
+
+        response = await dispatch_fusion('fixture', category='web',
+                                         providers=[binding('bad', unsafe), binding('good', good)])
+        self.assertEqual(response.status, 'partial')
+        self.assertEqual([(p.status, p.accepted) for p in response.providers],
+                         [('failed', 0), ('ok', 1)])
+        self.assertEqual(len(response.results), 1)
 
     async def test_wrong_source_identity_and_oversized_cards_are_rejected(self):
         async def wrong(*_args):

@@ -33,8 +33,57 @@ class SearchReleaseAclGuardTests(unittest.TestCase):
     def test_future_public_site_must_not_proxy_private_development(self):
         good = SITE.decode() + '\n' + PUBLIC + ' {\n    respond "not yet released" 503\n}\n'
         self.assertTrue(private_search_ingress_is_safe(good, OLD))
+        # A legitimate distinct public backend must not be disallowed simply
+        # because the future public Search hostname exists in the same file.
+        separate = SITE.decode() + '\nSEARCH.GOREECLOUD.COM {\n    reverse_proxy goreecloud-search-public-gateway:8080\n}\n'
+        self.assertTrue(private_search_ingress_is_safe(separate, OLD))
         bad = SITE.decode() + '\n' + PUBLIC + ' {\n    reverse_proxy ' + OLD + '\n}\n'
         self.assertFalse(private_search_ingress_is_safe(bad, OLD))
+
+    def test_includes_fail_closed_until_entire_expanded_config_is_audited(self):
+        for injection in (
+            'import /tmp/unreviewed.caddy\n',
+            'IMPORT snippets/private-route\n',
+            'import {env.SHARED_CADDY}\n',
+            'unrelated.example {\n    import /tmp/injected.caddy\n}\n',
+        ):
+            with self.subTest(injection=injection):
+                config = injection + SITE.decode()
+                self.assertFalse(private_search_ingress_is_safe(config, OLD))
+                self.assertEqual('blocked_do_not_cutover',
+                                 evaluate(source=config.encode(), snapshot=config.encode())['status'])
+        self.assertTrue(private_search_ingress_is_safe('# import /tmp/comment.caddy\n' + SITE.decode(), OLD))
+
+    def test_casefold_duplicate_and_mixed_case_aliases_are_rejected(self):
+        for extra in (
+            'SEARCH-DEV.GOREECLOUD.COM {\n    reverse_proxy other:8080\n}\n',
+            'Search-Dev.GoreeCloud.Com, OTHER.EXAMPLE {\n    respond "public" 200\n}\n',
+            'other.example {\n    @bad host SeArCh-DeV.gOrEeClOuD.cOm\n    respond "public" 200\n}\n',
+        ):
+            with self.subTest(extra=extra):
+                config = SITE.decode() + '\n' + extra
+                self.assertFalse(private_search_ingress_is_safe(config, OLD))
+                self.assertEqual('blocked_do_not_cutover',
+                                 evaluate(source=config.encode(), snapshot=config.encode())['status'])
+
+    def test_public_upstream_must_be_statically_separate_not_rewritten(self):
+        for public_body in (
+            'reverse_proxy goreecloud-search-free-working-gateway:8080',
+            'reverse_proxy {env.DEV_UPSTREAM}',
+            'map {host} {target} {\n        default goreecloud-search-free-working-gateway:8080\n    }\n    reverse_proxy {target}',
+            'rewrite * /private\n    reverse_proxy goreecloud-search-public-gateway:8080',
+            'vars backend goreecloud-search-free-working-gateway:8080\n    reverse_proxy {vars.backend}',
+        ):
+            with self.subTest(public_body=public_body):
+                candidate = SITE.decode() + '\n' + PUBLIC + ' {\n    ' + public_body + '\n}\n'
+                self.assertFalse(private_search_ingress_is_safe(candidate, OLD))
+
+    def test_another_site_cannot_reuse_private_gateway_even_with_case_rewrite(self):
+        candidate = SITE.decode() + '\nother.example {\n    map {host} {target} {\n        default ' + OLD.upper() + '\n    }\n}\n'
+        self.assertFalse(private_search_ingress_is_safe(candidate, OLD))
+        different_private_gateway = SITE.decode() + (
+            '\nother.example {\n    reverse_proxy goreecloud-search-free-working-gateway:8080\n}\n')
+        self.assertFalse(private_search_ingress_is_safe(different_private_gateway, OLD))
 
     def test_extra_dev_hostname_alias_fails(self):
         bad = SITE.decode() + '\nsearch-dev.goreecloud.com, search.goreecloud.com {\n    respond "ok"\n}\n'

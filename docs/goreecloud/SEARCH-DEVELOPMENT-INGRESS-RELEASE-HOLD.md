@@ -15,7 +15,10 @@
 `scripts/search_development_ingress_guard.py` is deliberately read-only. It
 inspects an explicitly supplied local Caddyfile, accepts a small audited
 directive subset for the private Search site, and rejects ambiguous,
-additional, or permissive routing. It does not print the Caddyfile or secret
+additional, or permissive routing. In particular, active `import` directives
+block source admission until their expansions have been resolved and reviewed;
+case-insensitive hostname aliases and any second Development gateway target
+also block. It does not print the Caddyfile or secret
 values, and produces one bounded JSON result.
 
 ```bash
@@ -36,8 +39,9 @@ snapshot, owner, network, volume and provider-profile checks.
 Adversarial fixtures deliberately reject a bypassing site-level proxy,
 public-client fallback proxy, malformed 403, altered NetBird mask, duplicate
 handler, unexpected Caddy route/log directives, duplicate host alias,
-incomplete braces and a public Search vhost accidentally targeting the private
-gateway. An unrelated public site with no Development upstream is not
+incomplete braces, unreviewed includes, case-variant vhosts and a public
+Search vhost accidentally targeting the private gateway. A separately routed
+public Search site with a literal independent upstream is not
 automatically prohibited; its independent qualification remains outside this
 Development-only guard.
 

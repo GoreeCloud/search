@@ -135,10 +135,16 @@ async def dispatch_fusion(
     async def get_one(binding: ProviderBinding) -> tuple[ProviderOutcome, tuple[SourceResult, ...]]:
         try:
             async with semaphore:
-                # wait_for bounds each source, including the semaphore wait.
-                # Blocking transports and cancellation suppression violate the
-                # adapter contract and need separate operational qualification.
-                records = await binding.search(query, category, per_provider)
+                # Start the source deadline only after its execution slot is
+                # acquired. Queued, healthy sources must not expire before
+                # their async transport has ever been invoked.
+                try:
+                    records = await asyncio.wait_for(
+                        binding.search(query, category, per_provider),
+                        timeout=timeout_seconds,
+                    )
+                except asyncio.TimeoutError:
+                    return ProviderOutcome(binding.source, 'timeout'), ()
                 if (not isinstance(records, (list, tuple))
                         or len(records) > per_provider
                         or any(not isinstance(card, SourceResult)
@@ -146,8 +152,13 @@ async def dispatch_fusion(
                                or card.category != category for card in records)):
                     raise ValueError('Invalid adapter result contract')
                 # One malformed provider's rank/card must not collapse
-                # otherwise valid providers after the fan-in operation.
-                fuse_results(records, category=category, limit=per_provider)
+                # otherwise valid providers after the fan-in operation. The
+                # fusion helper silently filters unsafe destinations, so a
+                # provider must also prove EVERY card is publishable before
+                # its raw accepted count or status may be called successful.
+                for card in records:
+                    if not fuse_results((card,), category=category, limit=1):
+                        raise ValueError('Unpublishable adapter card')
                 return (ProviderOutcome(binding.source, 'ok' if records else 'empty', len(records)),
                         tuple(records))
         except asyncio.CancelledError:
@@ -157,13 +168,7 @@ async def dispatch_fusion(
             # query-bearing transport exceptions through the native boundary.
             return ProviderOutcome(binding.source, 'failed'), ()
 
-    async def deadline(binding: ProviderBinding) -> tuple[ProviderOutcome, tuple[SourceResult, ...]]:
-        try:
-            return await asyncio.wait_for(get_one(binding), timeout=timeout_seconds)
-        except asyncio.TimeoutError:
-            return ProviderOutcome(binding.source, 'timeout'), ()
-
-    completed = await asyncio.gather(*(deadline(binding) for binding in admitted))
+    completed = await asyncio.gather(*(get_one(binding) for binding in admitted))
     outcomes = {name: outcome for name, outcome in blocked.items()}
     cards: list[SourceResult] = []
     for outcome, source_cards in completed:
