@@ -3,6 +3,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+from lxml.html import fromstring
+
 import test_runtime_smoke as _runtime_settings  # noqa: F401
 from searx.engines import duckduckgo
 from searx.exceptions import SearxEngineAPIException
@@ -57,6 +59,48 @@ class DuckDuckGoWebFailClosedTests(unittest.TestCase):
             duckduckgo.response(response)
         response.html.assert_not_called()
         self.assertEqual('DuckDuckGo Web returned unexpected redirect', str(caught.exception))
+
+    def test_off_provider_body_is_rejected_before_html_parse_or_vqd_cache(self):
+        # A proxy/redirect may return HTTP 200 and a plausible Web page from
+        # another origin. Its content and VQD are not attributable to DDG.
+        origins = (
+            'https://duckduckgo.com/html/',
+            'https://html.duckduckgo.com.evil.test/html/',
+            'http://html.duckduckgo.com/html/',
+            'https://fake@html.duckduckgo.com/html/',
+            'https://html.duckduckgo.com:8443/html/',
+            'https://html.duckduckgo.com%40evil.test/html/',
+            'https://html.duckduckgo.com:malformed/html/',
+            'not-a-provider-url',
+        )
+        for origin in origins:
+            with self.subTest(origin=origin):
+                response = SimpleNamespace(status_code=200, url=origin, html=MagicMock())
+                with patch.object(duckduckgo, 'set_vqd') as cached:
+                    with self.assertRaises(SearxEngineAPIException) as caught:
+                        duckduckgo.response(response)
+                self.assertEqual('DuckDuckGo Web returned unexpected response origin', str(caught.exception))
+                self.assertNotIn(origin, str(caught.exception))
+                response.html.assert_not_called()
+                cached.assert_not_called()
+
+    def test_verified_html_origin_preserves_normal_web_results(self):
+        page = fromstring('''
+            <html><body><div id="links"><div class="web-result">
+            <h2><a href="https://example.org/result">Public synthetic title</a></h2>
+            <a class="result__snippet">Public synthetic snippet</a>
+            </div></div></body></html>
+        ''')
+        response = SimpleNamespace(
+            status_code=200,
+            url='https://html.duckduckgo.com/html/',
+            html=lambda: page,
+            search_params={'data': {'q': 'public synthetic query'}},
+        )
+        with patch.object(duckduckgo, 'set_vqd') as cached:
+            results = duckduckgo.response(response)
+        cached.assert_not_called()
+        self.assertEqual(1, len(results))
 
 
 if __name__ == '__main__':

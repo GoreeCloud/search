@@ -170,6 +170,7 @@ Terms / phrases that you keep coming across:
 import json
 import re
 import typing as t
+from urllib.parse import urlsplit
 
 import babel
 
@@ -464,6 +465,24 @@ def is_ddg_captcha(dom: ElementType):
     return bool(eval_xpath(dom, "//form[@id='challenge-form']"))
 
 
+def require_ddg_response_origin(resp: "SXNG_Response") -> None:
+    """Never parse or cache a Web token from an off-provider response body.
+
+    A successful HTTP status after a redirect is not proof that the body came
+    from DuckDuckGo's HTML search endpoint.  Keep diagnostics query-free.
+    """
+    try:
+        parsed = urlsplit(str(resp.url))
+        allowed = (parsed.scheme == "https"
+                   and parsed.hostname == "html.duckduckgo.com"
+                   and parsed.username is None and parsed.password is None
+                   and parsed.port in (None, 443) and "%" not in parsed.netloc)
+    except (TypeError, ValueError):
+        allowed = False
+    if not allowed:
+        raise SearxEngineAPIException("DuckDuckGo Web returned unexpected response origin")
+
+
 def response(resp: "SXNG_Response") -> EngineResults:
     res = EngineResults()
 
@@ -472,6 +491,7 @@ def response(resp: "SXNG_Response") -> EngineResults:
         # empty result set, and following it could send a query elsewhere.
         raise SearxEngineAPIException("DuckDuckGo Web returned unexpected redirect")
 
+    require_ddg_response_origin(resp)
     doc = resp.html()
     params = resp.search_params
 
