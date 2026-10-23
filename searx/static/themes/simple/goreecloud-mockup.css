@@ -378,6 +378,9 @@ html[data-glaze-consumer] body.goreecloud_preview_endpoint .goreecloud-preview f
    viewport. A provider preview with a longer disclosure must scroll natively. */
 html[data-glaze-consumer]:has(> body.goreecloud_preview_endpoint) {
   overflow-y: auto !important;
+  /* Upstream root smooth scrolling races Chrome pointer hit tests:
+     Selenium/scrollIntoView return before a long preview actually scrolls. */
+  scroll-behavior: auto !important;
   /* Keep the root scrollport viewport-sized. With auto height it expands to
      the long disclosure, leaving Chrome only a few pixels of usable scroll. */
   height: 100% !important;

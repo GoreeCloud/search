@@ -150,6 +150,7 @@ class GCUISearchPreviewTests(unittest.TestCase):
             "html[data-glaze-consumer]:has(> body.goreecloud_preview_endpoint) {", 1
         )[1].split("}", 1)[0]
         self.assertIn("overflow-y: auto !important", preview_root)
+        self.assertIn("scroll-behavior: auto !important", preview_root)
         self.assertIn("height: 100% !important", preview_root)
         self.assertNotIn("height: auto !important", preview_root)
 

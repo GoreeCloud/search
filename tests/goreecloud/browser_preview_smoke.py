@@ -123,14 +123,25 @@ def pointer_geometry(driver, selector: str) -> dict:
       const centerY = (rect.top + rect.bottom) / 2;
       const hit = document.elementFromPoint(centerX, centerY);
       const scroller = document.scrollingElement;
+      const ancestors = [];
+      for (let node = target; node && ancestors.length < 7; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        ancestors.push({tag:node.tagName, id:node.id, position:style.position,
+          overflowY:style.overflowY, height:style.height,
+          scrollTop:node.scrollTop, scrollHeight:node.scrollHeight,
+          clientHeight:node.clientHeight});
+      }
       return {
         innerWidth:window.innerWidth, innerHeight:window.innerHeight,
         scrollY:window.scrollY, scrollingElement:scroller?.tagName,
         scrollTop:scroller?.scrollTop, scrollHeight:scroller?.scrollHeight,
         clientHeight:scroller?.clientHeight,
         htmlOverflow:getComputedStyle(document.documentElement).overflowY,
+        htmlScrollBehavior:getComputedStyle(document.documentElement).scrollBehavior,
+        htmlHeight:getComputedStyle(document.documentElement).height,
         bodyOverflow:getComputedStyle(document.body).overflowY,
         bodyHeight:getComputedStyle(document.body).height,
+        ancestors,
         targetTop:rect.top, targetBottom:rect.bottom,
         targetHeight:rect.height, centerX, centerY,
         hitTag:hit?.tagName, hitId:hit?.id,
@@ -143,9 +154,21 @@ def pointer_geometry(driver, selector: str) -> dict:
 def assert_pointer_hit(driver, selector: str, label: str) -> dict:
     geometry = pointer_geometry(driver, selector)
     assert geometry["scrollHeight"] > geometry["clientHeight"] + 5, (label, geometry)
-    assert 0 <= geometry["centerX"] < geometry["innerWidth"], (label, geometry)
-    assert 0 <= geometry["centerY"] < geometry["innerHeight"], (label, geometry)
-    assert geometry["hitWithinTarget"], (label, geometry)
+    assert geometry["htmlScrollBehavior"] == "auto", (label, geometry)
+    visible = (0 <= geometry["centerX"] < geometry["innerWidth"] and
+               0 <= geometry["centerY"] < geometry["innerHeight"] and
+               geometry["hitWithinTarget"])
+    if not visible:
+        # Diagnostic only: do not turn a failed click into a JS-activated pass.
+        # Test whether root scrolling can move at all, then fail with both probes.
+        scroll_to_probe = driver.execute_script("""
+          const root = document.scrollingElement;
+          const before = {scrollY:scrollY, scrollTop:root.scrollTop};
+          const reachable = Math.max(0, root.scrollHeight - root.clientHeight);
+          window.scrollTo({top:Math.min(reachable,root.scrollTop + 240),behavior:'instant'});
+          return {before, after:{scrollY:scrollY,scrollTop:root.scrollTop},reachable};
+        """)
+        raise AssertionError((label, geometry, {"scrollToProbe": scroll_to_probe}))
     return geometry
 
 
