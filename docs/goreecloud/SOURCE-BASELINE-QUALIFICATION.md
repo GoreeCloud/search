@@ -80,6 +80,28 @@ perform real provider tests. The JSON explicitly marks those unproven gates.
 The image record belongs to its exact integrated Development commit; it must
 not be paired with a different SHA or treated as live-deployment identity.
 
+### Partial installed-Python dependency observation
+
+The same gated Development image job now performs a **no-network, read-only
+ephemeral Docker run by its exact local image configuration digest**, with
+capabilities removed, no-new-privileges, bounded CPU/memory/processes and only
+a read-only mount of the inventory program. The program uses Python's standard
+`importlib.metadata` to list installed distribution **names and versions**,
+without installing, importing application modules, querying providers or
+reading credentials. The offline verifier matches this data to the same exact
+source inventory, OCI candidate identity, digest and Linux architecture,
+rejects duplicate/ambiguous package names and malformed values, and retains
+`search-local-python-distributions.json` for 30 days if all checks pass.
+
+This is **not a complete SBOM**: it excludes OS packages, shared libraries,
+non-Python artifacts, dependency relationships, licenses, vulnerability
+assessments and origin/signature proof; packages can be unpinned upstream.
+It cannot prove exactly what image runs on the VPS, which base images were
+resolved, that a container image is reproducible, or that the package list is
+trustworthy beyond the isolated CI observation. The artifact is explicitly
+unsigned and must not be used as Seal/Anchor qualification. A verified,
+complete SPDX/CycloneDX SBOM and required signatures remain a separate gate.
+
 The initial integrated Docker build exposed a runner parser failure on the
 upstream builder's `COPY --exclude` instruction. The builder now uses a
 Dockerfile-specific context ignore file to exclude generated

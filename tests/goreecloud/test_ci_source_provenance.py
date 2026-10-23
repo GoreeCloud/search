@@ -87,8 +87,17 @@ class SourceProvenanceContracts(unittest.TestCase):
         self.assertIn('search-unsigned-local-image-candidate', steps[4]['with']['name'])
         self.assertEqual('error', steps[4]['with']['if-no-files-found'])
         self.assertEqual('30', steps[4]['with']['retention-days'])
+        inventory_run = steps[5]['run']
+        self.assertIn('docker run --rm --network none --read-only --cap-drop ALL', inventory_run)
+        self.assertIn('--security-opt no-new-privileges', inventory_run)
+        self.assertIn('--entrypoint /usr/local/searxng/.venv/bin/python "$IMAGE_ID"', inventory_run)
+        self.assertIn('scripts/verify_runtime_python_inventory.py', inventory_run)
+        self.assertIn('--local-image-evidence "$RUNNER_TEMP/search-local-image-candidate.json"', inventory_run)
+        self.assertEqual('search-local-python-distributions', steps[6]['with']['name'])
+        self.assertEqual('error', steps[6]['with']['if-no-files-found'])
+        self.assertEqual('30', steps[6]['with']['retention-days'])
         runs = '\n'.join(step.get('run', '') for step in steps)
-        for unsafe in ('docker push', 'docker run', 'docker compose up'):
+        for unsafe in ('docker push', 'docker compose up', '--network host'):
             self.assertNotIn(unsafe, runs)
 
     def test_dist_image_has_explicit_commit_label_build_argument(self):
