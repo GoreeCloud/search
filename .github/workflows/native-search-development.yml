@@ -51,3 +51,22 @@ jobs:
           python tests/native/native_candidate_runner_smoke.py \
             --archive "$RUNNER_TEMP/goreecloud-search-native-candidate.pyz" \
             --expected-sha "$EXPECTED_SOURCE_SHA"
+      - name: Exercise real disposable systemd service lifecycle
+        # Never run this privileged gate against an untrusted fork checkout.
+        # The source itself is executed by systemd as 'nobody'; the temporary
+        # unit manager requires short-lived sudo on an isolated hosted runner.
+        if: >-
+          matrix.python-version == '3.12' && runner.os == 'Linux' &&
+          (github.event_name != 'pull_request' ||
+           github.event.pull_request.head.repo.full_name == 'GoreeCloud/search')
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          sudo -n env \
+            GITHUB_ACTIONS="$GITHUB_ACTIONS" \
+            RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" \
+            /usr/bin/python3 tests/native/native_systemd_lifecycle_smoke.py \
+              --archive "$RUNNER_TEMP/goreecloud-search-native-candidate.pyz" \
+              --expected-sha "$EXPECTED_SOURCE_SHA"
