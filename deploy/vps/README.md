@@ -73,6 +73,22 @@ from this older deployed Development image.
    # and neither pushes nor deploys containers.
    bash scripts/build_pinned_staging_image.sh "$SOURCE_SHA"
    ```
+   **Upstream base-image pinning (opt-in; release evidence still required):**
+   The default builder preserves the two existing mutable `docker.io/searxng/base`
+   tags for current Development/CI compatibility. For a separately approved
+   candidate, resolve and independently verify the **builder and runtime**
+   upstream registry manifest digests and platform details first. Set both
+   `GC_SEARCH_BUILDER_BASE_REF` and `GC_SEARCH_RUNTIME_BASE_REF` to the
+   corresponding `docker.io/searxng/base@sha256:<64-lowercase-hex>` references
+   in the build environment, then invoke the same script on the clean, exact
+   source SHA. A missing, partial, noncanonical or tag-only override fails
+   before Docker. The script passes both refs to the Dockerfiles as build args
+   and checks their declared `requested-*-base-ref` labels on the local image;
+   it prints `DIGEST_SYNTAX_ONLY_UNVERIFIED`, because syntax does not establish
+   origin, trust, platform closure, SBOM, reproducibility or a signed artifact.
+   Without both pins it prints `MUTABLE_DEFAULTS_RELEASE_HOLD`. Do not invent
+   digest values or treat either outcome as Seal/Anchor qualification.
+
    **Manual build alternative (do not run in addition to the preferred builder):**
    The version file is gitignored and must be generated from the *same* pinned
    clean checkout before Docker COPY. The following commands are only for an

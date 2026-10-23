@@ -9,6 +9,20 @@ if (( $# != 1 )) || [[ ! "$1" =~ ^[a-f0-9]{40}$ ]]; then
   echo 'Usage: scripts/build_pinned_staging_image.sh <full-40-character-commit-sha>' >&2
   exit 64
 fi
+# A two-sided opt-in avoids a misleading "pinned" image when only one of the
+# external upstream base images has an immutable reference. Defaults remain
+# unchanged for existing Development workflows until real digests are vetted.
+BUILDER_BASE_REF="${GC_SEARCH_BUILDER_BASE_REF:-docker.io/searxng/base:searxng-builder}"
+RUNTIME_BASE_REF="${GC_SEARCH_RUNTIME_BASE_REF:-docker.io/searxng/base:searxng}"
+BASE_MODE='MUTABLE_DEFAULTS_RELEASE_HOLD'
+if [[ -v GC_SEARCH_BUILDER_BASE_REF || -v GC_SEARCH_RUNTIME_BASE_REF ]]; then
+  if [[ ! "$BUILDER_BASE_REF" =~ ^docker\.io/searxng/base@sha256:[0-9a-f]{64}$ ]] ||
+     [[ ! "$RUNTIME_BASE_REF" =~ ^docker\.io/searxng/base@sha256:[0-9a-f]{64}$ ]]; then
+    echo 'Refusing image build: supply BOTH upstream base refs as docker.io/searxng/base@sha256:<64-lowercase-hex> (no tags).' >&2
+    exit 64
+  fi
+  BASE_MODE='DIGEST_SYNTAX_ONLY_UNVERIFIED'
+fi
 EXPECTED_SHA="$1"
 SOURCE_SHA="$(git rev-parse HEAD)"
 if [[ "$SOURCE_SHA" != "$EXPECTED_SHA" ]]; then
@@ -60,19 +74,29 @@ PY
 
 BUILDER_IMAGE="goreecloud/search-builder:staging-${SOURCE_SHA:0:12}"
 IMAGE="goreecloud/search:staging-${SOURCE_SHA:0:12}"
-docker build -f container/builder.dockerfile -t "$BUILDER_IMAGE" .
+docker build -f container/builder.dockerfile \
+  --build-arg BUILDER_BASE_IMAGE="$BUILDER_BASE_REF" \
+  -t "$BUILDER_IMAGE" .
 docker build -f container/dist.dockerfile \
   --build-arg BUILDER_IMAGE="$BUILDER_IMAGE" \
+  --build-arg RUNTIME_BASE_IMAGE="$RUNTIME_BASE_REF" \
   --build-arg VCS_REVISION="$SOURCE_SHA" \
   --build-arg VCS_URL="https://github.com/GoreeCloud/search" \
   --build-arg VERSION="dev-${SOURCE_SHA:0:12}" \
+  --build-arg REQUESTED_BUILDER_BASE_REF="$BUILDER_BASE_REF" \
+  --build-arg REQUESTED_RUNTIME_BASE_REF="$RUNTIME_BASE_REF" \
   -t "$IMAGE" .
 IMAGE_REVISION="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$IMAGE")"
 IMAGE_SOURCE="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.source"}}' "$IMAGE")"
+IMAGE_REQUESTED_BUILDER_REF="$(docker image inspect --format '{{index .Config.Labels "org.goreecloud.search.requested-builder-base-ref"}}' "$IMAGE")"
+IMAGE_REQUESTED_RUNTIME_REF="$(docker image inspect --format '{{index .Config.Labels "org.goreecloud.search.requested-runtime-base-ref"}}' "$IMAGE")"
 IMAGE_ID="$(docker image inspect --format '{{.Id}}' "$IMAGE")"
-if [[ "$IMAGE_REVISION" != "$SOURCE_SHA" || "$IMAGE_SOURCE" != 'https://github.com/GoreeCloud/search' ]]; then
-  echo 'Refusing candidate image: OCI source identity does not match pinned revision.' >&2
+if [[ "$IMAGE_REVISION" != "$SOURCE_SHA" || "$IMAGE_SOURCE" != 'https://github.com/GoreeCloud/search' ||
+      "$IMAGE_REQUESTED_BUILDER_REF" != "$BUILDER_BASE_REF" ||
+      "$IMAGE_REQUESTED_RUNTIME_REF" != "$RUNTIME_BASE_REF" ]]; then
+  echo 'Refusing candidate image: source or requested upstream base labels differ from build inputs.' >&2
   exit 66
 fi
 printf 'LOCAL_STAGING_IMAGE_PASS image=%s revision=%s image_id=%s\n' "$IMAGE" "$SOURCE_SHA" "$IMAGE_ID"
+printf 'BASE_IMAGE_REFERENCE_MODE=%s builder=%s runtime=%s\n' "$BASE_MODE" "$BUILDER_BASE_REF" "$RUNTIME_BASE_REF"
 echo 'No image was pushed or deployed. OCI labels are declared metadata, not cryptographic attestation.'
