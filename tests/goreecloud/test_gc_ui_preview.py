@@ -13,6 +13,7 @@ from gc_ui_preview_offline import offline_preview_app
 
 ROOT = Path(__file__).resolve().parents[2]
 CSS = ROOT / "searx/static/themes/simple/goreecloud-search.css"
+LAYOUT_CSS = ROOT / "searx/static/themes/simple/goreecloud-mockup.css"
 FOUNDATIONS = ROOT / "searx/static/themes/simple/gc-ui/css/gc.v1.generated.css"
 BROWSER = ROOT / "tests/goreecloud/browser_preview_smoke.py"
 GC = 'html[data-gc-consumer="goreecloud-search"]'
@@ -142,6 +143,15 @@ class GCUISearchPreviewTests(unittest.TestCase):
             "Input.dispatchTouchEvent", "hitWithinTarget", "WebDriverWait",
         ):
             self.assertIn(evidence, browser)
+
+    def test_private_preview_root_scrollport_stays_viewport_sized(self):
+        css = LAYOUT_CSS.read_text(encoding="utf-8")
+        preview_root = css.split(
+            "html[data-glaze-consumer]:has(> body.goreecloud_preview_endpoint) {", 1
+        )[1].split("}", 1)[0]
+        self.assertIn("overflow-y: auto !important", preview_root)
+        self.assertIn("height: 100% !important", preview_root)
+        self.assertNotIn("height: auto !important", preview_root)
 
     def test_gc_ui_debt_goes_down_without_certifying_full_acceptance(self):
         report = audit(ROOT, ROOT / "docs/goreecloud/gc-ui-legacy-baseline.json")

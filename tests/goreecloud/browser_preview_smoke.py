@@ -150,9 +150,16 @@ def assert_pointer_hit(driver, selector: str, label: str) -> dict:
 
 
 def click_native_pointer(driver, selector: str, label: str, *, navigates: bool = False) -> None:
-    """Let WebDriver scroll and click naturally; never submit/toggle through JS."""
+    """Scroll to an actual hit target, then click with WebDriver's native pointer."""
     target = driver.find_element(By.CSS_SELECTOR, selector)
     before = pointer_geometry(driver, selector)
+    # Chrome's implicit WebDriver scrolling can stop almost immediately when
+    # the document root has an auto-height scrollport. Verify usable scrolling
+    # and actual hit-testing before sending any pointer activation.
+    driver.execute_script("arguments[0].scrollIntoView({block:'center',inline:'nearest'})", target)
+    scrolled = assert_pointer_hit(driver, selector, label)
+    if before["targetTop"] >= before["innerHeight"]:
+        assert scrolled["scrollTop"] > before["scrollTop"], (label, before, scrolled)
     try:
         target.click()
     except WebDriverException as error:
@@ -161,9 +168,7 @@ def click_native_pointer(driver, selector: str, label: str, *, navigates: bool =
     if navigates:
         # An actual POST replaces the document; the caller checks its results.
         return
-    after = assert_pointer_hit(driver, selector, label)
-    if before["targetTop"] >= before["innerHeight"]:
-        assert after["scrollTop"] > before["scrollTop"], (label, before, after)
+    assert_pointer_hit(driver, selector, label)
 
 
 def tap_native_touch(driver, selector: str, label: str) -> None:
