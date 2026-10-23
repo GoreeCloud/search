@@ -90,6 +90,30 @@ def _manifest(item: dict) -> int:
     return len(layers)
 
 
+def platform_child_descriptor(root_raw: bytes, platform: str) -> tuple[str, int, str]:
+    """Select exactly one index child; a direct manifest cannot bind a platform."""
+    target = PLATFORM.fullmatch(platform)
+    if target is None:
+        raise ManifestEvidenceError("target platform is not canonical")
+    root = _parse(root_raw)
+    if root["mediaType"] not in INDEX_TYPES:
+        raise ManifestEvidenceError("top-level manifest is not a platform index")
+    entries = root.get("manifests")
+    if not isinstance(entries, list) or not 0 < len(entries) <= MAX_DESCRIPTORS:
+        raise ManifestEvidenceError("index descriptors absent or unbounded")
+    matches = []
+    for desc in entries:
+        desc_digest, size = _descriptor(desc, MANIFEST_TYPES)
+        p = desc.get("platform")
+        if not isinstance(p, dict):
+            raise ManifestEvidenceError("index descriptor has no platform")
+        if (p.get("os"), p.get("architecture"), p.get("variant")) == target.groups():
+            matches.append((desc_digest, size, desc["mediaType"]))
+    if len(matches) != 1:
+        raise ManifestEvidenceError("missing or ambiguous platform manifest child")
+    return matches[0]
+
+
 def verify(base_ref: str, root_raw: bytes, child_raw: bytes | None, platform: str) -> dict:
     """Check cryptographic bytes-to-descriptor links; never return a release PASS."""
     ref = BASE_REF.fullmatch(base_ref)
@@ -106,21 +130,10 @@ def verify(base_ref: str, root_raw: bytes, child_raw: bytes | None, platform: st
     image, child_digest = root, None
     descriptor_count = 0
     if root_type in INDEX_TYPES:
-        entries = root.get("manifests")
-        if not isinstance(entries, list) or not 0 < len(entries) <= MAX_DESCRIPTORS:
-            raise ManifestEvidenceError("index descriptors absent or unbounded")
-        descriptor_count = len(entries)
-        matches = []
-        for desc in entries:
-            desc_digest, size = _descriptor(desc, MANIFEST_TYPES)
-            p = desc.get("platform")
-            if not isinstance(p, dict):
-                raise ManifestEvidenceError("index descriptor has no platform")
-            if (p.get("os"), p.get("architecture"), p.get("variant")) == target.groups():
-                matches.append((desc_digest, size, desc["mediaType"]))
-        if len(matches) != 1 or child_raw is None:
+        descriptor_count = len(root["manifests"]) if isinstance(root.get("manifests"), list) else 0
+        child_digest, size, media_type = platform_child_descriptor(root_raw, platform)
+        if child_raw is None:
             raise ManifestEvidenceError("missing or ambiguous platform manifest child")
-        child_digest, size, media_type = matches[0]
         if len(child_raw) != size or "sha256:" + hashlib.sha256(child_raw).hexdigest() != child_digest:
             raise ManifestEvidenceError("platform child bytes do not match index descriptor")
         image = _parse(child_raw)
