@@ -25,13 +25,16 @@ ALLOWED_ORIGINS = (
 )
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 RELEASE_INPUTS = (
+    ".dockerignore",
     ".github/workflows/native-search-development.yml",
     ".github/workflows/search-foundation.yml",
     "configs/goreecloud/settings.free-first.yml",
     "container/builder.dockerfile",
+    "container/builder.dockerfile.dockerignore",
     "container/dist.dockerfile",
     "deploy/vps/compose.free-metasearch-working.yaml",
     "requirements.txt",
+    "requirements-server.txt",
     "scripts/build_pinned_staging_image.sh",
     "scripts/candidate_image_evidence.py",
     "scripts/free_upgrade_preflight.py",

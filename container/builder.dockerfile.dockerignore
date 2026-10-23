@@ -1,0 +1,10 @@
+# Mirrors the root context allowlist, but the source builder must not copy
+# generated revision metadata. Docker selects this file for builder.dockerfile;
+# dist.dockerfile continues to use the root .dockerignore.
+*
+!container/*.template.*
+!container/entrypoint.sh
+!searx/**
+!native_search/**
+!requirements*.txt
+searx/version_frozen.py
