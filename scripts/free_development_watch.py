@@ -245,7 +245,7 @@ def core_audit(opener, *, expected_revision: str, timeout: float) -> list[dict]:
 
 
 def synthetic_category_audit(opener, *, timeout: float) -> list[dict]:
-    """Exactly four synthetic requests with no retries or extra engine fallback."""
+    """At most four synthetic requests; no retries or extra engine fallback."""
     results = []
     for category, query, expected in CASES:
         body = urlencode({
