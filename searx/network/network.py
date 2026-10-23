@@ -60,6 +60,7 @@ class Network:
         'proxies',
         'using_tor_proxy',
         'privacy_proxy_required',
+        'provider_target_guard_required',
         'max_redirects',
         'retries',
         'retry_on_http_error',
@@ -82,6 +83,7 @@ class Network:
         proxies: str | dict[str, str] | None = None,
         using_tor_proxy: bool = False,
         privacy_proxy_required: bool = False,
+        provider_target_guard_required: bool = False,
         local_addresses: str | list[str] | None = None,
         retries: int = 0,
         retry_on_http_error: bool = False,
@@ -97,6 +99,9 @@ class Network:
         self.proxies = proxies
         self.using_tor_proxy = using_tor_proxy
         self.privacy_proxy_required = privacy_proxy_required
+        # Branded free-first Search still needs SSRF/redirect protection even
+        # though it deliberately does not use the optional Tor relay.
+        self.provider_target_guard_required = provider_target_guard_required or privacy_proxy_required
         self.local_addresses = local_addresses
         self.retries = retries
         self.retry_on_http_error = retry_on_http_error
@@ -233,6 +238,9 @@ class Network:
         enable_http3 = self.enable_http3 if enable_http3 is None else enable_http3
         local_address = next(self._local_addresses_cycle)
         proxies = next(self._proxies_cycle)  # is a tuple so it can be part of the key
+        if self.provider_target_guard_required:
+            if verify is False or self.enable_http or curl_options:
+                raise ProxyError('Search provider egress blocked: insecure transport override')
         if self.privacy_proxy_required:
             # Anonymous Search must prove the gateway is Tor, not merely SOCKS5H.
             # Fail before opening a connection if the verification flag was omitted.
@@ -240,8 +248,6 @@ class Network:
                 raise ProxyError('Private Search egress blocked: Tor verification required')
             if not self.valid_private_proxy(proxies):
                 raise ProxyError('Private Search egress blocked: approved local SOCKS5H proxy required')
-            if verify is False or self.enable_http or curl_options:
-                raise ProxyError('Private Search egress blocked: insecure transport override')
         curl_key = tuple(sorted((int(k), v) for k, v in (curl_options or {}).items()))
         key = (verify, max_redirects, local_address, proxies, impersonate, curl_key, enable_http3)
         if key not in self._clients or self._clients[key].is_closed:
@@ -314,12 +320,13 @@ class Network:
         was_disconnected = False
         do_raise_for_httperror = Network.extract_do_raise_for_httperror(kwargs)
         kwargs_clients = Network.extract_kwargs_clients(kwargs)
-        if self.privacy_proxy_required:
+        if self.provider_target_guard_required:
             if any(key in kwargs for key in ('proxy', 'proxies', 'interface', 'curl_options')):
-                raise ProxyError('Private Search egress blocked: per-request proxy override')
+                raise ProxyError('Search provider egress blocked: per-request transport override')
             if not safe_external_media_url(url):
-                raise ProxyError('Private Search egress blocked: unsafe HTTPS destination')
-            # Never follow private provider redirects to unvalidated hosts.
+                raise ProxyError('Search provider egress blocked: unsafe HTTPS destination')
+            # Never follow provider redirects to an unvalidated host, even on
+            # the direct-HTTPS free-first profile.
             kwargs['allow_redirects'] = False
             # Do not forward upstream cookies or client-identifying headers.
             # Provider challenges might need cookies; privacy takes precedence.
@@ -435,6 +442,7 @@ def initialize(
         'local_addresses': settings_outgoing['source_ips'],
         'using_tor_proxy': settings_outgoing['using_tor_proxy'],
         'privacy_proxy_required': bool(settings.get('goreecloud', {}).get('require_anonymous_egress')),
+        'provider_target_guard_required': bool(settings.get('goreecloud', {}).get('private_search')),
         'proxies': settings_outgoing['proxies'],
         'max_redirects': settings_outgoing['max_redirects'],
         'retries': settings_outgoing['retries'],
@@ -449,6 +457,11 @@ def initialize(
         # Engine-specific overrides cannot disable mandatory private Tor
         # verification. A disabled global Tor flag still fails closed.
         result['privacy_proxy_required'] = default_params['privacy_proxy_required']
+        # Per-engine configuration must never turn off GoreeCloud's shared
+        # outbound provider-target guard.
+        result['provider_target_guard_required'] = (
+            default_params['provider_target_guard_required'] or result['privacy_proxy_required']
+        )
         if result['privacy_proxy_required']:
             result['using_tor_proxy'] = default_params['using_tor_proxy']
         if logger_name:
