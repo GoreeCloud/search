@@ -205,10 +205,17 @@ def main() -> None:
 
         # Actual provider-choice submission, still without a provider call.
         with patch("searx.search.SearchWithPlugins", SyntheticSearch):
+            # Submit from a fresh desktop page: the responsive-width assertions
+            # above intentionally leave Chrome at 320px with a long page scroll.
+            driver.set_window_size(1440, 900)
+            post_synthetic_preview(driver, url)
+            driver.find_element(By.CSS_SELECTOR, ".goreecloud-preview-single summary").click()
             selected = driver.find_element(By.ID, "goreecloud-provider-choice")
             first_provider = selected.find_elements(By.CSS_SELECTOR, 'option[value]:not([value=""])')[0]
             Select(selected).select_by_value(first_provider.get_attribute("value"))
-            driver.find_element(By.CSS_SELECTOR, ".goreecloud-preview-single button[type=submit]").click()
+            submit = driver.find_element(By.CSS_SELECTOR, ".goreecloud-preview-single button[type=submit]")
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'})", submit)
+            submit.click()
             WebDriverWait(driver, 12).until(lambda browser: browser.current_url.endswith("/search"))
             assert "?" not in driver.current_url
             assert driver.find_elements(By.CSS_SELECTOR, ".goreecloud-source-diagnostics")
