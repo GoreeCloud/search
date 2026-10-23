@@ -96,6 +96,16 @@ class SourceProvenanceContracts(unittest.TestCase):
         self.assertEqual('search-local-python-distributions', steps[6]['with']['name'])
         self.assertEqual('error', steps[6]['with']['if-no-files-found'])
         self.assertEqual('30', steps[6]['with']['retention-days'])
+        os_run = steps[7]['run']
+        self.assertIn('docker run --rm --network none --read-only --cap-drop ALL', os_run)
+        self.assertIn('--security-opt no-new-privileges', os_run)
+        self.assertIn('--entrypoint /usr/local/searxng/.venv/bin/python "$IMAGE_ID"', os_run)
+        self.assertIn('scripts/verify_runtime_os_inventory.py', os_run)
+        self.assertIn('--python-evidence "$RUNNER_TEMP/search-local-python-distributions.json"', os_run)
+        self.assertIn('--local-image-evidence "$RUNNER_TEMP/search-local-image-candidate.json"', os_run)
+        self.assertEqual('search-local-os-packages', steps[8]['with']['name'])
+        self.assertEqual('error', steps[8]['with']['if-no-files-found'])
+        self.assertEqual('30', steps[8]['with']['retention-days'])
         runs = '\n'.join(step.get('run', '') for step in steps)
         for unsafe in ('docker push', 'docker compose up', '--network host'):
             self.assertNotIn(unsafe, runs)

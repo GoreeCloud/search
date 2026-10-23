@@ -93,14 +93,41 @@ source inventory, OCI candidate identity, digest and Linux architecture,
 rejects duplicate/ambiguous package names and malformed values, and retains
 `search-local-python-distributions.json` for 30 days if all checks pass.
 
-This is **not a complete SBOM**: it excludes OS packages, shared libraries,
-non-Python artifacts, dependency relationships, licenses, vulnerability
+This Python inventory is **not a complete SBOM**: it excludes OS packages,
+shared libraries, non-Python artifacts, dependency relationships, licenses, vulnerability
 assessments and origin/signature proof; packages can be unpinned upstream.
 It cannot prove exactly what image runs on the VPS, which base images were
 resolved, that a container image is reproducible, or that the package list is
 trustworthy beyond the isolated CI observation. The artifact is explicitly
 unsigned and must not be used as Seal/Anchor qualification. A verified,
 complete SPDX/CycloneDX SBOM and required signatures remain a separate gate.
+
+### Partial OS package-manager registration observation (pending runner acceptance)
+
+The Development-only candidate job additionally has a second, separate
+isolated observation configured against the **same exact local image ID**.
+With networking disabled, a read-only filesystem, dropped capabilities,
+no-new-privileges and an unprivileged UID, a standard-library reader inspects
+the pre-existing Alpine APK or Debian dpkg *text package database*, if exactly
+one recognized database exists. It records only OS release ID/version and
+installed package name/version/architecture. The offline verifier binds those
+rows to the exact clean source, image config digest, platform and previously
+verified Python evidence. It rejects unknown/ambiguous package managers,
+missing records, malformed or duplicate package fields, wrong architecture,
+changed source hashes or mismatched image identity. A successful integrated
+runner would retain `search-local-os-packages.json` for 30 days. No `apk`,
+`dpkg`, `apt` or network command is run inside the image.
+
+**This is not an OS binary closure or a complete SBOM.** Package-manager
+records omit manually copied executables, vendored/shared libraries that are
+not package-managed, transitive dependency edges, licenses, vulnerability
+results, signatures and content hashes. The base tags remain mutable. A green
+source-only test cannot prove that the particular upstream candidate image
+contains a readable supported package database; that must be established by
+the exact integrated Docker CI job after the change. A failure is a blocked
+evidence gate, not permission to silently substitute an invented inventory.
+No Seal/Anchor, deployed image, OS hardening or security qualification follows
+from this observation.
 
 The initial integrated Docker build exposed a runner parser failure on the
 upstream builder's `COPY --exclude` instruction. The builder now uses a

@@ -41,6 +41,8 @@ RELEASE_INPUTS = (
     "scripts/free_upgrade_preflight.py",
     "scripts/runtime_python_inventory.py",
     "scripts/verify_runtime_python_inventory.py",
+    "scripts/runtime_os_inventory.py",
+    "scripts/verify_runtime_os_inventory.py",
 )
 
 
