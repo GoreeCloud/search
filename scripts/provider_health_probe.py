@@ -152,8 +152,12 @@ def validate_observed_results(results: list, engine: str, metadata: dict) -> str
         if (item.get('engine') != engine or not isinstance(credited, list)
                 or not credited or any(name != engine for name in credited)):
             return 'invalid_result_attribution'
-    if results and (metadata.get('represented_engines') != [engine]
-                    or metadata.get('represented_result_counts') != {engine: len(results)}
+    # An empty result set must also have an empty representation. Otherwise a
+    # malformed/stale response can masquerade as a genuine provider no-result
+    # or provider-error observation.
+    counts = {engine: len(results)} if results else {}
+    if (metadata.get('represented_engines') != list(counts)
+                    or metadata.get('represented_result_counts') != counts
                     or metadata.get('representation_not_contact_confirmation') is not True):
         return 'invalid_representation_contract'
     return None
@@ -187,6 +191,10 @@ def probe(source: str, origin: str, *, category: str = 'general',
             return {'provider': source, 'state': 'invalid_response_contract'}
         if metadata.get('selected_engines') != [engine]:
             return {'provider': source, 'state': 'selection_mismatch'}
+        if (type(metadata.get('selected_engine_count')) is not int
+                or metadata.get('selected_engine_count') != 1
+                or metadata.get('selection_not_contact_confirmation') is not True):
+            return {'provider': source, 'state': 'invalid_response_contract'}
         errors = doc.get('unresponsive_engines')
         if not isinstance(errors, list):
             return {'provider': source, 'state': 'invalid_error_contract'}
