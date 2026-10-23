@@ -82,6 +82,16 @@ class FreeProviderEgressGuardTests(unittest.TestCase):
                 {'proxies': {'all://': 'http://localhost:8080'}},
                 {'interface': '127.0.0.1'},
                 {'curl_options': {1: 1}},
+                # AsyncSession.request accepts verify/cert/auth on each call;
+                # checking only Network.get_client(verify=...) is insufficient.
+                {'verify': False},
+                {'verify': '/nonexistent/custom-ca-bundle.pem'},
+                {'cert': '/nonexistent/private-client-cert.pem'},
+                {'auth': ('synthetic-user', 'synthetic-password')},
+                # Non-string header names are not safe to casefold against the
+                # text-only sensitive-header denylist.
+                {'headers': {b'Host': 'metadata.google.internal'}},
+                {'headers': {' Host': 'metadata.google.internal'}},
             ):
                 with self.subTest(kwargs=kwargs), self.assertRaises(ProxyError):
                     asyncio.run(free_network().request(
@@ -94,6 +104,8 @@ class FreeProviderEgressGuardTests(unittest.TestCase):
         with patch('searx.network.network.new_client') as factory:
             with self.assertRaises(ProxyError):
                 asyncio.run(net.get_client(verify=False))
+            with self.assertRaises(ProxyError):
+                asyncio.run(net.get_client(verify='/nonexistent/custom-ca-bundle.pem'))
             with self.assertRaises(ProxyError):
                 asyncio.run(net.get_client(curl_options={1: 1}))
             factory.assert_not_called()
@@ -113,9 +125,12 @@ class FreeProviderEgressGuardTests(unittest.TestCase):
                             'X-Forwarded-For': '192.0.2.1',
                             'Cookie': 'private-value',
                             'Authorization': 'Bearer redacted',
+                            'Host': 'metadata.google.internal',
+                            'hOsT': 'other.internal',
                             'Accept': 'application/json',
                         },
                         cookies={'session': 'private-value'},
+                        referer='https://private.example.invalid/secret',
                         raise_for_httperror=False,
                     ))
                     self.assertEqual(status, response.status_code)
@@ -127,6 +142,7 @@ class FreeProviderEgressGuardTests(unittest.TestCase):
                 self.assertIs(False, call.kwargs['allow_redirects'])
                 self.assertEqual({'Accept': 'application/json'}, call.kwargs['headers'])
                 self.assertNotIn('cookies', call.kwargs)
+                self.assertNotIn('referer', call.kwargs)
                 self.assertIs(False, client.stream.call_args.kwargs['allow_redirects'])
 
 

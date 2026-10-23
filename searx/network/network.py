@@ -5,12 +5,13 @@
 __all__ = ["get_network"]
 
 import typing as t
-from collections.abc import Generator
+from collections.abc import Generator, Mapping
 
 
 import atexit
 import asyncio
 import ipaddress
+import re
 from itertools import cycle
 from urllib.parse import urlsplit
 
@@ -239,7 +240,7 @@ class Network:
         local_address = next(self._local_addresses_cycle)
         proxies = next(self._proxies_cycle)  # is a tuple so it can be part of the key
         if self.provider_target_guard_required:
-            if verify is False or self.enable_http or curl_options:
+            if verify is not True or self.enable_http or curl_options:
                 raise ProxyError('Search provider egress blocked: insecure transport override')
         if self.privacy_proxy_required:
             # Anonymous Search must prove the gateway is Tor, not merely SOCKS5H.
@@ -328,6 +329,11 @@ class Network:
             if any(key in kwargs for key in (
                 'proxy', 'proxies', 'proxy_auth', 'interface',
                 'curl_options', 'doh_url', 'http_version',
+                # Request-level TLS and authentication arguments override
+                # the trusted client's verified defaults.  A provider must
+                # never opt out of certificate validation or send credentials
+                # supplied through the engine's request path.
+                'verify', 'cert', 'auth',
             )):
                 raise ProxyError('Search provider egress blocked: per-request transport override')
             if not safe_external_media_url(url):
@@ -338,8 +344,20 @@ class Network:
             # Do not forward upstream cookies or client-identifying headers.
             # Provider challenges might need cookies; privacy takes precedence.
             kwargs.pop('cookies', None)
+            # curl_cffi's dedicated referer argument bypasses the header
+            # scrubber below. Never leak a query-bearing referrer upstream.
+            kwargs.pop('referer', None)
             if kwargs.get('headers'):
+                # Deny ambiguous/binary header names before opening a client.
+                # Otherwise a forged Host may evade text-only casefolding.
+                if not isinstance(kwargs['headers'], Mapping) or any(
+                    not isinstance(name, str)
+                    or not re.fullmatch(r"[!#$%&'*+.^_`|~0-9A-Za-z-]+", name)
+                    for name in kwargs['headers']
+                ):
+                    raise ProxyError('Search provider egress blocked: invalid request header')
                 identifying = {
+                    'host', ':authority',
                     'cookie', 'authorization', 'proxy-authorization', 'x-api-key',
                     'forwarded', 'x-forwarded-for', 'x-real-ip', 'x-client-ip',
                     'cf-connecting-ip', 'true-client-ip', 'x-forwarded-host',
