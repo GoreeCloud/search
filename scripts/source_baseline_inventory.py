@@ -38,6 +38,8 @@ RELEASE_INPUTS = (
     "scripts/build_pinned_staging_image.sh",
     "scripts/candidate_image_evidence.py",
     "scripts/free_upgrade_preflight.py",
+    "scripts/runtime_python_inventory.py",
+    "scripts/verify_runtime_python_inventory.py",
 )
 
 
