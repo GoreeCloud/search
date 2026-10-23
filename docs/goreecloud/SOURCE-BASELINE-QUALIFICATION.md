@@ -102,32 +102,45 @@ trustworthy beyond the isolated CI observation. The artifact is explicitly
 unsigned and must not be used as Seal/Anchor qualification. A verified,
 complete SPDX/CycloneDX SBOM and required signatures remain a separate gate.
 
-### Partial OS package-manager registration observation (pending runner acceptance)
+### Runtime OS identity and package-registry availability (unsigned; no OS SBOM)
 
-The Development-only candidate job additionally has a second, separate
-isolated observation configured against the **same exact local image ID**.
-With networking disabled, a read-only filesystem, dropped capabilities,
-no-new-privileges and an unprivileged UID, a standard-library reader inspects
-the pre-existing Alpine APK or Debian dpkg *text package database*, if exactly
-one recognized database exists. It records only OS release ID/version and
-installed package name/version/architecture. The offline verifier binds those
-rows to the exact clean source, image config digest, platform and previously
-verified Python evidence. It rejects unknown/ambiguous package managers,
-missing records, malformed or duplicate package fields, wrong architecture,
-changed source hashes or mismatched image identity. A successful integrated
-runner would retain `search-local-os-packages.json` for 30 days. No `apk`,
-`dpkg`, `apt` or network command is run inside the image.
+The Development-only candidate job additionally performs a separate isolated
+observation against the **same exact local image ID**, without network,
+filesystem writes, privileges or access to secrets. The source-pinned Python
+reader recognizes two distinct cases:
 
-**This is not an OS binary closure or a complete SBOM.** Package-manager
-records omit manually copied executables, vendored/shared libraries that are
-not package-managed, transitive dependency edges, licenses, vulnerability
-results, signatures and content hashes. The base tags remain mutable. A green
-source-only test cannot prove that the particular upstream candidate image
-contains a readable supported package database; that must be established by
-the exact integrated Docker CI job after the change. A failure is a blocked
-evidence gate, not permission to silently substitute an invented inventory.
-No Seal/Anchor, deployed image, OS hardening or security qualification follows
-from this observation.
+- Alpine APK / Debian dpkg images with **one present, supported, parseable**
+  registration database: extract sorted, validated installed package
+  name/version/architecture rows as explicitly partial package evidence.
+- The currently used SearXNG base image is **Void Linux**, a rolling-release OS
+  whose `os-release` legitimately omits `VERSION_ID`. The upstream `searxng`
+  runtime Dockerfile intentionally removes XBPS and `/var/db/` after assembling
+  the root filesystem. Only when `ID=void`, `VERSION_ID` is absent, no APK/dpkg
+  database exists and no `/var/db/xbps*` entry exists does the reader classify
+  `package_inventory_status: unavailable`. The output includes OS identity,
+  expected XBPS manager and explicit registry-removal reason, but **no OS
+  package list, zero count, manifest hash or inferred package identities**.
+
+Both variants are independently bound to the exact clean source manifest,
+local image configuration digest, Linux architecture and previously verified
+Python evidence. Unexpected OS/manager combinations, malformed records,
+retained XBPS registry, new/unrecognized distro states or changed image/source
+evidence fail closed. A successful observation retains
+`search-local-os-observation.json` for 30 days. No `xbps`, `apk`, `dpkg`,
+`apt` or network command runs in the image. The upstream base implementation
+is documented at https://github.com/searxng/base/blob/main/Dockerfile.
+
+**The Void unavailable branch is a verified evidence gap, not an OS package
+inventory success or an Anchor qualification.** There is no evidence about
+which OS packages, bundled executables or shared libraries are present or
+their versions. Even when another distro's package database is readable,
+manager records omit manually copied binaries, transitive dependency edges,
+licenses, vulnerabilities, signatures and full content hashes. Upstream base
+tags remain mutable. A green source or CI workflow means only that the
+strictly limited observation was recorded; **complete OS package/BOM
+qualification remains blocked** until trusted pre-stripping build-stage or
+independently verified static image analysis becomes available. No Seal/Anchor,
+deployed-image, security or OS-hardening qualification follows.
 
 The initial integrated Docker build exposed a runner parser failure on the
 upstream builder's `COPY --exclude` instruction. The builder now uses a

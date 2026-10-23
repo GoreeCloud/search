@@ -103,7 +103,7 @@ class SourceProvenanceContracts(unittest.TestCase):
         self.assertIn('scripts/verify_runtime_os_inventory.py', os_run)
         self.assertIn('--python-evidence "$RUNNER_TEMP/search-local-python-distributions.json"', os_run)
         self.assertIn('--local-image-evidence "$RUNNER_TEMP/search-local-image-candidate.json"', os_run)
-        self.assertEqual('search-local-os-packages', steps[8]['with']['name'])
+        self.assertEqual('search-local-os-observation', steps[8]['with']['name'])
         self.assertEqual('error', steps[8]['with']['if-no-files-found'])
         self.assertEqual('30', steps[8]['with']['retention-days'])
         runs = '\n'.join(step.get('run', '') for step in steps)

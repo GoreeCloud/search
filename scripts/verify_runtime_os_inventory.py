@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Bind a partial OS-package observation to a verified local image and Python evidence.
+"""Bind OS registry observation to an exact verified local image and Python evidence.
 
-This produces an unsigned inventory of package-manager registrations only.
-It cannot certify an SBOM, binary closure, vulnerabilities, image signing,
-deployment identity, Seal or Anchor qualification.
+For Void images with their XBPS registry deliberately removed, this records
+an explicit unavailable status and NO package inventory. Neither branch can
+certify an SBOM, binary closure, signing, Seal or Anchor qualification.
 """
 
 from __future__ import annotations
@@ -87,14 +87,48 @@ def verify(runtime: dict, image: dict, python: dict, source: dict, sha: str, ima
     ).encode("utf-8")
     if hashlib.sha256(python_distribution_bytes).hexdigest() != python["distribution_manifest_sha256"]:
         raise OSPackageEvidenceError("previous Python evidence manifest hash is inconsistent")
-    if (
-        set(runtime) != {"schema", "os", "machine", "release", "package_manager", "packages"}
-        or runtime.get("schema") != "goreecloud.search.runtime-os-packages.v1"
-        or runtime.get("os") != "linux"
-        or runtime.get("machine") != machine
-    ):
+    if runtime.get("os") != "linux" or runtime.get("machine") != machine:
         raise OSPackageEvidenceError("OS runtime schema or platform mismatches the candidate")
     release = runtime.get("release")
+    if runtime.get("schema") == "goreecloud.search.runtime-os-registry-unavailable.v1":
+        if (
+            set(runtime) != {"schema", "os", "machine", "release", "package_manager",
+                             "package_inventory_status", "reason"}
+            or release != {"id": "void", "version_id": None}
+            or runtime.get("package_manager") != "xbps"
+            or runtime.get("package_inventory_status") != "unavailable"
+            or runtime.get("reason") != "runtime_xbps_package_registry_removed"
+        ):
+            raise OSPackageEvidenceError("unknown or contradictory unavailable OS registry state")
+        python_bytes = json.dumps(python, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return {
+            "schema": "goreecloud.search.local-os-registry-unavailable-evidence.v1",
+            "repository": REPO_URL,
+            "source_commit": sha,
+            "source_tree": source["source_tree"],
+            "local_image_config_digest": image_id,
+            "image_tag": image["image_tag"],
+            "platform": platform_id,
+            "os_release": release,
+            "package_manager": "xbps",
+            "package_inventory_status": "unavailable",
+            "reason": "runtime_xbps_package_registry_removed",
+            "python_evidence_sha256": hashlib.sha256(python_bytes).hexdigest(),
+            "unsigned": True,
+            "evidence_scope": "isolated_local_image_os_identity_and_registry_absence_only",
+            "not_evaluated": [
+                "installed_os_packages_and_binary_dependencies",
+                "complete_spdx_cyclonedx_sbom_dependencies_licenses_or_vulnerabilities",
+                "pinned_base_images_or_reproducible_build",
+                "cryptographic_attestation_or_signature",
+                "registry_manifest_digest_or_rollback_artifact",
+                "deployed_image_and_runtime_acceptance",
+                "seal_and_anchor_qualification",
+            ],
+        }
+    if (set(runtime) != {"schema", "os", "machine", "release", "package_manager", "packages"}
+            or runtime.get("schema") != "goreecloud.search.runtime-os-packages.v1"):
+        raise OSPackageEvidenceError("unsupported OS inventory schema")
     if (not isinstance(release, dict) or set(release) != {"id", "version_id"}
             or not isinstance(release.get("id"), str)
             or not RELEASE_FIELD.fullmatch(release["id"])
@@ -104,6 +138,9 @@ def verify(runtime: dict, image: dict, python: dict, source: dict, sha: str, ima
     manager = runtime.get("package_manager")
     if manager not in ("dpkg", "apk"):
         raise OSPackageEvidenceError("unsupported package-manager evidence")
+    if (release["id"], manager) not in {("alpine", "apk"), ("debian", "dpkg"),
+                                             ("ubuntu", "dpkg")}:
+        raise OSPackageEvidenceError("OS release does not match the package manager")
     allowed_arch = {
         ("dpkg", "linux/amd64"): {"amd64", "all"},
         ("dpkg", "linux/arm64"): {"arm64", "all"},
@@ -184,7 +221,10 @@ def main(argv: list[str] | None = None) -> int:
             stream.write("\n")
     except (OSPackageEvidenceError, InventoryError, BaselineError, OSError, ValueError, TypeError):
         parser.exit(2, "LOCAL_OS_PACKAGE_EVIDENCE_BLOCKED: could not verify exact OS package evidence\n")
-    print("LOCAL_OS_PACKAGE_EVIDENCE_PASS: unsigned registered packages only; no complete SBOM or release")
+    if record["schema"] == "goreecloud.search.local-os-registry-unavailable-evidence.v1":
+        print("LOCAL_OS_REGISTRY_UNAVAILABLE_VERIFIED: no OS package inventory; Anchor remains blocked")
+    else:
+        print("LOCAL_OS_PACKAGE_EVIDENCE_PASS: unsigned registered packages only; no complete SBOM or release")
     return 0
 
 

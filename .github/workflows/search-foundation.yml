@@ -105,7 +105,7 @@ jobs:
           path: ${{ runner.temp }}/search-local-python-distributions.json
           if-no-files-found: error
           retention-days: 30
-      - name: Inspect OS package-manager registrations in the same isolated image
+      - name: Observe OS registries or explicitly classify stripped Void XBPS runtime
         env:
           EXPECTED_SOURCE_SHA: ${{ github.sha }}
         run: |
@@ -122,12 +122,12 @@ jobs:
               --image-id "$IMAGE_ID" \
               --local-image-evidence "$RUNNER_TEMP/search-local-image-candidate.json" \
               --python-evidence "$RUNNER_TEMP/search-local-python-distributions.json" \
-              --output "$RUNNER_TEMP/search-local-os-packages.json"
-      - name: Retain unsigned partial OS package-manager evidence
+              --output "$RUNNER_TEMP/search-local-os-observation.json"
+      - name: Retain unsigned OS observation (may explicitly have no package inventory)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: search-local-os-packages
-          path: ${{ runner.temp }}/search-local-os-packages.json
+          name: search-local-os-observation
+          path: ${{ runner.temp }}/search-local-os-observation.json
           if-no-files-found: error
           retention-days: 30
   runtime-and-boundaries:

@@ -51,6 +51,14 @@ OS = {
         {"name": "ca-certificates-bundle", "version": "20241010-r0", "arch": "noarch"},
     ],
 }
+VOID = {
+    "schema": "goreecloud.search.runtime-os-registry-unavailable.v1",
+    "os": "linux", "machine": "x86_64",
+    "release": {"id": "void", "version_id": None},
+    "package_manager": "xbps",
+    "package_inventory_status": "unavailable",
+    "reason": "runtime_xbps_package_registry_removed",
+}
 
 
 class RuntimeOSInventoryTests(unittest.TestCase):
@@ -83,6 +91,39 @@ class RuntimeOSInventoryTests(unittest.TestCase):
         raw = ('NAME="Alpine Linux"\nID=alpine\nVERSION_ID="3.21.3"\n'
                'PRETTY_NAME="Alpine Linux test image"\nHOME_URL="https://example.invalid"\n')
         self.assertEqual({"id": "alpine", "version_id": "3.21.3"}, parse_os_release(raw))
+
+    def test_rolling_void_os_release_without_version_is_explicitly_supported(self):
+        raw = ('NAME="Void"\nID="void"\nPRETTY_NAME="Void Linux"\n'
+               'HOME_URL="https://voidlinux.org/"\nDISTRIB_ID="void"\n')
+        self.assertEqual({"id": "void", "version_id": None}, parse_os_release(raw))
+        with self.assertRaises(InventoryError):
+            parse_os_release("ID=alpine\n")
+        with self.assertRaises(InventoryError):
+            parse_os_release("ID=void\nVERSION_ID=\n")
+
+    def test_known_void_without_registry_yields_no_inventory_or_count(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "etc").mkdir()
+            (root / "etc/os-release").write_text('ID="void"\nNAME="Void"\n')
+            runtime = collect(root)
+            self.assertEqual("unavailable", runtime["package_inventory_status"])
+            self.assertEqual("xbps", runtime["package_manager"])
+            self.assertNotIn("packages", runtime)
+            self.assertNotIn("package_count", runtime)
+
+    def test_void_with_surviving_or_foreign_package_registry_fails_closed(self):
+        for path in ("var/db/xbps", "var/db/xbps-anything", "lib/apk/db/installed",
+                     "var/lib/dpkg/status"):
+            with self.subTest(path=path), tempfile.TemporaryDirectory() as d:
+                root = Path(d)
+                (root / "etc").mkdir()
+                (root / "etc/os-release").write_text('ID="void"\n')
+                target = root / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("registry remains")
+                with self.assertRaises(InventoryError):
+                    collect(root)
 
     def test_scanner_uses_only_fixed_package_db_paths_without_executing_package_manager(self):
         with tempfile.TemporaryDirectory() as d:
@@ -132,6 +173,29 @@ class RuntimeOSInventoryTests(unittest.TestCase):
         self.assertTrue(record["unsigned"])
         self.assertIn("manually_copied_or_unregistered_executables_and_shared_libraries",
                       record["not_evaluated"])
+
+    def test_exact_source_image_python_chain_records_unavailable_void_without_packages(self):
+        record = verify(deepcopy(VOID), deepcopy(IMAGE), deepcopy(PYTHON), deepcopy(SOURCE), SHA, IMAGE_ID)
+        self.assertEqual("goreecloud.search.local-os-registry-unavailable-evidence.v1", record["schema"])
+        self.assertEqual("unavailable", record["package_inventory_status"])
+        self.assertEqual("xbps", record["package_manager"])
+        self.assertEqual(IMAGE_ID, record["local_image_config_digest"])
+        self.assertEqual("runtime_xbps_package_registry_removed", record["reason"])
+        self.assertNotIn("packages", record)
+        self.assertNotIn("package_count", record)
+        self.assertNotIn("package_manifest_sha256", record)
+        self.assertIn("installed_os_packages_and_binary_dependencies", record["not_evaluated"])
+
+    def test_unavailable_void_rejects_synthetic_success_or_weakened_identity(self):
+        for field, bad in (("schema", OS["schema"]), ("release", {"id": "void", "version_id": "2"}),
+                           ("package_manager", "apk"), ("package_inventory_status", "observed"),
+                           ("reason", "unknown"), ("packages", []), ("package_count", 0),
+                           ("machine", "aarch64"), ("unexpected", True)):
+            with self.subTest(field=field):
+                runtime = deepcopy(VOID)
+                runtime[field] = bad
+                with self.assertRaises(OSPackageEvidenceError):
+                    verify(runtime, IMAGE, PYTHON, SOURCE, SHA, IMAGE_ID)
 
     def test_tampered_python_chain_fails_closed(self):
         for field, bad in (("source_commit", "e" * 40),
