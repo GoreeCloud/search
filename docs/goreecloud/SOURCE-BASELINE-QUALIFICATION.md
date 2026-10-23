@@ -80,6 +80,20 @@ perform real provider tests. The JSON explicitly marks those unproven gates.
 The image record belongs to its exact integrated Development commit; it must
 not be paired with a different SHA or treated as live-deployment identity.
 
+The initial integrated Docker build exposed a runner parser failure on the
+upstream builder's `COPY --exclude` instruction. The builder now uses a
+Dockerfile-specific context ignore file to exclude generated
+`searx/version_frozen.py`; the distribution image retains its existing root
+context rules so that the pinned build helper can copy the freshly generated
+version file. Both ignore files are enumerated in the source inventory. This
+is a build-compatibility correction, not an acceptance of the first failed
+image candidate; the full image build must pass on the corrected source.
+The same builder also used an invalid GNU `find -exec` argument form for
+verifying compressed files (`{}.gz` / `{}.br` with the batching `+` form).
+The corrected builder discovers already-created `.gz` and `.br` files and
+tests them with standalone `{}` arguments; this is covered by offline
+regressions but still requires a real Docker build to be accepted.
+
 **Acceptance sequence:** observe a green exact-head post-merge run and retain
 the JSON; independently fix/pin dependencies and generate signed provenance
 plus SBOM where required; create a controlled release line and rollback

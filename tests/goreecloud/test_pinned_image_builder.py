@@ -6,6 +6,9 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts/build_pinned_staging_image.sh"
 DIST = ROOT / "container/dist.dockerfile"
+BUILDER = ROOT / "container/builder.dockerfile"
+BUILDER_IGNORE = ROOT / "container/builder.dockerfile.dockerignore"
+ROOT_IGNORE = ROOT / ".dockerignore"
 
 
 class PinnedImageBuildContracts(unittest.TestCase):
@@ -49,6 +52,26 @@ class PinnedImageBuildContracts(unittest.TestCase):
         self.assertIn('bash scripts/build_pinned_staging_image.sh "$SOURCE_SHA"', guide)
         self.assertIn('python3 searx/version.py freeze', guide)
         self.assertIn('test -f searx/version_frozen.py', guide)
+
+    def test_builder_specific_context_excludes_only_generated_version_metadata(self):
+        builder = BUILDER.read_text()
+        specific = BUILDER_IGNORE.read_text().splitlines()
+        root = ROOT_IGNORE.read_text().splitlines()
+        self.assertIn('COPY ./searx/ ./searx/', builder)
+        self.assertNotIn('COPY --exclude=', builder)
+        self.assertEqual(
+            [line for line in root if line and not line.startswith('#')],
+            [line for line in specific if line and not line.startswith('#')][:-1],
+        )
+        self.assertEqual('searx/version_frozen.py', specific[-1])
+        self.assertNotIn('searx/version_frozen.py', root)
+
+    def test_builder_compression_checks_use_valid_find_exec_arguments(self):
+        builder = BUILDER.read_text()
+        self.assertNotIn('{}.gz +', builder)
+        self.assertNotIn('{}.br +', builder)
+        self.assertIn('-name "*.gz" -exec gzip --test {} +', builder)
+        self.assertIn('-name "*.br" -exec brotli --test {} +', builder)
 
 
 if __name__ == "__main__":
