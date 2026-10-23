@@ -68,6 +68,7 @@ from searx.goreecloud_request_budget import RequestBudget
 from searx.goreecloud_policy import (
     SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
     distinct_selected_sources, safe_primary_result_url, represented_result_sources, validate_builtin_sources,
+    safe_external_media_url,
     all_selected_sources_access_restricted,
     validate_builtin_search_bangs, restrict_explicit_private_engines, validate_private_request_context,
     SEARCH_SOURCE_COOKIE, SEARCH_SOURCE_OPTIONS, SEARCH_SOURCE_FAMILIES,
@@ -325,6 +326,9 @@ def image_proxify(url: str):
             return url
         return None
 
+    # A provider-supplied media URL is untrusted even when the server signs it.
+    if not safe_external_media_url(url):
+        return None
     h = new_hmac(settings['server']['secret_key'], url.encode())
 
     return '{0}?{1}'.format(url_for('image_proxy'), urlencode(dict(url=url.encode(), h=h)))
@@ -1308,12 +1312,31 @@ def preferences():
 app.add_url_rule('/favicon_proxy', methods=['GET'], endpoint="favicon_proxy", view_func=favicons.favicon_proxy)
 
 
+def _bounded_image_proxy_stream(chunks, maximum_size, close_stream):
+    """Stop the remote stream at the byte cap, even without Content-Length."""
+    forwarded = 0
+    try:
+        for chunk in chunks:
+            if not isinstance(chunk, (bytes, bytearray, memoryview)):
+                logger.warning('image-proxy: invalid upstream stream chunk')
+                return
+            forwarded += len(chunk)
+            if forwarded > maximum_size:
+                logger.warning('image-proxy: upstream stream size exceeded')
+                return
+            yield bytes(chunk)
+    except RequestException:
+        logger.warning('image-proxy: upstream stream interrupted')
+    finally:
+        close_stream()
+
+
 @app.route('/image_proxy', methods=['GET'])
 def image_proxy():
     # pylint: disable=too-many-return-statements, too-many-branches
 
     url = sxng_request.args.get('url')
-    if not url:
+    if not safe_external_media_url(url):
         return '', 400
 
     if not is_hmac_of(settings['server']['secret_key'], url.encode(), sxng_request.args.get('h', '')):
@@ -1330,9 +1353,9 @@ def image_proxy():
             'DNT': '1',
         }
         set_context_network_name('image_proxy')
-        resp, stream = http_stream(method='GET', url=url, headers=request_headers, allow_redirects=True)
+        resp, stream = http_stream(method='GET', url=url, headers=request_headers, allow_redirects=False)
         content_length = resp.headers.get('Content-Length')
-        if content_length and content_length.isdigit() and int(content_length) > maximum_size:
+        if content_length and (not content_length.isdigit() or int(content_length) > maximum_size):
             return 'Max size', 400
 
         if resp.status_code != 200:
@@ -1365,14 +1388,18 @@ def image_proxy():
         try:
             if resp:
                 resp.close()
-            del resp
-            del stream
         except RequestException as e:
             logger.debug('Exception while closing response: %s', e)
+        finally:
+            resp = None
+            stream = None
 
     try:
-        headers = dict_subset(resp.headers, {'Content-Type', 'Content-Encoding', 'Content-Length', 'Length'})
-        response = Response(stream, mimetype=resp.headers['Content-Type'], headers=headers, direct_passthrough=True)
+        # Do not forward an untrusted length claim; WSGI frames the bounded
+        # iterator rather than promising bytes a malicious upstream may omit.
+        headers = dict_subset(resp.headers, {'Content-Type', 'Content-Encoding'})
+        bounded_stream = _bounded_image_proxy_stream(stream, maximum_size, close_stream)
+        response = Response(bounded_stream, mimetype=resp.headers['Content-Type'], headers=headers, direct_passthrough=True)
         response.call_on_close(close_stream)
         return response
     except RequestException:
