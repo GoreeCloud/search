@@ -8,6 +8,13 @@
 
 The authorized `GoreeCloud` GitHub connection provided fresh PR/branch details. The exact commits were fetched read-only into an isolated GoreeCloud Search worktree and inspected with actual Git three-way merge machinery. The new local inspector is `scripts/release_merge_preview.py`; it does not merge, retarget, commit, push or update any Git reference. It needs a complete *local* object store and refuses implicit partial-clone network fetches. `git merge-tree --write-tree` may create unreachable local tree/blob objects without changing a ref or worktree.
 
+The source-baseline and merge-preview inspectors explicitly ignore local
+`git replace` object aliases, disable lazy fetches and avoid optional Git
+locks. A replacement alias can otherwise reinterpret a literal source SHA as
+a different tree or history. Real-Git negative fixtures cover this spoofed
+object case. These offline checks still do **not** prove signed provenance,
+complete SBOM, conflict resolution, trusted deployment or Seal/Anchor readiness.
+
 ## Verified exact source boundary
 
 | Boundary | Verified value at this audit |
