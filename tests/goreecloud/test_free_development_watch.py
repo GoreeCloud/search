@@ -254,6 +254,27 @@ class FreeDevelopmentWatchTests(unittest.TestCase):
         self.assertEqual('http_denied', report['checks'][-1]['reason'])
         self.assertNotIn('Forbidden', out)
 
+    def test_http_200_with_provider_failure_aborts_later_probes(self):
+        # SearXNG may report a provider-side block or throttle in a 200 JSON
+        # response. DuckDuckGo is selected in multiple later categories, so
+        # the monitor must not continue probing after this first failure.
+        expected = watch.CASES[0][2]
+        response = synthetic_document(
+            expected,
+            errors=[['duckduckgo', '429 at https://private.example/path']],
+        )
+        opener = FakeOpener(modified={'/search': FakeResponse(json.dumps(response))})
+        code, report, output = execute(
+            ['--expected-revision', REV, '--check-sources'], opener,
+        )
+        self.assertEqual(2, code)
+        self.assertEqual(1, report['provider_requests_attempted'])
+        self.assertEqual(4, len(opener.requests))
+        self.assertEqual(['synthetic_general'],
+                         [item['check'] for item in report['checks'][3:]])
+        self.assertEqual(['duckduckgo'], report['checks'][-1]['failed_engines'])
+        self.assertNotIn('private.example', output)
+
     def test_reject_source_mismatch_partial_and_empty(self):
         for case in (
             {'goreecloud': {'selected_engines': ['google']}, 'results': [{}],

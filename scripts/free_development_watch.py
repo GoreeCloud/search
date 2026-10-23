@@ -245,7 +245,7 @@ def core_audit(opener, *, expected_revision: str, timeout: float) -> list[dict]:
 
 
 def synthetic_category_audit(opener, *, timeout: float) -> list[dict]:
-    """Exactly four synthetic requests with no retries or extra engine fallback."""
+    """At most four synthetic requests; no retries or extra engine fallback."""
     results = []
     for category, query, expected in CASES:
         body = urlencode({
@@ -284,6 +284,13 @@ def synthetic_category_audit(opener, *, timeout: float) -> list[dict]:
                                             'invalid_error_attribution' if not recognized else
                                             'invalid_result_attribution' if valid_links is None else
                                             'provider_or_selection_issue')
+                        if errors:
+                            # HTTP 200 can still carry an upstream denial or
+                            # throttle. Later categories may reuse that provider;
+                            # do not issue more synthetic requests after a
+                            # reported failure, regardless of error wording.
+                            results.append(result)
+                            break
         except (HTTPError, URLError, OSError, ValueError, TypeError) as error:
             result['reason'] = 'http_denied' if isinstance(error, HTTPError) else type(error).__name__
             # A 403/429 is not a signal to attempt an alternative route.

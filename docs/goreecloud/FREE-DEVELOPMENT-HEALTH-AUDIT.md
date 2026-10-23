@@ -1,6 +1,6 @@
 # GoreeCloud Search — zero-fee Development health audit
 
-**Updated October 21, 2026 — opt-in operational tool, not a new background service.**
+**Updated October 23, 2026 — opt-in operational tool, not a new background service.**
 
 GoreeCloud Search's verified *NetBird-only Development* hostname is
 `https://search-dev.goreecloud.com`, currently served by source
@@ -49,7 +49,7 @@ python3 scripts/free_development_watch.py \
   --check-sources
 ```
 
-Only after all three baseline checks pass, this submits **exactly one fixed,
+Only after all three baseline checks pass, this submits **at most one fixed,
 nonpersonal, synthetic query** for each of Web, Images, Videos and News,
 **sequentially** and **without alternate-engine retries**. It checks the
 transparent selected-source lists, at least one validated public HTTP(S) result
@@ -62,8 +62,10 @@ the explicit **not a provider-contact confirmation** metadata. Unknown or
 malformed provider-error attribution also fails the audit. These source
 checks operate locally on the existing response and add no DNS lookups or
 HTTP requests. It prints only per-category aggregate **usable link**/error counts, never raw
-provider URLs or titles. HTTP 403/429 aborts remaining synthetic checks: do not
-bypass provider protections, CAPTCHAs, blocks or rate limits.
+provider URLs or titles. HTTP 403/429 **or any reported upstream provider
+failure within HTTP 200 JSON** aborts remaining synthetic checks, since later
+categories may reuse the affected provider. Do not bypass provider protections,
+CAPTCHAs, blocks or rate limits.
 
 Source choices are DuckDuckGo/Bing/Startpage for Web, Bing Images,
 DuckDuckGo/Bing Videos and DuckDuckGo News. Their availability can change and
