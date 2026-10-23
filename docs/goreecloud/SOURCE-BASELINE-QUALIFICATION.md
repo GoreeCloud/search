@@ -80,6 +80,45 @@ perform real provider tests. The JSON explicitly marks those unproven gates.
 The image record belongs to its exact integrated Development commit; it must
 not be paired with a different SHA or treated as live-deployment identity.
 
+### Offline Dockerfile base-reference gap audit
+
+`scripts/audit_dockerfile_base_refs.py` provides a read-only, standard-library
+inventory of the *source syntax* for `FROM` instructions in the tracked
+`container/builder.dockerfile` and `container/dist.dockerfile`. It verifies the
+exact clean source commit and the Dockerfile hashes against the same source
+baseline, rejects ambiguous Dockerfile syntax and writes only a new report:
+
+```bash
+python3 scripts/audit_dockerfile_base_refs.py \
+  --expected-sha "$(git rev-parse HEAD)" \
+  --output /path/to/new-base-reference-audit.json
+```
+
+At the reviewed Development source, there are **two mutable external base
+tags** (`docker.io/searxng/base:searxng-builder` and
+`docker.io/searxng/base:searxng`) and **one unresolved dynamic build-stage
+reference** (`${BUILDER_IMAGE}`). The audit reports their source file, line,
+literal reference and classification. A digest-form `FROM` would establish
+only digest **syntax**, not whether that digest was resolved, inspected,
+signed, vulnerable, or included in a complete SBOM. The dynamic builder-stage
+reference is later supplied by a source-scoped local image tag in the build
+script; its actual image configuration digest is outside this offline audit.
+Every report deliberately returns `HOLD_NO_SEAL_OR_ANCHOR_QUALIFICATION`,
+even if all literal external references eventually use digests.
+
+The Foundation workflow's `exact-source-baseline` job is configured to run
+this audit at its exact checked-out source SHA on both PR and push events and
+retain `search-dockerfile-base-reference-hold` for 30 days. This configuration
+is source-reviewed; an actual head-specific successful CI execution must be
+read back before claiming the artifact was produced for any candidate.
+
+This diagnostic neither edits Dockerfiles nor pulls images, pins upstream
+tags, generates a complete SBOM, evaluates vulnerabilities, signs artifacts,
+or verifies a released/deployed image. A future controlled build must resolve
+and record immutable build-stage/base images, complete dependency and license
+evidence, signature/attestation and approved distribution/rollback provenance
+before the corresponding Seal gates can close.
+
 ### Partial installed-Python dependency observation
 
 The same gated Development image job now performs a **no-network, read-only

@@ -53,7 +53,7 @@ class SourceProvenanceContracts(unittest.TestCase):
         )
         job = workflow['jobs']['exact-source-baseline']
         self.assertEqual('read', job['permissions']['contents'])
-        checkout, inventory, upload = job['steps']
+        checkout, inventory, upload, base_audit, base_upload = job['steps']
         expected = '${{ github.event.pull_request.head.sha || github.sha }}'
         self.assertEqual(expected, checkout['with']['ref'])
         self.assertEqual('false', checkout['with']['persist-credentials'])
@@ -64,6 +64,12 @@ class SourceProvenanceContracts(unittest.TestCase):
                       inventory['run'])
         self.assertEqual('error', upload['with']['if-no-files-found'])
         self.assertEqual('30', upload['with']['retention-days'])
+        self.assertEqual(expected, base_audit['env']['EXPECTED_SOURCE_SHA'])
+        self.assertIn('scripts/audit_dockerfile_base_refs.py', base_audit['run'])
+        self.assertIn('--output "$RUNNER_TEMP/search-base-image-refs.json"', base_audit['run'])
+        self.assertEqual('search-dockerfile-base-reference-hold', base_upload['with']['name'])
+        self.assertEqual('error', base_upload['with']['if-no-files-found'])
+        self.assertEqual('30', base_upload['with']['retention-days'])
 
     def test_expensive_candidate_image_isolated_to_integrated_development_push(self):
         workflow = yaml.load(

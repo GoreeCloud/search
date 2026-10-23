@@ -40,6 +40,20 @@ jobs:
           path: ${{ runner.temp }}/search-source-baseline.json
           if-no-files-found: error
           retention-days: 30
+      - name: Record Dockerfile base image closure blockers (not a release pass)
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python3 scripts/audit_dockerfile_base_refs.py \
+            --expected-sha "$EXPECTED_SOURCE_SHA" \
+            --output "$RUNNER_TEMP/search-base-image-refs.json"
+      - name: Retain unsigned source-only base reference audit
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: search-dockerfile-base-reference-hold
+          path: ${{ runner.temp }}/search-base-image-refs.json
+          if-no-files-found: error
+          retention-days: 30
   local-image-candidate-evidence:
     # Only the integrated Development head receives the expensive isolated
     # build. PRs still run offline evidence tests and source-only inventory.
