@@ -1,8 +1,11 @@
 # Keep the legacy builder default for existing workflows; staged builds use an
 # isolated revision-tagged builder image to avoid races between candidates.
 ARG BUILDER_IMAGE=localhost/searxng/searxng:builder
+# Keep the legacy Development base unless an explicitly digest-pinned override
+# is supplied; the default mutable tag is not release provenance evidence.
+ARG RUNTIME_BASE_IMAGE=docker.io/searxng/base:searxng
 FROM ${BUILDER_IMAGE} AS builder
-FROM docker.io/searxng/base:searxng AS dist
+FROM ${RUNTIME_BASE_IMAGE} AS dist
 
 COPY --chown=977:977 --from=builder /usr/local/searxng/.venv/ ./.venv/
 COPY --chown=977:977 --from=builder /usr/local/searxng/searx/ ./searx/
@@ -14,6 +17,8 @@ ARG CREATED="0001-01-01T00:00:00Z"
 ARG VERSION="unknown"
 ARG VCS_URL="unknown"
 ARG VCS_REVISION="unknown"
+ARG REQUESTED_BUILDER_BASE_REF="unverified"
+ARG REQUESTED_RUNTIME_BASE_REF="unverified"
 
 LABEL org.opencontainers.image.created="$CREATED" \
     org.opencontainers.image.description="SearXNG is a metasearch engine. Users are neither tracked nor profiled." \
@@ -23,7 +28,9 @@ LABEL org.opencontainers.image.created="$CREATED" \
     org.opencontainers.image.source="$VCS_URL" \
     org.opencontainers.image.title="SearXNG" \
     org.opencontainers.image.url="https://searxng.org" \
-    org.opencontainers.image.version="$VERSION"
+    org.opencontainers.image.version="$VERSION" \
+    org.goreecloud.search.requested-builder-base-ref="$REQUESTED_BUILDER_BASE_REF" \
+    org.goreecloud.search.requested-runtime-base-ref="$REQUESTED_RUNTIME_BASE_REF"
 
 ENV __SEARXNG_VERSION="$VERSION" \
     __SEARXNG_SETTINGS_PATH="$__SEARXNG_CONFIG_PATH/settings.yml" \

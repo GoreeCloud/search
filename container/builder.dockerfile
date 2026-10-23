@@ -1,4 +1,7 @@
-FROM docker.io/searxng/base:searxng-builder AS builder
+# Preserve the existing Development default. A qualified release build must
+# supply a separately verified immutable ref through --build-arg.
+ARG BUILDER_BASE_IMAGE=docker.io/searxng/base:searxng-builder
+FROM ${BUILDER_BASE_IMAGE} AS builder
 
 COPY ./requirements.txt ./requirements-server.txt ./
 

@@ -26,17 +26,17 @@ def fixture(files):
 
 
 class DockerfileBaseReferenceAuditTests(unittest.TestCase):
-    def test_current_exact_dockerfiles_disclose_unpinned_and_dynamic_froms(self):
+    def test_current_exact_dockerfiles_disclose_three_dynamic_froms(self):
         files = {path: (ROOT / path).read_bytes() for path in DOCKERFILES}
         report = fixture(files)
         rows = report["from_references"]
         self.assertEqual(3, len(rows))
         self.assertEqual(3, report["unresolved_or_mutable_reference_count"])
-        self.assertEqual(
-            ["mutable_or_unpinned_external_reference", "unresolved_build_argument",
-             "mutable_or_unpinned_external_reference"],
-            [r["classification"] for r in rows],
-        )
+        self.assertEqual(["unresolved_build_argument"] * 3,
+                         [r["classification"] for r in rows])
+        # The audit sees checked-in defaults, not any actual build-arg override.
+        self.assertEqual(["${BUILDER_BASE_IMAGE}", "${BUILDER_IMAGE}",
+                          "${RUNTIME_BASE_IMAGE}"], [r["reference"] for r in rows])
         self.assertEqual("HOLD_NO_SEAL_OR_ANCHOR_QUALIFICATION", report["release_decision"])
         self.assertIn("upstream_image_licenses_vulnerabilities_or_complete_sbom",
                       report["not_evaluated"])
