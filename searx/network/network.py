@@ -242,6 +242,12 @@ class Network:
         if self.provider_target_guard_required:
             if verify is not True or self.enable_http or curl_options:
                 raise ProxyError('Search provider egress blocked: insecure transport override')
+            # Some upstream engines opt into HTTP/3 independently of the
+            # network's defaults.  The guarded provider route must stay on
+            # HTTPS over TCP; QUIC uses UDP and can bypass TCP-only egress
+            # controls.  Downgrade to HTTP/2 (or 1.1) without dropping the
+            # provider's results.
+            enable_http3 = False
         if self.privacy_proxy_required:
             # Anonymous Search must prove the gateway is Tor, not merely SOCKS5H.
             # Fail before opening a connection if the verification flag was omitted.
