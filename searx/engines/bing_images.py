@@ -76,14 +76,31 @@ def response(resp: "SXNG_Response") -> EngineResults:
     dom = resp.html()
 
     for result in dom.xpath('//ul[contains(@class, "dgControl_list")]/li'):
-        metadata = result.xpath('.//a[@class="iusc"]/@m')
-        if not metadata:
+        metadata_attrs = result.xpath('.//a[@class="iusc"]/@m')
+        if not metadata_attrs:
             continue
 
-        metadata = json.loads(result.xpath('.//a[@class="iusc"]/@m')[0])
+        # A single incomplete/malformed card must not discard other images
+        # returned by the provider. Do not log the source payload: it can
+        # contain the searched terms and full provider/result URLs.
+        try:
+            metadata = json.loads(metadata_attrs[0])
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(metadata, dict) or any(
+            not isinstance(metadata.get(field), str) or not metadata[field].strip()
+            for field in ('purl', 'turl', 'murl')
+        ):
+            continue
+
         title = " ".join(result.xpath('.//div[@class="infnmpt"]//a/text()')).strip()
         if not title:
-            title = result.xpath('.//div[@class="infnmpt"]//a/@title')[0]
+            title_attrs = result.xpath('.//div[@class="infnmpt"]//a/@title')
+            title = next((label.strip() for label in title_attrs if label.strip()), '')
+        if not title and isinstance(metadata.get('t'), str):
+            title = metadata['t'].strip()
+        if not title:
+            continue
 
         img_format = " ".join(result.xpath('.//div[@class="imgpt"]/div/span/text()')).strip().split(" · ")
         source = " ".join(result.xpath('.//div[@class="imgpt"]//div[@class="lnkw"]//a/text()')).strip()
@@ -94,7 +111,7 @@ def response(resp: "SXNG_Response") -> EngineResults:
                 url=metadata["purl"],
                 thumbnail_src=metadata["turl"],
                 img_src=metadata["murl"],
-                content=metadata.get("desc"),
+                content=metadata.get("desc") if isinstance(metadata.get("desc"), str) else "",
                 source=source,
                 resolution=img_format[0],
                 img_format=img_format[1] if len(img_format) >= 2 else "",
