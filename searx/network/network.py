@@ -12,10 +12,11 @@ import atexit
 import asyncio
 import ipaddress
 import re
+import socket
 from itertools import cycle
 from urllib.parse import urlsplit
 
-from curl_cffi import CurlHttpVersion
+from curl_cffi import CurlHttpVersion, CurlOpt
 from curl_cffi.requests.exceptions import (
     ConnectionError as CurlConnectionError,
     ProxyError,
@@ -46,6 +47,12 @@ PROXY_PATTERN_MAPPING = {
 }
 
 ADDRESS_MAPPING = {'ipv4': '0.0.0.0', 'ipv6': '::'}
+# Some IPv6 addresses that Python considers globally routable can encode a
+# non-global IPv4 destination through NAT64. Deny these translation families
+# instead of trusting the IPv6 wrapper's is_global property.
+PROVIDER_TRANSLATION_NETWORKS = tuple(ipaddress.ip_network(prefix) for prefix in (
+    '64:ff9b::/96', '64:ff9b:1::/48', '2002::/16', '2001::/32', '::/96',
+))
 
 
 @t.final
@@ -225,6 +232,41 @@ class Network:
             and '#' not in url and '?' not in url
         )
 
+    @staticmethod
+    async def resolve_public_provider(host: str) -> tuple[str, tuple[str, ...]]:
+        """Resolve once, vet *every* answer, then pin the curl connection.
+
+        A hostname syntax check by itself cannot stop a DNS rebinding answer
+        from connecting Search to a loopback, private or metadata endpoint.
+        Do not leak the hostname into errors: upstream URLs can carry secrets.
+        """
+        try:
+            ascii_host = host.encode('idna').decode('ascii').lower()
+            answers = await asyncio.wait_for(
+                asyncio.get_running_loop().getaddrinfo(
+                    ascii_host, 443, type=socket.SOCK_STREAM,
+                ),
+                timeout=3.0,
+            )
+            addresses = tuple(sorted({entry[4][0] for entry in answers}))
+            if not 1 <= len(addresses) <= 16 or not all(
+                Network.public_provider_address(address) for address in addresses
+            ):
+                raise ValueError('Unsafe provider address')
+            return ascii_host, addresses
+        except (OSError, ValueError, UnicodeError, asyncio.TimeoutError) as exc:
+            raise ProxyError('Search provider egress blocked: DNS resolution not publicly pinned') from exc
+
+    @staticmethod
+    def public_provider_address(value: str) -> bool:
+        address = ipaddress.ip_address(value)
+        return bool(address.is_global and not (
+            isinstance(address, ipaddress.IPv6Address)
+            and (address.ipv4_mapped is not None or any(
+                address in network for network in PROVIDER_TRANSLATION_NETWORKS
+            ))
+        ))
+
     async def get_client(
         self,
         verify: bool | None = None,
@@ -232,6 +274,7 @@ class Network:
         impersonate: str | None = None,
         curl_options: dict[int, t.Any] | None = None,
         enable_http3: bool | None = None,
+        _trusted_dns_pin: tuple[str, tuple[str, ...]] | None = None,
     ) -> AsyncClient:
         verify = self.verify if verify is None else verify
         max_redirects = self.max_redirects if max_redirects is None else max_redirects
@@ -248,6 +291,12 @@ class Network:
             # controls.  Downgrade to HTTP/2 (or 1.1) without dropping the
             # provider's results.
             enable_http3 = False
+            if not self.privacy_proxy_required:
+                # Direct free-first Search is safe only if a vetted address
+                # is installed into curl's resolver cache for this connection.
+                # Proxies resolve destinations elsewhere and bypass this pin.
+                if proxies or not _trusted_dns_pin or not _trusted_dns_pin[1]:
+                    raise ProxyError('Search provider egress blocked: verified direct DNS pin required')
         if self.privacy_proxy_required:
             # Anonymous Search must prove the gateway is Tor, not merely SOCKS5H.
             # Fail before opening a connection if the verification flag was omitted.
@@ -256,8 +305,21 @@ class Network:
             if not self.valid_private_proxy(proxies):
                 raise ProxyError('Private Search egress blocked: approved local SOCKS5H proxy required')
         curl_key = tuple(sorted((int(k), v) for k, v in (curl_options or {}).items()))
-        key = (verify, max_redirects, local_address, proxies, impersonate, curl_key, enable_http3)
+        key = (verify, max_redirects, local_address, proxies, impersonate, curl_key, enable_http3, _trusted_dns_pin)
         if key not in self._clients or self._clients[key].is_closed:
+            effective_curl_options = curl_options
+            if _trusted_dns_pin is not None and self.provider_target_guard_required:
+                hostname, addresses = _trusted_dns_pin
+                # CURLOPT_RESOLVE binds HTTPS host:port to these IPs while
+                # retaining the original hostname for SNI/cert verification.
+                # Every address was checked before the client was created.
+                ip_list = ','.join(f'[{ip}]' if ':' in ip else ip for ip in addresses)
+                effective_curl_options = {
+                    CurlOpt.RESOLVE: [f'{hostname}:443:{ip_list}'],
+                    # libcurl otherwise honors HTTPS_PROXY/ALL_PROXY from the
+                    # process environment and could bypass our local DNS pin.
+                    CurlOpt.PROXY: '',
+                }
             client = new_client(
                 self.enable_http,
                 verify,
@@ -268,7 +330,7 @@ class Network:
                 local_address,
                 max_redirects,
                 impersonate=impersonate,
-                curl_options=curl_options,
+                curl_options=effective_curl_options,
             )
             self._clients[key] = client
         client = self._clients[key]
@@ -327,7 +389,12 @@ class Network:
         was_disconnected = False
         do_raise_for_httperror = Network.extract_do_raise_for_httperror(kwargs)
         kwargs_clients = Network.extract_kwargs_clients(kwargs)
+        trusted_dns_pin = None
         if self.provider_target_guard_required:
+            # These were extracted into client arguments; reject before any
+            # resolver work just like request-level transport overrides.
+            if 'verify' in kwargs_clients or 'curl_options' in kwargs_clients:
+                raise ProxyError('Search provider egress blocked: insecure transport override')
             # curl_cffi accepts these per-request controls in addition to
             # client options.  In particular, doh_url can silently replace
             # the resolver and make a second outbound request to an unvetted
@@ -381,8 +448,12 @@ class Network:
                     if name.lower() not in identifying
                     and not name.lower().startswith(identifying_prefixes)
                 }
+            # Resolve only after every synchronous rejection/sanitization;
+            # a rejected request must not cause even a DNS lookup.
+            if not self.privacy_proxy_required:
+                trusted_dns_pin = await self.resolve_public_provider(urlsplit(url).hostname)
         while retries >= 0:  # pragma: no cover
-            client = await self.get_client(**kwargs_clients)
+            client = await self.get_client(_trusted_dns_pin=trusted_dns_pin, **kwargs_clients)
             try:
                 method = method.upper()
                 if stream:
