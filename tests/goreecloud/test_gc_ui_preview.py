@@ -132,12 +132,14 @@ class GCUISearchPreviewTests(unittest.TestCase):
                 self.assertNotIn("Location", result.headers)
                 result.close()
 
-    def test_browser_regression_covers_native_keyboard_phone_and_forced_colors(self):
+    def test_browser_regression_covers_real_pointer_touch_keyboard_and_forced_colors(self):
         browser = BROWSER.read_text(encoding="utf-8")
         for evidence in (
             "Keys.ENTER", "Keys.TAB", "matchMedia", "setEmulatedMedia",
             "getBoundingClientRect", "--gc-v1-color-primary",
             "320, 760", "390, 844", "1440, 900", "network.assert_not_called()",
+            "elementFromPoint", "scrollingElement", "target.click()",
+            "Input.dispatchTouchEvent", "hitWithinTarget", "WebDriverWait",
         ):
             self.assertIn(evidence, browser)
 
