@@ -200,6 +200,31 @@ class NativeSystemdLifecycleOfflineTests(unittest.TestCase):
                          "no managed-service acceptance\n",
                          blocked_message(failure.exception))
 
+    def test_cleanup_reports_fixed_inspection_or_reload_stage_only(self):
+        state = {
+            "LoadState": "not-found", "ActiveState": "inactive",
+            "MainPID": "0", "ControlPID": "0",
+        }
+        secret = "private-token:///run/owner-query"
+        with tempfile.TemporaryDirectory() as tmp:
+            unit_path = Path(tmp) / "goreecloud-native-ci-unique.service"
+            unit_path.write_text("synthetic unit; never executed")
+            with mock.patch("native_systemd_lifecycle_smoke._show",
+                            side_effect=OSError(secret)):
+                with self.assertRaises(LifecycleBlocked) as failure:
+                    _cleanup_created_unit("goreecloud-native-ci-unique.service", unit_path)
+            self.assertEqual("teardown-inspect", str(failure.exception))
+            self.assertTrue(unit_path.exists())
+            with mock.patch("native_systemd_lifecycle_smoke._show",
+                            side_effect=lambda unit, key: state[key]), \
+                    mock.patch("native_systemd_lifecycle_smoke._run",
+                               side_effect=OSError(secret)):
+                with self.assertRaises(LifecycleBlocked) as failure:
+                    _cleanup_created_unit("goreecloud-native-ci-unique.service", unit_path)
+            self.assertEqual("teardown-reload", str(failure.exception))
+            self.assertFalse(unit_path.exists())
+            self.assertNotIn(secret, blocked_message(failure.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

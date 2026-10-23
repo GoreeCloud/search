@@ -64,7 +64,9 @@ DIAGNOSTIC_STAGES = frozenset((
     "host", "provenance", "fixture", "unit-render", "unit-create",
     "unit-verify", "manager-reload", "unit-identity", "start", "readiness",
     "query", "process-identity", "failure-injection", "restart", "stop",
-    "missing-index", "restore", "listener-closed", "teardown", "unknown",
+    "missing-index", "restore", "listener-closed", "teardown",
+    "teardown-inspect", "teardown-stop", "teardown-confirm",
+    "teardown-reset", "teardown-unlink", "teardown-reload", "unknown",
 ))
 
 
@@ -247,53 +249,60 @@ def _cleanup_created_unit(unit: str, unit_path: Path) -> None:
     unlinking. An unrecognized/failed manager state fails closed and leaves
     the unit in the short-lived runner for investigation, not on a VPS.
     """
-    if unit_path.is_symlink() or not unit_path.is_file():
-        raise LifecycleBlocked("disposable unit path is not our regular file")
-
-    load_state = _show(unit, "LoadState")
-    active_state = _show(unit, "ActiveState")
-    main_pid = int(_show(unit, "MainPID"))
-    control_pid = int(_show(unit, "ControlPID"))
-    if load_state not in ("loaded", "not-found", "bad-setting", "error", "masked"):
-        raise LifecycleBlocked("systemd reports an unrecognized unit load state")
-    if active_state not in ("active", "activating", "reloading", "deactivating",
-                            "inactive", "failed"):
-        raise LifecycleBlocked("systemd reports an unrecognized unit active state")
-    if main_pid < 0 or control_pid < 0:
-        raise LifecycleBlocked("systemd reported an invalid native unit process")
+    with _stage("teardown-inspect"):
+        if unit_path.is_symlink() or not unit_path.is_file():
+            raise LifecycleBlocked("disposable unit path is not our regular file")
+        load_state = _show(unit, "LoadState")
+        active_state = _show(unit, "ActiveState")
+        main_pid = int(_show(unit, "MainPID"))
+        control_pid = int(_show(unit, "ControlPID"))
+        if load_state not in ("loaded", "not-found", "bad-setting", "error", "masked"):
+            raise LifecycleBlocked("systemd reports an unrecognized unit load state")
+        if active_state not in ("active", "activating", "reloading", "deactivating",
+                                "inactive", "failed"):
+            raise LifecycleBlocked("systemd reports an unrecognized unit active state")
+        if main_pid < 0 or control_pid < 0:
+            raise LifecycleBlocked("systemd reported an invalid native unit process")
 
     # If verify/reload failed before systemd loaded the file, show reports
     # not-found/inactive/PIDs=0. There is nothing to stop; a stop request for
     # an unknown unit can itself fail and previously masked the actual gate.
     if active_state not in ("inactive", "failed") or main_pid or control_pid:
-        try:
-            _run("systemctl", "stop", unit)
-        except LifecycleBlocked:
-            _run("systemctl", "kill", "--signal=SIGKILL",
-                 "--kill-whom=all", unit, accepted=(0, 1))
-            _run("systemctl", "stop", unit)
+        with _stage("teardown-stop"):
+            try:
+                _run("systemctl", "stop", unit)
+            except LifecycleBlocked:
+                _run("systemctl", "kill", "--signal=SIGKILL",
+                     "--kill-whom=all", unit, accepted=(0, 1))
+                _run("systemctl", "stop", unit)
 
-    after_state = _show(unit, "ActiveState")
-    after_main = int(_show(unit, "MainPID"))
-    after_control = int(_show(unit, "ControlPID"))
-    if after_state not in ("inactive", "failed") or after_main != 0 or after_control != 0:
-        raise LifecycleBlocked("disposable unit still has unaccounted processes")
+    with _stage("teardown-confirm"):
+        after_state = _show(unit, "ActiveState")
+        after_main = int(_show(unit, "MainPID"))
+        after_control = int(_show(unit, "ControlPID"))
+        if after_state not in ("inactive", "failed") or after_main != 0 or after_control != 0:
+            raise LifecycleBlocked("disposable unit still has unaccounted processes")
     if load_state == "loaded":
-        _run("systemctl", "reset-failed", unit)
-    unit_path.unlink()
-    _run("systemctl", "daemon-reload")
+        with _stage("teardown-reset"):
+            _run("systemctl", "reset-failed", unit)
+    with _stage("teardown-unlink"):
+        unit_path.unlink()
+    with _stage("teardown-reload"):
+        _run("systemctl", "daemon-reload")
 
 
 def _teardown_preserving_primary(unit: str, unit_path: Path) -> None:
     """Prevent cleanup failure from overwriting a more informative stage."""
     primary = sys.exc_info()[1]
     try:
-        with _stage("teardown"):
-            _cleanup_created_unit(unit, unit_path)
-    except LifecycleBlocked:
+        _cleanup_created_unit(unit, unit_path)
+    except (LifecycleBlocked, OSError, ValueError, TypeError, KeyError,
+            subprocess.TimeoutExpired) as error:
         if primary is not None:
             raise LifecycleWithTeardownFailure(primary) from None
-        raise
+        if isinstance(error, LifecycleBlocked) and str(error) in DIAGNOSTIC_STAGES:
+            raise
+        raise LifecycleBlocked("teardown") from None
 
 
 def exercise(archive: Path, expected_sha: str) -> None:
