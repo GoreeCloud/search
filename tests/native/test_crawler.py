@@ -120,7 +120,7 @@ class CrawlerTests(unittest.TestCase):
         mock_addr = [(2, 1, 6, '', ('127.0.0.1', 443))]
         with patch('native_search.crawler.socket.getaddrinfo', return_value=mock_addr):
             with self.assertRaisesRegex(ValueError, 'non-public'):
-                PinnedHttpsFetcher().fetch('https://example.org/')
+                PinnedHttpsFetcher(self.host).fetch('https://example.org/')
 
     def test_crawl_requires_finite_plan(self):
         for count in (0, 101):
