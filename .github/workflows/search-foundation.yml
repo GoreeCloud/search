@@ -210,6 +210,9 @@ jobs:
           python -m pip install selenium==4.50.0
       - name: Verify local homepage at desktop and phone widths
         run: python tests/goreecloud/browser_home_smoke.py
+      - name: Verify private preview native POST, keyboard, responsive and forced-color behavior in Chrome
+        run: python tests/goreecloud/browser_preview_smoke.py
+        timeout-minutes: 10
       - name: Retain synthetic UI screenshots for review
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
