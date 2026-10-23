@@ -18,8 +18,11 @@ function apply() {
     html.classList.remove('theme-dark', 'theme-black', 'theme-light', 'theme-auto');
     html.classList.add('theme-' + override);
   }
+  // GC UI Foundations v1.0.1 resolves semantic colors on :root[data-gc-mode].
+  // Keep that contract aligned with the existing private Search appearance and OS preference.
+  const active = darkActive();
+  html.setAttribute('data-gc-mode', active ? 'dark' : 'light');
   if (button) {
-    const active = darkActive();
     button.setAttribute('aria-pressed', String(active));
     button.setAttribute('aria-label', active ? 'Switch to light mode' : 'Switch to dark mode');
     button.title = active ? 'Switch to light appearance' : 'Switch to dark appearance';

@@ -276,12 +276,18 @@ def main() -> None:
         assert theme_button.rect['width'] >= 44 and theme_button.rect['height'] >= 44, 'Theme touch target too small'
         theme_button.send_keys(Keys.SPACE)
         assert driver.execute_script("return document.documentElement.classList.contains('theme-dark')"), 'Dark toggle failed'
+        assert driver.execute_script("return document.documentElement.getAttribute('data-gc-mode')") == 'dark', 'GC UI dark mode not synchronized'
+        assert driver.execute_script("return getComputedStyle(document.documentElement).getPropertyValue('--gc-v1-color-focus-ring').trim()") == '#D8D2FF', 'GC UI dark semantic focus token not active'
         assert theme_button.get_attribute('aria-label') == 'Switch to light mode'
+        assert theme_button.get_attribute('aria-pressed') == 'true', 'Dark toggle ARIA state not synchronized'
         driver.save_screenshot(str(artifacts / 'phone-dark.png'))
         driver.refresh()
         assert driver.execute_script("return document.documentElement.classList.contains('theme-dark')"), 'Session appearance did not persist'
+        assert driver.execute_script("return document.documentElement.getAttribute('data-gc-mode')") == 'dark', 'GC UI session dark mode lost'
         driver.find_element(By.CSS_SELECTOR, '.goreecloud-theme-toggle').click()
         assert driver.execute_script("return document.documentElement.classList.contains('theme-light')"), 'Light toggle failed'
+        assert driver.execute_script("return document.documentElement.getAttribute('data-gc-mode')") == 'light', 'GC UI light mode not synchronized'
+        assert driver.execute_script("return getComputedStyle(document.documentElement).getPropertyValue('--gc-v1-color-focus-ring').trim()") == '#4132B3', 'GC UI light semantic focus token not active'
         print('PASS moon button toggles light/dark appearance for this browser tab')
         # The slash shortcut is an optional focus aid, not a query-submission action.
         driver.get(url)
