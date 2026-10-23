@@ -79,11 +79,18 @@ html[data-glaze-consumer] body.preferences_endpoint #search_form fieldset .descr
 html[data-glaze-consumer] body.preferences_endpoint #search_form fieldset > p {
   color: var(--gc-muted); font-size: 13px;
 }
-html[data-glaze-consumer] body.preferences_endpoint #search_form select,
-html[data-glaze-consumer] body.preferences_endpoint #search_form input:is([type="text"],[type="search"]) {
-  box-sizing: border-box; max-width: 100%; min-height: 42px;
-  padding: 8px 10px; border: 1px solid var(--gc-outline);
-  border-radius: 9px; background: var(--gc-surface); color: var(--gc-ink);
+html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form select,
+html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form input:is([type="text"],[type="search"]) {
+  box-sizing: border-box; max-width: 100%;
+  min-height: var(--gc-v1-component-field-height, 48px);
+  padding: 8px 10px; border: 1px solid var(--gc-v1-color-outline, var(--gc-outline));
+  border-radius: var(--gc-v1-component-field-radius, 12px);
+  background: var(--gc-v1-color-surface, var(--gc-surface));
+  color: var(--gc-v1-color-on-surface, var(--gc-ink));
+}
+html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form :is(select,input[type="text"],input[type="search"]):focus-visible {
+  outline: var(--gc-v1-component-focus-width, 3px) solid var(--gc-v1-color-focus-ring, var(--gc-ring));
+  outline-offset: var(--gc-v1-component-focus-offset, 3px);
 }
 html[data-glaze-consumer] body.preferences_endpoint #search_form .goreecloud-provider-preferences {
   padding: 20px 22px; margin-bottom: 20px;
@@ -96,19 +103,24 @@ html[data-glaze-consumer] body.preferences_endpoint #search_form .goreecloud-pro
   max-width: 620px; margin: 4px 0 14px;
   color: var(--gc-muted); font-size: 14px; line-height: 1.55;
 }
-html[data-glaze-consumer] body.preferences_endpoint #search_form .goreecloud-provider-option {
+html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form .goreecloud-provider-option {
   display: flex; box-sizing: border-box; align-items: center;
   width: 100%; max-width: 450px; min-height: 48px;
   gap: 12px; padding: 11px 14px; margin-bottom: 6px;
   border: 1px solid transparent; border-radius: 10px;
-  color: var(--gc-ink); font-size: 14px;
+  color: var(--gc-v1-color-on-surface, var(--gc-ink)); font-size: 14px;
 }
-html[data-glaze-consumer] body.preferences_endpoint #search_form .goreecloud-provider-option:has(input:checked) {
-  background: color-mix(in srgb, var(--gc-accent-strong) 9%, var(--gc-surface));
-  border-color: color-mix(in srgb, var(--gc-accent-strong) 24%, var(--gc-outline));
+html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form .goreecloud-provider-option:has(input:checked) {
+  background: color-mix(in srgb, var(--gc-v1-color-primary, var(--gc-accent-strong)) 9%, var(--gc-v1-color-surface, var(--gc-surface)));
+  border-color: color-mix(in srgb, var(--gc-v1-color-primary, var(--gc-accent-strong)) 24%, var(--gc-v1-color-outline, var(--gc-outline)));
 }
-html[data-glaze-consumer] body.preferences_endpoint #search_form .goreecloud-provider-option input {
-  accent-color: var(--gc-accent-strong); min-width: 18px; min-height: 18px;
+html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form .goreecloud-provider-option:has(input:focus-visible) {
+  outline: var(--gc-v1-component-focus-width, 3px) solid var(--gc-v1-color-focus-ring, var(--gc-ring));
+  outline-offset: 1px;
+}
+html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form .goreecloud-provider-option input {
+  accent-color: var(--gc-v1-color-primary, var(--gc-accent-strong));
+  min-width: 18px; min-height: 18px;
 }
 html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-actions {
   display: flex; flex-wrap: wrap; align-items: center;
@@ -120,11 +132,18 @@ html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-acti
   width: 100%; margin: 0 0 4px; color: var(--gc-muted);
   font-size: 12px; line-height: 1.5;
 }
-html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-actions > input[type="submit"] {
-  box-sizing: border-box; min-height: 44px;
-  padding: 8px 24px; background: #1c51b0; color: #fff;
+html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint .goreecloud-preferences-actions > input[type="submit"] {
+  box-sizing: border-box;
+  min-height: var(--gc-v1-component-button-height-medium, 44px);
+  padding: 8px 24px;
+  background: var(--gc-v1-color-primary, #1c51b0);
+  color: var(--gc-v1-color-on-primary, #fff);
   border: 1px solid transparent; border-radius: 10px; cursor: pointer;
   font-weight: 700; font-size: 14px;
+}
+html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint .goreecloud-preferences-actions > input[type="submit"]:focus-visible {
+  outline: var(--gc-v1-component-focus-width, 3px) solid var(--gc-v1-color-focus-ring, var(--gc-ring));
+  outline-offset: var(--gc-v1-component-focus-offset, 3px);
 }
 html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-actions .preferences_back {
   float: none; margin: 0; display: inline-flex; align-items: center;
@@ -227,6 +246,20 @@ html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-cat
   }
   html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-category-tab.unavailable {
     color: GrayText; opacity: 1;
+  }
+  html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form :is(select,input[type="text"],input[type="search"]) {
+    background: Field; color: FieldText; border-color: FieldText;
+  }
+  html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint .goreecloud-preferences-actions > input[type="submit"] {
+    background: ButtonFace; color: ButtonText; border-color: ButtonText;
+  }
+  html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form .goreecloud-provider-option:has(input:checked) {
+    background: Canvas; color: CanvasText; border-color: Highlight;
+  }
+  html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form .goreecloud-provider-option:has(input:focus-visible),
+  html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form :is(select,input[type="text"],input[type="search"]):focus-visible,
+  html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint .goreecloud-preferences-actions > input[type="submit"]:focus-visible {
+    outline-color: Highlight;
   }
 }
 
