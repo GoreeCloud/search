@@ -442,10 +442,19 @@ html[data-glaze-consumer] body.results_endpoint #results #sidebar .goreecloud-so
   border: 1px solid var(--gc-outline);
   border-radius: 14px;
 }
-html[data-glaze-consumer] body.results_endpoint .goreecloud-source-diagnostics summary {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-source-diagnostics > summary {
+  box-sizing: border-box;
+  display: list-item;
+  min-height: var(--gc-v1-foundation-target-comfortable, 44px);
+  padding: 10px 4px;
   cursor: pointer;
   font-weight: 650;
   font-size: 13px;
+  color: var(--gc-v1-color-on-surface, var(--gc-ink));
+}
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-source-diagnostics > summary:focus-visible {
+  outline: var(--gc-v1-component-focus-width, 3px) solid var(--gc-v1-color-focus-ring, var(--gc-ring));
+  outline-offset: -2px;
 }
 html[data-glaze-consumer] body.results_endpoint .goreecloud-source-diagnostics :is(p,li) {
   color: var(--gc-muted);
@@ -453,8 +462,24 @@ html[data-glaze-consumer] body.results_endpoint .goreecloud-source-diagnostics :
   line-height: 1.55;
   margin: 9px 0;
 }
-html[data-glaze-consumer] body.results_endpoint .goreecloud-source-diagnostics .goreecloud-empty-retry button {
-  min-height: 44px;
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-source-diagnostics .goreecloud-empty-retry button {
+  min-height: var(--gc-v1-component-button-height-medium, 44px);
+  color: var(--gc-v1-color-on-primary, var(--gc-surface));
+  background: var(--gc-v1-color-primary, var(--gc-accent-strong));
+  border-color: var(--gc-v1-color-primary, var(--gc-accent-strong));
+}
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-source-diagnostics .goreecloud-empty-retry button:focus-visible {
+  outline: var(--gc-v1-component-focus-width, 3px) solid var(--gc-v1-color-focus-ring, var(--gc-ring));
+  outline-offset: var(--gc-v1-component-focus-offset, 3px);
+}
+@media (forced-colors: active) {
+  html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-source-diagnostics > summary:focus-visible,
+  html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-source-diagnostics .goreecloud-empty-retry button:focus-visible {
+    outline-color: Highlight;
+  }
+  html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-source-diagnostics .goreecloud-empty-retry button {
+    background: ButtonFace; color: ButtonText; border-color: ButtonText;
+  }
 }
 html[data-glaze-consumer] .goreecloud-provider-preferences {
   border: 1px solid var(--gc-outline);

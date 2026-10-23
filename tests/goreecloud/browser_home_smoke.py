@@ -818,9 +818,44 @@ def main() -> None:
                 By.CSS_SELECTOR, 'details'
             ).get_attribute('open') is not None, 'Provider error details were collapsed'
             assert driver.find_element(By.CSS_SELECTOR, '#urls').is_displayed()
-            driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-diagnostics > summary').click()
+            summary = driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-diagnostics > summary')
+            summary.send_keys(Keys.SPACE)
+            summary_focus = driver.execute_script("""
+              const summary=arguments[0];
+              const style=getComputedStyle(summary);
+              return {expanded:summary.parentElement.open,
+                focused:document.activeElement===summary,
+                visible:summary.matches(':focus-visible'),
+                outline:style.outlineStyle, outlineWidth:parseFloat(style.outlineWidth)};
+            """, summary)
+            assert summary_focus['expanded'] and summary_focus['focused'] and summary_focus['visible'], summary_focus
+            assert summary_focus['outline'] == 'solid' and summary_focus['outlineWidth'] >= 3, summary_focus
             retry = driver.find_element(By.CSS_SELECTOR, '.goreecloud-partial-retry button')
             assert retry.is_displayed(), 'Partial retry action hidden'
+            for width, height, label in ((1440, 900, 'desktop'), (390, 844, 'phone'), (320, 760, 'phone-small')):
+                driver.set_window_size(width, height)
+                controls = driver.execute_script("""
+                  const root=document.documentElement;
+                  const details=document.querySelector('.goreecloud-source-diagnostics');
+                  const summary=details.querySelector('summary');
+                  const retry=details.querySelector('.goreecloud-partial-retry button');
+                  return {consumer:root.getAttribute('data-gc-consumer'),
+                    targetToken:getComputedStyle(root).getPropertyValue('--gc-v1-foundation-target-comfortable').trim(),
+                    buttonToken:getComputedStyle(root).getPropertyValue('--gc-v1-component-button-height-medium').trim(),
+                    open:details.open,
+                    summaryHeight:summary.getBoundingClientRect().height,
+                    summaryMarker:getComputedStyle(summary).display,
+                    buttonHeight:retry.getBoundingClientRect().height,
+                    nativePost:retry.type==='submit' && retry.form?.method==='post',
+                    viewport:root.clientWidth, scroll:root.scrollWidth};
+                """)
+                assert controls['consumer'] == 'goreecloud-search', (label, controls)
+                assert controls['open'] and controls['summaryMarker'] == 'list-item', (label, controls)
+                assert controls['targetToken'] == '44px' and controls['summaryHeight'] >= 44, (label, controls)
+                assert controls['buttonToken'] == '44px' and controls['buttonHeight'] >= 44, (label, controls)
+                assert controls['nativePost'], (label, controls)
+                assert controls['scroll'] <= controls['viewport'] + 1, (label, controls)
+            driver.set_window_size(1440, 900)
             selected = driver.find_element(
                 By.CSS_SELECTOR, '.goreecloud-partial-retry input[name="engines"]'
             ).get_attribute('value')
