@@ -50,6 +50,14 @@ class LifecycleBlocked(Exception):
     """The ephemeral system manager cannot safely qualify the candidate."""
 
 
+class LifecycleWithTeardownFailure(LifecycleBlocked):
+    """Carry the original stage separately from cleanup, never raw details."""
+
+    def __init__(self, primary: Exception):
+        self.primary = primary
+        super().__init__("teardown")
+
+
 # The CI log is intentionally limited to these fixed, non-content categories.
 # Never print arbitrary subprocess output, exceptions, paths, source, or data.
 DIAGNOSTIC_STAGES = frozenset((
@@ -74,9 +82,17 @@ def _stage(name: str):
 
 def blocked_message(error: Exception) -> str:
     """Output never includes exception text unless it is a fixed stage token."""
-    diagnostic = str(error)
-    stage = diagnostic if diagnostic in DIAGNOSTIC_STAGES else "unknown"
+    if isinstance(error, LifecycleWithTeardownFailure):
+        primary = _safe_stage(error.primary)
+        return (f"NATIVE_SYSTEMD_LIFECYCLE_BLOCKED primary={primary} "
+                "cleanup=teardown: no managed-service acceptance\n")
+    stage = _safe_stage(error)
     return f"NATIVE_SYSTEMD_LIFECYCLE_BLOCKED stage={stage}: no managed-service acceptance\n"
+
+
+def _safe_stage(error: Exception) -> str:
+    diagnostic = str(error) if isinstance(error, LifecycleBlocked) else "unknown"
+    return diagnostic if diagnostic in DIAGNOSTIC_STAGES else "unknown"
 
 
 def _run(*args: str, accepted: tuple[int, ...] = (0,), timeout: int = 20) -> str:
@@ -224,6 +240,62 @@ def _assert_unprivileged_process(pid: int, uid: int, gid: int) -> None:
         raise LifecycleBlocked("actual systemd service group is not unprivileged")
 
 
+def _cleanup_created_unit(unit: str, unit_path: Path) -> None:
+    """Tear down only our unit, including a unit never loaded by systemd.
+
+    Verifying the system manager reports no active processes is required before
+    unlinking. An unrecognized/failed manager state fails closed and leaves
+    the unit in the short-lived runner for investigation, not on a VPS.
+    """
+    if unit_path.is_symlink() or not unit_path.is_file():
+        raise LifecycleBlocked("disposable unit path is not our regular file")
+
+    load_state = _show(unit, "LoadState")
+    active_state = _show(unit, "ActiveState")
+    main_pid = int(_show(unit, "MainPID"))
+    control_pid = int(_show(unit, "ControlPID"))
+    if load_state not in ("loaded", "not-found", "bad-setting", "error", "masked"):
+        raise LifecycleBlocked("systemd reports an unrecognized unit load state")
+    if active_state not in ("active", "activating", "reloading", "deactivating",
+                            "inactive", "failed"):
+        raise LifecycleBlocked("systemd reports an unrecognized unit active state")
+    if main_pid < 0 or control_pid < 0:
+        raise LifecycleBlocked("systemd reported an invalid native unit process")
+
+    # If verify/reload failed before systemd loaded the file, show reports
+    # not-found/inactive/PIDs=0. There is nothing to stop; a stop request for
+    # an unknown unit can itself fail and previously masked the actual gate.
+    if active_state not in ("inactive", "failed") or main_pid or control_pid:
+        try:
+            _run("systemctl", "stop", unit)
+        except LifecycleBlocked:
+            _run("systemctl", "kill", "--signal=SIGKILL",
+                 "--kill-whom=all", unit, accepted=(0, 1))
+            _run("systemctl", "stop", unit)
+
+    after_state = _show(unit, "ActiveState")
+    after_main = int(_show(unit, "MainPID"))
+    after_control = int(_show(unit, "ControlPID"))
+    if after_state not in ("inactive", "failed") or after_main != 0 or after_control != 0:
+        raise LifecycleBlocked("disposable unit still has unaccounted processes")
+    if load_state == "loaded":
+        _run("systemctl", "reset-failed", unit)
+    unit_path.unlink()
+    _run("systemctl", "daemon-reload")
+
+
+def _teardown_preserving_primary(unit: str, unit_path: Path) -> None:
+    """Prevent cleanup failure from overwriting a more informative stage."""
+    primary = sys.exc_info()[1]
+    try:
+        with _stage("teardown"):
+            _cleanup_created_unit(unit, unit_path)
+    except LifecycleBlocked:
+        if primary is not None:
+            raise LifecycleWithTeardownFailure(primary) from None
+        raise
+
+
 def exercise(archive: Path, expected_sha: str) -> None:
     with _stage("host"):
         _require_ephemeral_host()
@@ -319,21 +391,7 @@ def exercise(archive: Path, expected_sha: str) -> None:
                     raise LifecycleBlocked("stopped systemd service still accepts requests")
         finally:
             if installed:
-                with _stage("teardown"):
-                    # Stop and confirm process exit before removing the unit.
-                    # Do not unlink a unit whose process is unaccounted for.
-                    try:
-                        _run("systemctl", "stop", unit)
-                    except LifecycleBlocked:
-                        _run("systemctl", "kill", "--signal=SIGKILL",
-                             "--kill-whom=all", unit, accepted=(0, 1))
-                        _run("systemctl", "stop", unit)
-                    if _show(unit, "ActiveState") not in ("inactive", "failed"):
-                        raise LifecycleBlocked("disposable unit could not be stopped safely")
-                    _run("systemctl", "reset-failed", unit)
-                    # Only this random O_EXCL-created unit can ever be removed.
-                    unit_path.unlink()
-                    _run("systemctl", "daemon-reload")
+                _teardown_preserving_primary(unit, unit_path)
 
 
 def main() -> int:

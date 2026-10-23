@@ -14,9 +14,12 @@ import unittest
 from native_systemd_lifecycle_smoke import (
     DIAGNOSTIC_STAGES,
     LifecycleBlocked,
+    LifecycleWithTeardownFailure,
     UNIT_SOURCE,
     _stage,
     _require_ephemeral_host,
+    _cleanup_created_unit,
+    _teardown_preserving_primary,
     _validate_archive,
     blocked_message,
     render_temporary_unit,
@@ -115,6 +118,87 @@ class NativeSystemdLifecycleOfflineTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             with _stage("unexpected-checkout-path"):
                 pass
+
+    def test_unloaded_unit_is_removed_without_stop_request(self):
+        # systemd-analyze can reject the file before daemon-reload. This
+        # previously caused a spurious systemctl stop failure in finally.
+        state = {
+            "LoadState": "not-found", "ActiveState": "inactive",
+            "MainPID": "0", "ControlPID": "0",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            unit_path = Path(tmp) / "goreecloud-native-ci-unique.service"
+            unit_path.write_text("synthetic unit; never executed")
+            with mock.patch("native_systemd_lifecycle_smoke._show",
+                            side_effect=lambda unit, key: state[key]), \
+                    mock.patch("native_systemd_lifecycle_smoke._run") as runner:
+                _cleanup_created_unit("goreecloud-native-ci-unique.service", unit_path)
+            self.assertFalse(unit_path.exists())
+            runner.assert_called_once_with("systemctl", "daemon-reload")
+
+    def test_loaded_process_is_stopped_and_accounted_for_before_unlink(self):
+        state = {
+            "LoadState": "loaded", "ActiveState": "active",
+            "MainPID": "1234", "ControlPID": "0",
+        }
+
+        def simulate_manager(*args, **kwargs):
+            if args == ("systemctl", "stop", "goreecloud-native-ci-unique.service"):
+                state.update(ActiveState="inactive", MainPID="0")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            unit_path = Path(tmp) / "goreecloud-native-ci-unique.service"
+            unit_path.write_text("synthetic unit; never executed")
+            with mock.patch("native_systemd_lifecycle_smoke._show",
+                            side_effect=lambda unit, key: state[key]), \
+                    mock.patch("native_systemd_lifecycle_smoke._run",
+                               side_effect=simulate_manager) as runner:
+                _cleanup_created_unit("goreecloud-native-ci-unique.service", unit_path)
+            self.assertFalse(unit_path.exists())
+            self.assertEqual(1, sum(call.args[:2] == ("systemctl", "stop")
+                                    for call in runner.call_args_list))
+
+    def test_unaccounted_process_prevents_unlink(self):
+        state = {
+            "LoadState": "loaded", "ActiveState": "active",
+            "MainPID": "1234", "ControlPID": "0",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            unit_path = Path(tmp) / "goreecloud-native-ci-unique.service"
+            unit_path.write_text("synthetic unit; never executed")
+            with mock.patch("native_systemd_lifecycle_smoke._show",
+                            side_effect=lambda unit, key: state[key]), \
+                    mock.patch("native_systemd_lifecycle_smoke._run"):
+                with self.assertRaises(LifecycleBlocked):
+                    _cleanup_created_unit("goreecloud-native-ci-unique.service", unit_path)
+            self.assertTrue(unit_path.exists())
+
+    def test_primary_failure_survives_teardown_failure_without_leakage(self):
+        secret = "private index /run/secret.sql query=forbidden"
+        with mock.patch("native_systemd_lifecycle_smoke._cleanup_created_unit",
+                        side_effect=OSError(secret)):
+            with self.assertRaises(LifecycleWithTeardownFailure) as failure:
+                try:
+                    with _stage("unit-verify"):
+                        raise OSError(secret)
+                finally:
+                    _teardown_preserving_primary("goreecloud-native-ci-unique.service",
+                                                 Path("/run/systemd/system/unused-unit.service"))
+        diagnostic = blocked_message(failure.exception)
+        self.assertEqual(
+            "NATIVE_SYSTEMD_LIFECYCLE_BLOCKED primary=unit-verify "
+            "cleanup=teardown: no managed-service acceptance\n", diagnostic)
+        self.assertNotIn(secret, diagnostic)
+
+    def test_cleanup_only_failure_remains_single_stage(self):
+        with mock.patch("native_systemd_lifecycle_smoke._cleanup_created_unit",
+                        side_effect=OSError("private path")):
+            with self.assertRaises(LifecycleBlocked) as failure:
+                _teardown_preserving_primary("goreecloud-native-ci-unique.service",
+                                             Path("/run/systemd/system/unused-unit.service"))
+        self.assertEqual("NATIVE_SYSTEMD_LIFECYCLE_BLOCKED stage=teardown: "
+                         "no managed-service acceptance\n",
+                         blocked_message(failure.exception))
 
 
 if __name__ == "__main__":
