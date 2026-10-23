@@ -135,7 +135,9 @@ html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-acti
   border-radius: 10px; background: var(--gc-surface);
   color: var(--gc-ink); text-decoration: none; font-size: 13px; font-weight: 600;
 }
-html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tabs {
+/* Results category navigation remains native same-origin POST forms.  The GC UI
+   consumer contract styles only presentation; it never chooses an engine. */
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-category-tabs {
   box-sizing: border-box; width: 100%; min-width: 0;
   display: flex; flex-wrap: nowrap; align-items: center;
   overflow-x: auto; overscroll-behavior-inline: contain;
@@ -143,33 +145,38 @@ html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tabs {
   margin: 0 0 9px; padding: 0 2px;
   scrollbar-width: thin;
 }
-html[data-glaze-consumer] body.results_endpoint .goreecloud-category-form {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-category-form {
   box-sizing: border-box; margin: 0; padding: 0; flex: 0 0 auto;
 }
-html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tab {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-category-tab {
   box-sizing: border-box; display: inline-flex; justify-content: center;
   align-items: center; flex: 0 0 auto; gap: 5px;
-  min-height: 46px; padding: 10px 21px; margin: 0;
+  min-height: max(46px, var(--gc-v1-foundation-target-comfortable, 44px));
+  padding: 10px 21px; margin: 0;
   background: transparent; border: 0; border-bottom: 3px solid transparent;
-  color: var(--gc-muted); text-decoration: none;
+  color: var(--gc-v1-color-on-surface-muted, var(--gc-muted)); text-decoration: none;
   font-size: 14px; font-weight: 650; cursor: pointer;
   white-space: nowrap;
 }
-html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tab.selected,
-html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tab[aria-current="page"] {
-  color: var(--gc-accent-strong); border-bottom-color: var(--gc-accent-strong);
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-category-tab.selected,
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-category-tab[aria-current="page"] {
+  color: var(--gc-v1-color-primary, var(--gc-accent-strong));
+  border-bottom-color: var(--gc-v1-color-primary, var(--gc-accent-strong));
 }
-html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tab.unavailable {
-  color: var(--gc-muted); opacity: .56; cursor: not-allowed;
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-category-tab.unavailable {
+  color: var(--gc-v1-color-on-surface-muted, var(--gc-muted));
+  opacity: max(var(--gc-v1-foundation-opacity-disabled, .56), .56);
+  cursor: not-allowed;
 }
-html[data-glaze-consumer] body.results_endpoint .goreecloud-tab-unavailable-note {
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-tab-unavailable-note {
   font-size: 10px; font-weight: 500;
 }
-html[data-glaze-consumer] body.results_endpoint .goreecloud-category-form button:hover {
-  background: color-mix(in srgb, var(--gc-accent-strong) 5%, var(--gc-surface));
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-category-form button:hover {
+  background: color-mix(in srgb, var(--gc-v1-color-primary, var(--gc-accent-strong)) 5%, var(--gc-v1-color-surface, var(--gc-surface)));
 }
-html[data-glaze-consumer] body.results_endpoint .goreecloud-category-form button:focus-visible {
-  outline: 3px solid var(--gc-ring); outline-offset: -3px;
+html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-category-form button:focus-visible {
+  outline: var(--gc-v1-component-focus-width, 3px) solid var(--gc-v1-color-focus-ring, var(--gc-ring));
+  outline-offset: -3px;
 }
 @media (max-width: 650px) {
   html[data-gc-consumer="goreecloud-search"] body.preferences_endpoint #search_form > .tabs {
@@ -202,8 +209,8 @@ html[data-glaze-consumer] body.results_endpoint .goreecloud-category-form button
   html[data-glaze-consumer] body.preferences_endpoint #search_form fieldset {
     padding: 14px 12px;
   }
-  html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tab {
-    padding-inline: 16px; min-height: 44px;
+  html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-category-tab {
+    padding-inline: 16px; min-height: var(--gc-v1-foundation-target-comfortable, 44px);
   }
 }
 @media (forced-colors: active) {
@@ -212,8 +219,14 @@ html[data-glaze-consumer] body.results_endpoint .goreecloud-category-form button
   html[data-glaze-consumer] body.preferences_endpoint .goreecloud-preferences-actions {
     background: Canvas; color: CanvasText; border-color: CanvasText;
   }
-  html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tab[aria-current="page"] {
+  html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-category-tab[aria-current="page"] {
     border-bottom-color: Highlight; color: LinkText;
+  }
+  html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-category-form button:focus-visible {
+    outline-color: Highlight;
+  }
+  html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-category-tab.unavailable {
+    color: GrayText; opacity: 1;
   }
 }
 
@@ -331,19 +344,20 @@ html[data-glaze-consumer] body.results_endpoint #urls.goreecloud-image-results a
 /* All four categories must fit a 320px phone without a visible scrollbar.
    Disabled categories remain discoverable through aria-disabled and title. */
 @media (max-width: 410px) {
-  html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tabs {
+  html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-category-tabs {
     display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
     overflow: visible; gap: 0; padding-inline: 0;
   }
-  html[data-glaze-consumer] body.results_endpoint .goreecloud-category-form {
+  html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-category-form {
     width: 100%; min-width: 0;
   }
-  html[data-glaze-consumer] body.results_endpoint .goreecloud-category-tab {
+  html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-category-tab {
     box-sizing: border-box; width: 100%; min-width: 0;
-    min-height: 44px; padding: 8px 2px; font-size: 12px;
+    min-height: var(--gc-v1-foundation-target-comfortable, 44px);
+    padding: 8px 2px; font-size: 12px;
     text-align: center; justify-content: center;
   }
-  html[data-glaze-consumer] body.results_endpoint .goreecloud-tab-unavailable-note {
+  html[data-gc-consumer="goreecloud-search"] body.results_endpoint .goreecloud-tab-unavailable-note {
     display: none;
   }
 }
