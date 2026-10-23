@@ -1,6 +1,6 @@
 # GoreeCloud Search — capability delivery map
 
-The supplied GoreeCloud Search feature catalog is a **proposed product target**, not an inventory of shipped features. Current lifecycle: Development.
+The supplied GoreeCloud Search feature catalog is a **proposed product target**, not an inventory of shipped features. Current environment: private Development; the exact official release-lifecycle stage remains unqualified. See [source baseline and Anchor gates](SOURCE-BASELINE-QUALIFICATION.md).
 
 | Workstream | Current foundation | Open and gated work |
 | --- | --- | --- |
