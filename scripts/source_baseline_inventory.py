@@ -36,6 +36,7 @@ RELEASE_INPUTS = (
     "requirements.txt",
     "requirements-server.txt",
     "scripts/build_pinned_staging_image.sh",
+    "scripts/build_native_linux_service.py",
     "scripts/candidate_image_evidence.py",
     "scripts/free_upgrade_preflight.py",
     "scripts/runtime_python_inventory.py",
