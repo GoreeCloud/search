@@ -461,11 +461,21 @@ def main() -> None:
               const radio = document.querySelector('#tab-ui');
               const label = document.querySelector('#tab-label-ui');
               const tabs = document.querySelector('#search_form > .tabs');
+              const source = document.querySelector('#search_form .goreecloud-provider-option input[name="goreecloud_sources"]');
+              const language = document.querySelector('#search_form select[name="language"]');
+              const save = document.querySelector('.goreecloud-preferences-actions > input[type="submit"]');
               const token = getComputedStyle(root).getPropertyValue('--gc-v1-foundation-target-comfortable').trim();
               return {consumer: root.getAttribute('data-gc-consumer'),
                 token, tabHeight: label.getBoundingClientRect().height,
                 tabRelation: label.control === radio && tabs.getAttribute('role') === 'tablist',
                 tabPanel: !!document.querySelector('#tab-content-ui[role="tabpanel"]'),
+                fieldToken: getComputedStyle(root).getPropertyValue('--gc-v1-component-field-height').trim(),
+                buttonToken: getComputedStyle(root).getPropertyValue('--gc-v1-component-button-height-medium').trim(),
+                sourceLabelHeight: source?.closest('label')?.getBoundingClientRect().height ?? 0,
+                sourceLabelAccessible: source?.closest('label')?.textContent.trim().length > 0,
+                languageHeight: language?.getBoundingClientRect().height ?? 0,
+                languageLabelled: !!language?.getAttribute('aria-labelledby'),
+                saveHeight: save?.getBoundingClientRect().height ?? 0,
                 width:document.documentElement.clientWidth,
                 scroll:document.documentElement.scrollWidth,
                 title:document.querySelector('#main_preferences h1').getBoundingClientRect().width}
@@ -473,7 +483,22 @@ def main() -> None:
             assert prefs_geom['consumer'] == 'goreecloud-search', (label, prefs_geom)
             assert prefs_geom['token'] == '44px' and prefs_geom['tabHeight'] >= 44, (label, prefs_geom)
             assert prefs_geom['tabRelation'] and prefs_geom['tabPanel'], (label, prefs_geom)
+            assert prefs_geom['fieldToken'] == '48px' and prefs_geom['languageHeight'] >= 48, (label, prefs_geom)
+            assert prefs_geom['buttonToken'] == '44px' and prefs_geom['saveHeight'] >= 44, (label, prefs_geom)
+            assert prefs_geom['sourceLabelAccessible'] and prefs_geom['sourceLabelHeight'] >= 44, (label, prefs_geom)
+            assert prefs_geom['languageLabelled'], (label, prefs_geom)
             assert prefs_geom['scroll'] <= prefs_geom['width'] + 1, (label, prefs_geom)
+            keyboard_source = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="working"]')
+            keyboard_source.send_keys(Keys.SPACE)
+            source_focus = driver.execute_script("""
+              const input=arguments[0];
+              const label=input.closest('.goreecloud-provider-option');
+              const style=getComputedStyle(label);
+              return {focused:document.activeElement===input, visible:input.matches(':focus-visible'),
+                outline:style.outlineStyle, width:parseFloat(style.outlineWidth)};
+            """, keyboard_source)
+            assert source_focus['focused'] and source_focus['visible'], (label, source_focus)
+            assert source_focus['outline'] == 'solid' and source_focus['width'] >= 3, (label, source_focus)
             if width == 320:
                 # The visible word 'Interface' must remain intact at 320px.
                 # A Range returns two rectangles when the browser splits it.
