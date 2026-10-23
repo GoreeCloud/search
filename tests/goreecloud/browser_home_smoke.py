@@ -18,6 +18,7 @@ from werkzeug.serving import make_server
 from flask import request
 
 ROOT = Path(__file__).resolve().parents[2]
+IMAGE_GALLERY_COUNT = 16  # Must exceed the image-preview control's >12 render threshold.
 sys.path.insert(0, str(ROOT))  # direct-script CI launch from nested tests directory
 os.environ["SEARXNG_SETTINGS_PATH"] = str(ROOT / "configs/goreecloud/settings.yml")
 os.environ["SEARXNG_SECRET"] = secrets.token_hex(32)
@@ -120,7 +121,7 @@ class SyntheticBrowserImageResultsCollection(SyntheticBrowserSearch):
             return "data:image/png;base64," + base64.b64encode(png).decode("ascii")
 
         images = []
-        for i in range(1, 13):
+        for i in range(1, IMAGE_GALLERY_COUNT + 1):
             img = sample_png(i)
             result = LegacyResult(
                 title=f"Synthetic gallery image {i}",
@@ -638,16 +639,21 @@ def main() -> None:
                 driver.find_element(By.XPATH,
                     "//nav[contains(@class,'goreecloud-category-tabs')]//button[normalize-space()='Images']").click()
                 WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
-                    lambda page: len(page.find_elements(By.CSS_SELECTOR, '#urls.goreecloud-image-results article.result-images')) == 12
+                    lambda page: len(page.find_elements(By.CSS_SELECTOR, '#urls.goreecloud-image-results article.result-images')) == IMAGE_GALLERY_COUNT
                 )
                 geometry = driver.execute_script("""
                     const root=document.querySelector('#urls');
                     const cards=[...root.querySelectorAll('article.result-images')];
                     const image=cards[0].querySelector('img.image_thumbnail');
+                    const loadAll=root.querySelector('#goreecloud-image-load-all');
                     const css=getComputedStyle(root);
                     const cr=cards.map(c=>c.getBoundingClientRect());
                     const widths=new Set(cr.map(r=>Math.round(r.left)));
                     return {display:css.display, columns:css.gridTemplateColumns.split(' ').length,
+                        gcConsumer:document.documentElement.getAttribute('data-gc-consumer'),
+                        imageLoadTarget:loadAll?.getBoundingClientRect().height ?? 0,
+                        imageLoadButton:loadAll?.type === 'button' && !loadAll.disabled,
+                        targetToken:getComputedStyle(document.documentElement).getPropertyValue('--gc-v1-component-button-height-medium').trim(),
                         distinctX:widths.size, viewport:document.documentElement.clientWidth,
                         scroll:document.documentElement.scrollWidth,
                         cardWidth:cr[0].width, imageWidth:image.getBoundingClientRect().width,
@@ -675,6 +681,9 @@ def main() -> None:
                 """)
                 print('IMAGE GRID', label, geometry, flush=True)
                 assert geometry['display'] == 'grid', (label, geometry)
+                assert geometry['gcConsumer'] == 'goreecloud-search', (label, geometry)
+                assert geometry['imageLoadButton'] and geometry['imageLoadTarget'] >= 44, (label, geometry)
+                assert geometry['targetToken'] == '44px', (label, geometry)
                 assert geometry['inlineImages'], (label, geometry)
                 WebDriverWait(driver, 5).until(
                     lambda page: page.execute_script(
@@ -703,7 +712,7 @@ def main() -> None:
                 WebDriverWait(driver, 5).until(
                     lambda page: 'image-detail-open' not in page.find_element(By.ID, 'results').get_attribute('class')
                 )
-        print('PASS desktop and phone image grid, 12 loaded offline PNGs, image details and POST privacy')
+        print(f'PASS desktop and phone image grid, {IMAGE_GALLERY_COUNT} loaded offline PNGs, image details and POST privacy')
 
         # Category tabs must really submit POST, preserve the original query,
         # and never send it through the browser URL.
