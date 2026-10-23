@@ -12,6 +12,21 @@ ROOT_IGNORE = ROOT / ".dockerignore"
 
 
 class PinnedImageBuildContracts(unittest.TestCase):
+    def test_tracked_builder_is_directly_executable_without_running_docker(self):
+        """The VPS uses the script as an entrypoint, not just via `bash`."""
+        tracked = subprocess.run(
+            ["git", "ls-files", "--stage", "--", "scripts/build_pinned_staging_image.sh"],
+            cwd=ROOT, capture_output=True, text=True, check=True, timeout=5,
+        )
+        self.assertEqual("100755", tracked.stdout.split()[0])
+        # No arguments must stop at the usage gate, before image creation.
+        result = subprocess.run(
+            [str(SCRIPT)], cwd=ROOT, capture_output=True, text=True, timeout=5,
+        )
+        self.assertEqual(64, result.returncode)
+        self.assertIn("40-character-commit-sha", result.stderr)
+        self.assertEqual("", result.stdout)
+
     def test_bad_arguments_refused_before_build(self):
         result = subprocess.run(
             ["bash", str(SCRIPT)], cwd=ROOT, capture_output=True, text=True, timeout=5
