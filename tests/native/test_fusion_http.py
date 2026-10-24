@@ -80,14 +80,26 @@ class NativeFusionHttpTests(unittest.TestCase):
         return request(port, 'POST', route, json.dumps(data), headers={
             'Content-Type': 'application/json', **(headers or {})})
 
-    def test_default_native_process_has_no_provider_calls_or_results(self):
+    def test_default_native_process_fuses_owned_index_only_without_network(self):
         port = self.start()
-        code, head, body = self.post(port, {'query': 'sensitive query'})
-        self.assertEqual(503, code)
-        self.assertNotIn('sensitive query', json.dumps(body))
+        code, head, body = self.post(port, {'query': 'Owned Search'})
+        self.assertEqual(200, code)
+        self.assertEqual('owned_index_only', body['mode'])
+        self.assertEqual('ok', body['status'])
+        self.assertEqual('https://example.org/local', body['results'][0]['url'])
+        self.assertEqual([['goreecloud_index', 1]], body['results'][0]['source_ranks'])
+        self.assertEqual([{'source': 'goreecloud_index', 'status': 'ok', 'accepted': 1}],
+                         body['providers'])
+        self.assertNotIn('Owned Search', json.dumps(body['providers']))
         self.assertNotIn('Access-Control-Allow-Origin', head)
         self.assertEqual('no-store', head['Cache-Control'])
         self.assertEqual(405, request(port, 'GET', '/v1/fusion?q=sensitive')[0])
+        self.assertEqual(503, self.post(port, {'query': 'Owned Search', 'category': 'images'})[0])
+        code, _, miss = self.post(port, {'query': 'sensitive unmatched query'})
+        self.assertEqual(200, code)
+        self.assertEqual('empty', miss['status'])
+        self.assertEqual([], miss['results'])
+        self.assertNotIn('sensitive unmatched query', json.dumps(miss))
 
     def test_explicit_fixture_search_has_unified_deduped_web_and_image_results(self):
         bindings = load_synthetic_fixture(self.fixture)
@@ -99,6 +111,7 @@ class NativeFusionHttpTests(unittest.TestCase):
         self.assertEqual('ok', body['status'])
         self.assertEqual(1, body['total_displayed'])
         self.assertEqual([['alpha', 2], ['beta', 1]], body['results'][0]['source_ranks'])
+        self.assertEqual(['empty', 'ok', 'ok'], [p['status'] for p in body['providers']])
         self.assertNotIn('secret', json.dumps(body))
         self.assertNotIn('Access-Control-Allow-Origin', head)
         _, _, images = self.post(port, {'query': 'different private query', 'category': 'images'})
@@ -113,9 +126,41 @@ class NativeFusionHttpTests(unittest.TestCase):
         port = self.start(providers=load_synthetic_fixture(self.fixture))
         code, _, body = self.post(port, {'query': 'private'})
         self.assertEqual(200, code)
-        self.assertEqual('unavailable', body['status'])
+        self.assertEqual('partial', body['status'])
         self.assertEqual([], body['results'])
-        self.assertEqual(['blocked', 'blocked'], [p['status'] for p in body['providers']])
+        self.assertEqual(['empty', 'blocked', 'blocked'],
+                         [p['status'] for p in body['providers']])
+
+    def test_owner_and_explicit_fixture_share_one_canonical_web_result(self):
+        self.index.add(url='https://example.org/a', title='Secret indexing',
+                       body='A locally approved URL also present in the synthetic fixtures')
+        port = self.start(providers=load_synthetic_fixture(self.fixture), fixtures=True)
+        code, _, body = self.post(port, {'query': 'Secret', 'category': 'web'})
+        self.assertEqual(200, code)
+        self.assertEqual('ok', body['status'])
+        self.assertEqual(1, body['total_displayed'])
+        self.assertEqual('https://example.org/a', body['results'][0]['url'])
+        self.assertEqual([['alpha', 2], ['beta', 1], ['goreecloud_index', 1]],
+                         body['results'][0]['source_ranks'])
+        self.assertEqual(['ok', 'ok', 'ok'], [p['status'] for p in body['providers']])
+
+    def test_reserved_first_party_binding_cannot_be_reconfigured(self):
+        async def forged(*_args):
+            self.fail('Reserved fake must never be invoked')
+
+        from native_search.dispatch import ProviderBinding, ProviderRights
+        fake = ProviderBinding('goreecloud_index', forged, ProviderRights(
+            frozenset({'web'}), True, True, True, 'fake', 'contract_reviewed'))
+        with self.assertRaises(ValueError):
+            make_handler(self.index, fusion_providers=(fake,))
+
+    def test_web_fts_query_bounds_fail_closed_without_leaking_query(self):
+        port = self.start()
+        for query in ('x' * 257, ' '.join('q%d' % n for n in range(17)), '_'):
+            with self.subTest(query=query):
+                code, _, body = self.post(port, {'query': query})
+                self.assertEqual(422, code)
+                self.assertNotIn(query, json.dumps(body))
 
     def test_origin_preflight_and_request_budget_validation(self):
         port = self.start(providers=load_synthetic_fixture(self.fixture), fixtures=True)
@@ -203,6 +248,40 @@ class NativeFusionHttpTests(unittest.TestCase):
             self.assertEqual('synthetic_fixture_preview', response[2]['mode'])
             self.assertEqual(1, response[2]['total_displayed'])
             self.assertNotIn('not included in response', json.dumps(response[2]))
+        finally:
+            proc.terminate()
+            try:
+                proc.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.communicate(timeout=5)
+
+    def test_linux_zipapp_candidate_returns_real_owned_hits_without_fixture(self):
+        artifact = self.root / 'native-owned.pyz'
+        artifact.write_bytes(build_bundle(ROOT, SOURCE_SHA))
+        with socket.socket() as sock:
+            sock.bind(('127.0.0.1', 0))
+            port = sock.getsockname()[1]
+        proc = subprocess.Popen([
+            sys.executable, str(artifact), '--db', str(self.root / 'owned.sqlite'),
+            '--port', str(port),
+        ], cwd=self.root, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        try:
+            response = None
+            for _ in range(80):
+                try:
+                    response = self.post(port, {'query': 'Owned Search'})
+                    break
+                except OSError:
+                    if proc.poll() is not None:
+                        break
+                    time.sleep(0.05)
+            self.assertIsNotNone(response, 'candidate ZIP service did not start')
+            self.assertEqual(200, response[0])
+            self.assertEqual('owned_index_only', response[2]['mode'])
+            self.assertEqual('ok', response[2]['status'])
+            self.assertEqual(['goreecloud_index'], [p['source'] for p in response[2]['providers']])
+            self.assertEqual('https://example.org/local', response[2]['results'][0]['url'])
         finally:
             proc.terminate()
             try:

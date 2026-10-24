@@ -15,8 +15,10 @@ import json
 from typing import Sequence
 from urllib.parse import urlsplit
 
-from .dispatch import ProviderBinding, dispatch_fusion
-from .index import SearchIndex
+from .dispatch import ProviderBinding, ProviderRights, dispatch_fusion
+from .index import SearchIndex, clean_query
+from .owned_index_provider import (OWNED_INDEX_EVIDENCE, OWNED_INDEX_SOURCE,
+                                   OwnedIndexAdapter)
 
 MAX_POST_BYTES = 4096
 REQUEST_IDLE_TIMEOUT_SECONDS = 5.0
@@ -43,7 +45,17 @@ def make_handler(index: SearchIndex, *, fusion_providers: Sequence[ProviderBindi
                  allow_synthetic_fixtures: bool = False):
     if not isinstance(fusion_providers, (list, tuple)) or type(allow_synthetic_fixtures) is not bool:
         raise ValueError('Invalid fusion service configuration')
-    installed_providers = tuple(fusion_providers)
+    if len(fusion_providers) > 7 or any(
+            not isinstance(binding, ProviderBinding)
+            or binding.source == OWNED_INDEX_SOURCE for binding in fusion_providers):
+        raise ValueError('Invalid or reserved fusion source configuration')
+    # An actual FTS index is always part of the Web category. It never makes
+    # a network call, so it does not require a fictional upstream contract.
+    owned = ProviderBinding(OWNED_INDEX_SOURCE, OwnedIndexAdapter(index), ProviderRights(
+        frozenset({'web'}), True, True, True,
+        OWNED_INDEX_EVIDENCE, 'owned_index'))
+    external_providers = tuple(fusion_providers)
+    web_providers = (owned,) + external_providers
 
     class NativeHandler(BaseHTTPRequestHandler):
         server_version = 'GoreeCloudNativeSearchDevelopment'
@@ -124,16 +136,23 @@ def make_handler(index: SearchIndex, *, fusion_providers: Sequence[ProviderBindi
                 if self.path == '/v1/fusion':
                     if set(supplied) - {'query', 'category', 'limit'}:
                         raise ValueError()
-                    if not installed_providers:
-                        return self.respond(503, {'error': 'No fusion providers are configured'})
+                    category = supplied.get('category', 'web')
+                    providers = web_providers if category == 'web' else external_providers
+                    if category == 'web':
+                        # The local FTS search budget is intentionally tighter
+                        # than the general third-party dispatch contract.
+                        clean_query(supplied.get('query'))
+                    if not providers:
+                        return self.respond(503, {'error': 'No fusion providers for this category'})
                     reply = asyncio.run(dispatch_fusion(
-                        supplied.get('query'), category=supplied.get('category', 'web'),
-                        providers=installed_providers, limit=supplied.get('limit', 20),
+                        supplied.get('query'), category=category,
+                        providers=providers, limit=supplied.get('limit', 20),
                         allow_synthetic_fixtures=allow_synthetic_fixtures))
                     return self.respond(200, {
                         'schema_version': reply.schema_version,
                         'mode': ('synthetic_fixture_preview' if allow_synthetic_fixtures
-                                 else 'explicitly_configured_providers'),
+                                 else 'owned_index_only' if not external_providers
+                                 else 'owned_index_with_configured_providers'),
                         'category': reply.category,
                         'status': reply.status,
                         'total_displayed': len(reply.results),

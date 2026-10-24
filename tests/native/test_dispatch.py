@@ -3,6 +3,8 @@
 
 import asyncio
 from dataclasses import asdict
+from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -10,6 +12,10 @@ from native_search.dispatch import (
     ProviderBinding, ProviderRights, dispatch_fusion as real_dispatch_fusion,
 )
 from native_search.fusion import SourceResult
+from native_search.index import SearchIndex
+from native_search.owned_index_provider import (
+    OWNED_INDEX_EVIDENCE, OWNED_INDEX_SOURCE, OwnedIndexAdapter,
+)
 
 
 def allowed(category='web'):
@@ -32,6 +38,84 @@ def hit(name, rank=1, url='https://example.com/shared', *, category='web'):
 
 
 class DispatchTests(unittest.IsolatedAsyncioTestCase):
+    async def test_owned_local_index_is_admitted_without_upstream_rights(self):
+        with tempfile.TemporaryDirectory() as directory, SearchIndex(Path(directory) / 'owned.sqlite') as index:
+            index.add(url='https://example.org/owned', title='Private orchard',
+                      body='Only explicitly ingested local content is available')
+            own = ProviderBinding(OWNED_INDEX_SOURCE, OwnedIndexAdapter(index), ProviderRights(
+                frozenset({'web'}), True, True, True, OWNED_INDEX_EVIDENCE, 'owned_index'))
+            response = await real_dispatch_fusion('orchard', category='web', providers=[own])
+            self.assertEqual('ok', response.status)
+            self.assertEqual((('goreecloud_index', 1),), response.results[0].source_ranks)
+            self.assertEqual('https://example.org/owned', response.results[0].url)
+            self.assertEqual([('goreecloud_index', 'ok', 1)], [
+                (item.source, item.status, item.accepted) for item in response.providers])
+            images = await real_dispatch_fusion('orchard', category='images', providers=[own])
+            self.assertEqual('unavailable', images.status)
+            self.assertEqual('blocked', images.providers[0].status)
+
+    async def test_owned_index_rights_never_license_external_callbacks(self):
+        calls = []
+
+        async def fake(*_args):
+            calls.append(True)
+            return [hit('goreecloud_index')]
+
+        owner_rights = ProviderRights(frozenset({'web'}), True, True, True,
+                                      OWNED_INDEX_EVIDENCE, 'owned_index')
+        reviewed = ProviderRights(frozenset({'web'}), True, True, True,
+                                  OWNED_INDEX_EVIDENCE, 'contract_reviewed')
+        attempts = [
+            ProviderBinding(OWNED_INDEX_SOURCE, fake, owner_rights),
+            ProviderBinding('remote', fake, owner_rights),
+            ProviderBinding(OWNED_INDEX_SOURCE, fake, reviewed),
+        ]
+        for source in attempts:
+            with self.subTest(source=source.source, basis=source.rights.rights_basis):
+                reply = await real_dispatch_fusion('secret', category='web', providers=[source])
+                self.assertEqual('unavailable', reply.status)
+                self.assertEqual('blocked', reply.providers[0].status)
+        self.assertEqual([], calls)
+
+    async def test_owned_adapter_requires_actual_native_index_and_exact_evidence(self):
+        with self.assertRaises(TypeError):
+            OwnedIndexAdapter(object())
+        with tempfile.TemporaryDirectory() as directory, SearchIndex(Path(directory) / 'owned.sqlite') as index:
+            index.add(url='https://example.org/owned', title='Orchard', body='owned data')
+            forged_evidence = ProviderBinding(
+                OWNED_INDEX_SOURCE, OwnedIndexAdapter(index),
+                ProviderRights(frozenset({'web'}), True, True, True,
+                               'external-contract-is-not-local-proof', 'owned_index'))
+            response = await real_dispatch_fusion('Orchard', category='web',
+                                                  providers=[forged_evidence])
+            self.assertEqual('unavailable', response.status)
+            self.assertEqual('blocked', response.providers[0].status)
+            for categories, basis in ((frozenset({'images'}), 'owned_index'),
+                                      (frozenset({'web', 'images'}), 'owned_index'),
+                                      (frozenset({'web'}), 'contract_reviewed')):
+                with self.subTest(categories=categories, basis=basis):
+                    invalid = ProviderBinding(OWNED_INDEX_SOURCE, OwnedIndexAdapter(index),
+                                              ProviderRights(categories, True, True, True,
+                                                             OWNED_INDEX_EVIDENCE, basis))
+                    result = await real_dispatch_fusion('Orchard', category='web',
+                                                        providers=[invalid])
+                    self.assertEqual('blocked', result.providers[0].status)
+
+    async def test_closed_owned_index_does_not_leak_internal_exception_or_query(self):
+        with tempfile.TemporaryDirectory() as directory:
+            index = SearchIndex(Path(directory) / 'owned.sqlite')
+            adapter = OwnedIndexAdapter(index)
+            index.close()
+            binding = ProviderBinding(OWNED_INDEX_SOURCE, adapter, ProviderRights(
+                frozenset({'web'}), True, True, True, OWNED_INDEX_EVIDENCE, 'owned_index'))
+            response = await real_dispatch_fusion('private sealed query', category='web',
+                                                  providers=[binding])
+            self.assertEqual('unavailable', response.status)
+            self.assertEqual('failed', response.providers[0].status)
+            self.assertEqual([], list(response.results))
+            self.assertNotIn('private sealed query', str(asdict(response)))
+            self.assertNotIn('database', str(asdict(response)))
+
     async def test_synthetic_sources_default_deny_without_test_switch(self):
         calls = []
 

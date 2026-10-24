@@ -20,13 +20,16 @@ PUBLIC_HOST = "search.goreecloud.com"
 NETBIRD = "@netbird_client remote_ip 100.64.0.0/10"
 DENY = 'respond "Forbidden" 403'
 _ENV = re.compile(r"\{\$[A-Z][A-Z0-9_]*\}")
-_PUBLIC_UPSTREAM = re.compile(r"\breverse_proxy\s+goreecloud-search-(?:free-|gateway)", re.IGNORECASE)
 _HOST_TOKEN_BOUNDARY = r"(?<![A-Za-z0-9.-]){}(?![A-Za-z0-9.-])"
 _PROXY = re.compile(r"^reverse_proxy\s+(.+)$", re.IGNORECASE)
-_DEV_GATEWAYS = re.compile(
-    r"\bgoreecloud-search-(?:gateway|(?:free|dev|private|staging)-[a-z0-9-]*gateway):8080\b",
+# Restrict private backend identities even when they are not suffixed with
+# `gateway`: an ingress/container DNS alias is still the same release domain.
+_PRIVATE_BACKENDS = re.compile(
+    r"\bgoreecloud-search-(?:gateway|(?:free|dev|development|private|staging|test|preview)"
+    r"(?:-[a-z0-9]+)*)(?::[0-9]{1,5})?\b",
     re.IGNORECASE,
 )
+_PUBLIC_BACKEND = re.compile(r"goreecloud-search-(?:public|prod)-[a-z0-9-]+:8080", re.IGNORECASE)
 _ALLOWED_HEADERS = {
     'Strict-Transport-Security "max-age=31536000"',
     'X-Content-Type-Options nosniff',
@@ -44,11 +47,25 @@ def _clean(line: str) -> str:
 
 def _site_lines(config: str, hostname: str) -> list[str] | None:
     """Extract exactly one complete, top-level exact-host block, or fail."""
-    starts = [i for i, line in enumerate(config.splitlines())
-              if _clean(line).casefold() == hostname.casefold() + " {"]
+    lines = config.splitlines()
+    starts = []
+    nesting = 0
+    for i, line in enumerate(lines):
+        cleaned = _clean(line)
+        if cleaned.casefold() == hostname.casefold() + " {":
+            # A nested header resembling a vhost does not establish any host
+            # isolation. It can live inside another site/route/snippet.
+            if nesting != 0:
+                return None
+            starts.append(i)
+        safe = _ENV.sub("ENV", cleaned)
+        nesting += safe.count("{") - safe.count("}")
+        if nesting < 0:
+            return None
+    if nesting != 0:
+        return None
     if len(starts) != 1:
         return None
-    lines = config.splitlines()
     start = starts[0]
     content: list[str] = []
     depth = 0
@@ -74,7 +91,9 @@ def private_search_ingress_is_safe(config: str, expected_upstream: str) -> bool:
     shared Caddyfile, it must not proxy into the private Development gateways;
     this function is NOT an assessment of that separate public service.
     """
-    if not re.fullmatch(r"goreecloud-search-[a-z0-9-]+:8080", expected_upstream):
+    if (not isinstance(expected_upstream, str)
+            or not expected_upstream.endswith(":8080")
+            or not _PRIVATE_BACKENDS.fullmatch(expected_upstream)):
         return False
     if not isinstance(config, str) or not config:
         return False
@@ -97,26 +116,27 @@ def private_search_ingress_is_safe(config: str, expected_upstream: str) -> bool:
     # even if hidden behind a Caddy map/vars alias instead of reverse_proxy.
     if clean_config.casefold().count(expected_upstream.casefold()) != 1:
         return False
-    # A second old/new Development gateway, even with a different alias, must
-    # not be reachable from another vhost. Keep independently named public
-    # Search backends valid.
-    if [item.casefold() for item in _DEV_GATEWAYS.findall(clean_config)] != [expected_upstream.casefold()]:
+    # A second Development/private backend, including non-gateway aliases or
+    # alternate ports, must not be referenced by any other vhost. Keep only
+    # independently public/prod-named Search backends valid.
+    if [item.casefold() for item in _PRIVATE_BACKENDS.findall(clean_config)] != [expected_upstream.casefold()]:
         return False
     public = _site_lines(config, PUBLIC_HOST)
     public_host_token = _HOST_TOKEN_BOUNDARY.format(re.escape(PUBLIC_HOST))
     public_mentioned = bool(re.search(public_host_token, clean_config, flags=re.IGNORECASE))
     if public_mentioned:
-        if public is None or _PUBLIC_UPSTREAM.search("\n".join(public)):
+        if public is None:
             return False
-        # The separate public site is allowed, but it must route to an
-        # independently named literal backend. Dynamic reverse_proxy targets,
-        # maps and rewrites are not statically provable as distinct from Dev.
-        if any(line.startswith(("map ", "vars ", "rewrite ", "handle_path "))
-               for line in public):
+        # A future public site may give a static 503 or proxy only to an
+        # explicitly public/prod-named backend. Generic service aliases are
+        # ambiguous and cannot demonstrate static separation from Development.
+        # This is a naming/structure gate, never runtime network isolation.
+        if any(re.match(r"^(?:map|vars|rewrite|handle_path|route|php_fastcgi|forward_auth|invoke)\b", line,
+                        flags=re.IGNORECASE) for line in public):
             return False
         for line in public:
             match = _PROXY.fullmatch(line)
-            if match and not re.fullmatch(r"[a-z][a-z0-9-]*:8080", match.group(1)):
+            if match and not _PUBLIC_BACKEND.fullmatch(match.group(1)):
                 return False
 
     children = {

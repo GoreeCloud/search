@@ -7,10 +7,11 @@ DuckDuckGo Extra (images, videos, news)
 import typing as t
 
 from datetime import datetime
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from urllib.parse import quote_plus
 
 from searx.result_types import EngineResults, MainResult, Image, Video
+from searx.goreecloud_policy import safe_external_media_url
 from searx.utils import html_to_text, gen_useragent, extr
 from searx.network import get  # see https://github.com/searxng/searxng/issues/762
 
@@ -153,15 +154,56 @@ def request(query: str, params: "OnlineParams") -> None:
     # Never log raw headers, cookies, per-query token or request data.
 
 
+def _image_http_url(value: object) -> str:
+    """Only accept complete HTTP(S) URLs; image cards are untrusted input."""
+    if not isinstance(value, str):
+        return ''
+    value = value.strip()
+    if not value or '\\' in value or any(ord(ch) <= 32 or ord(ch) == 127 for ch in value):
+        return ''
+    try:
+        parsed = urlsplit(value)
+        port = parsed.port
+        if parsed.scheme in ('http', 'https') and parsed.hostname and parsed.username is None and parsed.password is None:
+            if port is None or port > 0:
+                return value
+    except ValueError:
+        pass
+    return ''
+
+
 def _image_result(result):
+    if not isinstance(result, dict):
+        raise ValueError('Malformed image card')
+
+    # The publisher link and full image are required. A missing thumbnail,
+    # title, resolution or source is not a reason to discard a valid image.
+    url = _image_http_url(result.get('url'))
+    # Mirror the HTTPS/public-origin rule enforced by the image proxy so
+    # unusable thumbnails cannot mask the fallback to the original image.
+    image = _image_http_url(result.get('image'))
+    if not safe_external_media_url(image):
+        image = ''
+    if not url or not image:
+        raise ValueError('Image card lacks safe source or media URL')
+    thumbnail = _image_http_url(result.get('thumbnail'))
+    if not safe_external_media_url(thumbnail):
+        thumbnail = image
+    title = result.get('title')
+    source = result.get('source')
+    width, height = result.get('width'), result.get('height')
+    resolution = ''
+    if str(width).isdigit() and str(height).isdigit():
+        resolution = f'{width} x {height}'
+
     return Image(
-        url=result['url'],
-        title=result['title'],
+        url=url,
+        title=title.strip() if isinstance(title, str) and title.strip() else 'Image result',
         content='',
-        thumbnail_src=result['thumbnail'],
-        img_src=result['image'],
-        resolution='%s x %s' % (result['width'], result['height']),
-        source=result['source'],
+        thumbnail_src=thumbnail,
+        img_src=image,
+        resolution=resolution,
+        source=source if isinstance(source, str) else '',
     )
 
 
@@ -189,10 +231,26 @@ def response(resp: "SXNG_Response") -> EngineResults:
     res = EngineResults()
     res_json = resp.json()
 
-    for result in res_json['results']:
-        if ddg_category == 'images':
-            res.add(_image_result(result))
-        elif ddg_category == 'videos':
+    # Do not misreport unexpected/denied upstream JSON as an empty result set.
+    if not isinstance(res_json, dict) or not isinstance(res_json.get('results'), list):
+        raise SearxEngineAPIException('Unexpected DuckDuckGo results response')
+
+    items = res_json['results']
+
+    if ddg_category == 'images':
+        for result in items:
+            try:
+                res.add(_image_result(result))
+            except ValueError:
+                # One broken card must not hide healthy neighboring results.
+                # Do not log result payloads: provider URLs and query may be private.
+                continue
+        if items and not res:
+            raise SearxEngineAPIException('DuckDuckGo returned no usable image cards')
+        return res
+
+    for result in items:
+        if ddg_category == 'videos':
             res.add(_video_result(result))
         elif ddg_category == 'news':
             res.add(_news_result(result))
