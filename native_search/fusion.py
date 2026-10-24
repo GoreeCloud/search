@@ -3,7 +3,7 @@
 
 This is a GoreeCloud-owned, provider-neutral *development* module. It does not
 make network requests, authorize an upstream license, or join the deployed
-SearXNG path or the current three-module Linux service artifact.
+SearXNG path. The separate native Linux development candidate packages it.
 
 Only distinct upstream sources earn ranking votes for a duplicate result.
 The implementation intentionally uses URL identity, not unverified semantic
@@ -22,6 +22,8 @@ SUPPORTED_CATEGORIES = frozenset({'web', 'images', 'videos', 'news'})
 _PROVIDER_ID = re.compile(r'[a-z][a-z0-9_-]{0,47}\Z')
 _TRACKING_KEYS = frozenset({'fbclid', 'gclid', 'dclid', 'msclkid', 'igshid', 'mc_cid', 'mc_eid'})
 _CONTROL = re.compile(r'[\x00-\x20\x7f\\]')
+_QUERY_CONTROL = re.compile(r'[\x00-\x1f\x7f]')
+_LEXICAL_WORD = re.compile(r'[^\W_]+', re.UNICODE)
 _YOUTUBE_VIDEO_ID = re.compile(r'[A-Za-z0-9_-]{11}\Z')
 _YOUTUBE_HOSTS = frozenset({
     'youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com',
@@ -29,6 +31,7 @@ _YOUTUBE_HOSTS = frozenset({
 })
 _YOUTU_BE_HOSTS = frozenset({'youtu.be', 'www.youtu.be'})
 _MAX_CANDIDATES = 1000
+_MAX_QUERY_TERMS = 16
 
 
 @dataclass(frozen=True)
@@ -127,10 +130,51 @@ def video_result_identity(url: object) -> str | None:
     return canonical
 
 
+def _query_terms(query: str | None) -> tuple[str, ...]:
+    """Bound query-text use to ranking in memory, never a fetch or log input.
+
+    `None` opts out and exactly preserves pre-existing reciprocal-rank scores.
+    A supplied query is validated before evaluating untrusted candidate cards.
+    """
+    if query is None:
+        return ()
+    if (not isinstance(query, str) or not 0 < len(query) <= 512
+            or _QUERY_CONTROL.search(query)):
+        raise ValueError('Invalid relevance query')
+    terms = tuple(dict.fromkeys(term.casefold() for term in _LEXICAL_WORD.findall(query)))
+    if not terms or len(terms) > _MAX_QUERY_TERMS or any(len(term) > 64 for term in terms):
+        raise ValueError('Invalid bounded relevance terms')
+    return terms
+
+
+def _lexical_boost(title: str, description: str, terms: tuple[str, ...],
+                   rrf_k: int) -> float:
+    """Give modest, repeat-insensitive credit to explicit query-term overlap.
+
+    Keep RRF primary: even a full title/description/phrase match can add at
+    most 20 percent of a rank-one *single-source* vote. This is deterministic,
+    term-based relevance, not semantic understanding or a spam-quality verdict.
+    """
+    if not terms:
+        return 0.0
+    title_words = tuple(term.casefold() for term in _LEXICAL_WORD.findall(title))
+    description_words = {term.casefold() for term in _LEXICAL_WORD.findall(description)}
+    target = set(terms)
+    title_cover = len(target.intersection(title_words)) / len(target)
+    description_cover = len(target & description_words) / len(target)
+    phrase = (len(title_words) >= len(terms) and any(
+        title_words[index:index + len(terms)] == terms
+        for index in range(len(title_words) - len(terms) + 1)
+    ))
+    return ((0.14 * title_cover + 0.04 * description_cover
+             + (0.02 if phrase else 0.0)) / (rrf_k + 1))
+
+
 def fuse_results(
-    candidates: Iterable[SourceResult], *, category: str, limit: int = 20, rrf_k: int = 60,
+    candidates: Iterable[SourceResult], *, category: str, limit: int = 20,
+    rrf_k: int = 60, query: str | None = None,
 ) -> list[FusedResult]:
-    """Normalize and rank a bounded set of offline cards using reciprocal rank fusion.
+    """Normalize and rank offline cards using RRF and optional bounded relevance.
 
     Every distinct source gives a URL at most one vote (at its best rank),
     preventing repeated cards from one provider from artificially boosting it.
@@ -141,6 +185,8 @@ def fuse_results(
     This function makes no assertion that any named source is licensed or live.
     Upstream admission, request budgets and contractual permissions are separate
     gates that must run *before* provider dispatch and result use.
+    The optional `query` signal never changes identity/dedup or source votes;
+    absent a query, ordering and numeric scores remain exactly the old RRF.
     """
     if category not in SUPPORTED_CATEGORIES:
         raise ValueError('Unsupported fusion category')
@@ -148,6 +194,7 @@ def fuse_results(
         raise ValueError('Invalid result limit')
     if type(rrf_k) is not int or not 1 <= rrf_k <= 1000:
         raise ValueError('Invalid fusion constant')
+    terms = _query_terms(query)
 
     merged: dict[str, dict] = {}
     for ordinal, result in enumerate(candidates):
@@ -193,7 +240,8 @@ def fuse_results(
     for group in merged.values():
         card = group['card']
         ranks = tuple(sorted(group['ranks'].items()))
-        score = sum(1.0 / (rrf_k + rank) for _, rank in ranks)
+        score = (sum(1.0 / (rrf_k + rank) for _, rank in ranks)
+                 + _lexical_boost(card.title, card.description, terms, rrf_k))
         ordered.append((score, group['first'], FusedResult(
             category=category, url=card.url, title=card.title,
             description=card.description, score=score, source_ranks=ranks,

@@ -94,7 +94,13 @@ class NativeFusionHttpTests(unittest.TestCase):
         self.assertNotIn('Access-Control-Allow-Origin', head)
         self.assertEqual('no-store', head['Cache-Control'])
         self.assertEqual(405, request(port, 'GET', '/v1/fusion?q=sensitive')[0])
-        self.assertEqual(503, self.post(port, {'query': 'Owned Search', 'category': 'images'})[0])
+        code, _, owned_images = self.post(port, {'query': 'Owned Search', 'category': 'images'})
+        self.assertEqual(200, code)
+        self.assertEqual('empty', owned_images['status'])
+        self.assertEqual([], owned_images['results'])
+        self.assertEqual([{'source': 'goreecloud_images', 'status': 'empty', 'accepted': 0}],
+                         owned_images['providers'])
+        self.assertEqual(503, self.post(port, {'query': 'Owned Search', 'category': 'news'})[0])
         code, _, miss = self.post(port, {'query': 'sensitive unmatched query'})
         self.assertEqual(200, code)
         self.assertEqual('empty', miss['status'])
@@ -117,7 +123,43 @@ class NativeFusionHttpTests(unittest.TestCase):
         _, _, images = self.post(port, {'query': 'different private query', 'category': 'images'})
         self.assertEqual('partial', images['status'])
         self.assertEqual('https://cdn.example.org/image.jpg', images['results'][0]['media_url'])
-        self.assertEqual(['ok', 'blocked'], [p['status'] for p in images['providers']])
+        self.assertEqual(['empty', 'ok', 'blocked'], [p['status'] for p in images['providers']])
+
+    def test_owned_local_images_merge_with_explicit_synthetic_cards(self):
+        self.index.add_image(
+            page_url='https://publisher.example.org/photo',
+            media_url='https://cdn.example.org/image.jpg',
+            title='Colored orchid', description='Garden flower orchid',
+            rights_evidence='owner-reviewed/asset-001')
+        port = self.start(providers=load_synthetic_fixture(self.fixture), fixtures=True)
+        code, headers, body = self.post(port, {'query': 'orchid', 'category': 'images'})
+        self.assertEqual(200, code)
+        self.assertEqual('partial', body['status'])  # fixture beta has no Images rights
+        self.assertEqual(1, body['total_displayed'])  # identical original image URL
+        self.assertEqual([['alpha', 1], ['goreecloud_images', 1]],
+                         body['results'][0]['source_ranks'])
+        self.assertEqual('https://cdn.example.org/image.jpg', body['results'][0]['media_url'])
+        self.assertEqual(['ok', 'ok', 'blocked'], [p['status'] for p in body['providers']])
+        self.assertNotIn('owner-reviewed/asset-001', json.dumps(body))
+        self.assertNotIn('orchid', json.dumps(body['providers']))
+        self.assertNotIn('Access-Control-Allow-Origin', headers)
+
+    def test_default_owned_images_return_results_and_takedown_updates_immediately(self):
+        media = 'https://cdn.example.org/rose.png'
+        self.index.add_image(page_url='https://publisher.example.org/rose', media_url=media,
+                             title='Red rose', description='Fresh rose bloom',
+                             rights_evidence='owner-confirmed/rose-001')
+        port = self.start()
+        code, _, result = self.post(port, {'query': 'rose', 'category': 'images'})
+        self.assertEqual(200, code)
+        self.assertEqual('owned_index_only', result['mode'])
+        self.assertEqual('ok', result['status'])
+        self.assertEqual(media, result['results'][0]['media_url'])
+        self.assertEqual([['goreecloud_images', 1]], result['results'][0]['source_ranks'])
+        self.assertTrue(self.index.remove_image(media))
+        _, _, removed = self.post(port, {'query': 'rose', 'category': 'images'})
+        self.assertEqual('empty', removed['status'])
+        self.assertEqual([], removed['results'])
         code, _, local = self.post(port, {'query': 'Owned Search'}, route='/v1/search')
         self.assertEqual(200, code)
         self.assertEqual('goreecloud-native-index', local['source'])
@@ -153,6 +195,10 @@ class NativeFusionHttpTests(unittest.TestCase):
             frozenset({'web'}), True, True, True, 'fake', 'contract_reviewed'))
         with self.assertRaises(ValueError):
             make_handler(self.index, fusion_providers=(fake,))
+        fake_images = ProviderBinding('goreecloud_images', forged, ProviderRights(
+            frozenset({'images'}), True, True, True, 'fake', 'contract_reviewed'))
+        with self.assertRaises(ValueError):
+            make_handler(self.index, fusion_providers=(fake_images,))
 
     def test_web_fts_query_bounds_fail_closed_without_leaking_query(self):
         port = self.start()
@@ -257,6 +303,11 @@ class NativeFusionHttpTests(unittest.TestCase):
                 proc.communicate(timeout=5)
 
     def test_linux_zipapp_candidate_returns_real_owned_hits_without_fixture(self):
+        self.index.add_image(
+            page_url='https://publisher.example.org/flower',
+            media_url='https://cdn.example.org/flower.png',
+            title='Flower garden', description='Owned green garden photography',
+            rights_evidence='owner-reviewed/photo-zip-001')
         artifact = self.root / 'native-owned.pyz'
         artifact.write_bytes(build_bundle(ROOT, SOURCE_SHA))
         with socket.socket() as sock:
@@ -282,6 +333,10 @@ class NativeFusionHttpTests(unittest.TestCase):
             self.assertEqual('ok', response[2]['status'])
             self.assertEqual(['goreecloud_index'], [p['source'] for p in response[2]['providers']])
             self.assertEqual('https://example.org/local', response[2]['results'][0]['url'])
+            _, _, images = self.post(port, {'query': 'garden', 'category': 'images'})
+            self.assertEqual('ok', images['status'])
+            self.assertEqual('https://cdn.example.org/flower.png', images['results'][0]['media_url'])
+            self.assertEqual([['goreecloud_images', 1]], images['results'][0]['source_ranks'])
         finally:
             proc.terminate()
             try:

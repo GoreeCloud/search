@@ -141,6 +141,30 @@ class SearchQualityBenchmarkTests(unittest.TestCase):
         self.assertIn('insufficient_relevant_at_10', result['failed_gates'])
         self.assertIn('insufficient_recall_at_10', result['failed_gates'])
 
+    def test_optional_first_relevant_rank_gate_catches_top_heavy_bad_ranking(self):
+        fixture = images()
+        # One judged-relevant card does occur in the displayed top ten, but
+        # source consensus puts it fourth. Recall alone would incorrectly
+        # report a passing fixture despite poor first-result relevance.
+        fixture['relevant'] = ['https://assets.example.test/c.jpg']
+        fixture['gates']['min_relevant_at_10'] = 1
+        fixture['gates']['min_reciprocal_rank_percent_at_10'] = 50
+        outcome = quality.evaluate_fixture(fixture)
+        self.assertEqual(1, outcome['relevant_at_10'])
+        self.assertEqual(100, outcome['recall_percent_at_10'])
+        self.assertEqual(25, outcome['reciprocal_rank_percent_at_10'])
+        self.assertEqual(['insufficient_first_relevant_rank_at_10'],
+                         outcome['failed_gates'])
+        fixture['gates']['min_reciprocal_rank_percent_at_10'] = 25
+        self.assertTrue(quality.evaluate_fixture(fixture)['passed'])
+
+    def test_reciprocal_rank_gate_rejects_non_integer_or_unachievable_bounds(self):
+        for value in (True, False, 0, -1, 101, '50', 12.5):
+            fixture = images()
+            fixture['gates']['min_reciprocal_rank_percent_at_10'] = value
+            with self.subTest(value=value), self.assertRaises(quality.InvalidBenchmark):
+                quality.evaluate_fixture(fixture)
+
     def test_web_same_source_repeat_is_one_vote_and_one_result(self):
         fixture = {
             'development_only': True, 'category': 'web',

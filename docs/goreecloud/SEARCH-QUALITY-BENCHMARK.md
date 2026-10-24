@@ -1,8 +1,8 @@
 # GoreeCloud Search — deterministic result-quality benchmark
 
 **Document type:** Development quality gate | **Owner:** GoreeCloud |
-**Status:** Active Development, not release-qualified | **Revision:** 0.2 |
-**Verified source:** GoreeCloud Search Development candidate, October 23, 2026 |
+**Status:** Active Development, not release-qualified | **Revision:** 0.3 |
+**Verified source:** GoreeCloud Search Development candidate, October 24, 2026 |
 **Canonical source:** `docs/goreecloud/SEARCH-QUALITY-BENCHMARK.md`
 
 **Scope:** Development source check only. This benchmark neither runs providers
@@ -47,7 +47,7 @@ Each fixture is bounded and has exactly five root fields:
 | `category` | One implemented fusion category: `web`, `images`, `videos`, `news`. Shopping, Maps and More are roadmap only. |
 | `sources` | Unique sanitized source IDs with explicit `ok`, `empty`, `timeout`, `rate_limited`, `access_denied` or `error` states. Only `ok` can contain candidate cards; errors may not disguise partial results as success. |
 | `relevant` | A small, hand-judged set of result URLs; for Images, the asset URLs rather than hosting-page URLs. |
-| `gates` | Minimum diversity, unique result count, relevant@10, recall@10, maximum images without original-media IDs, optional distinct top-ten discovery-source count (`min_sources_with_unique_at_10`), and optional full-source-health requirement. |
+| `gates` | Minimum diversity, unique result count, relevant@10, recall@10, maximum images without original-media IDs, optional distinct top-ten discovery-source count (`min_sources_with_unique_at_10`), optional integer first-relevant reciprocal-rank percentage (`min_reciprocal_rank_percent_at_10`), and optional full-source-health requirement. |
 
 The evaluator emits only aggregate counts, source IDs and fixed failure codes:
 
@@ -67,6 +67,12 @@ The evaluator emits only aggregate counts, source IDs and fixed failure codes:
 - `relevant_at_10`, `recall_percent_at_10`, `precision_percent_at_10`, and
   `reciprocal_rank_at_10` check the ranking of a fixed relevance corpus. A
   recalled result elsewhere beyond top ten does not satisfy the top-ten gate.
+- `reciprocal_rank_percent_at_10` is integer `100 // first_relevant_rank` or
+  zero if no judged result appears in the first ten. The optional
+  `min_reciprocal_rank_percent_at_10` threshold fails with the fixed code
+  `insufficient_first_relevant_rank_at_10`; a high recall@10 cannot hide all
+  useful results at the bottom of the first page. This is an offline position
+  check, **not** evidence of real-provider result relevance.
 
 For Videos, judged result matching now uses the same conservative canonical
 identity as the owned fusion engine: proven-identical YouTube watch, Shorts,
@@ -114,6 +120,15 @@ Before the real user-visible image experience can pass acceptance:
 6. Finish privacy, abuse/rate controls, security, native OS packaging, release
    provenance, rollbacks and actual ingress/user acceptance; do not infer
    public readiness or Anchor status from offline quality checks.
+
+The separate native fusion path now has a bounded whole-token query relevance
+boost, while the development image browser has stricter signed same-origin
+proxy handling and late-load race protection. The owned Images adapter may
+serve only operator-approved local image *metadata*. These development changes
+neither create Google/Bing/Brave connectivity nor repair the currently deployed
+public Search TLS or prove screenshot parity with the founder's Image Search
+reference. The first-relevant gate should be enabled on a pinned, deliberately
+judged fixture before using it as a promotion check.
 
 No public traffic, NetBird policy, deployed image, API credentials, external
 provider request or persistent user data is touched by this benchmark.

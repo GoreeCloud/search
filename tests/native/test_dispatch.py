@@ -14,7 +14,8 @@ from native_search.dispatch import (
 from native_search.fusion import SourceResult
 from native_search.index import SearchIndex
 from native_search.owned_index_provider import (
-    OWNED_INDEX_EVIDENCE, OWNED_INDEX_SOURCE, OwnedIndexAdapter,
+    OWNED_INDEX_EVIDENCE, OWNED_INDEX_SOURCE, OWNED_IMAGE_EVIDENCE,
+    OWNED_IMAGE_SOURCE, OwnedIndexAdapter, OwnedImageAdapter,
 )
 
 
@@ -38,6 +39,80 @@ def hit(name, rank=1, url='https://example.com/shared', *, category='web'):
 
 
 class DispatchTests(unittest.IsolatedAsyncioTestCase):
+    async def test_ranker_uses_validated_query_without_changing_source_votes(self):
+        async def owned_synthetic(_query, _category, _limit):
+            return [
+                SourceResult('alpha', 'web', 1, 'https://example.org/recipe',
+                             'Weeknight spaghetti recipe'),
+                SourceResult('alpha', 'web', 2, 'https://example.org/orchids',
+                             'Orchid growing guide', 'How to care for orchids'),
+            ]
+
+        result = await dispatch_fusion('orchid', category='web',
+                                       providers=[binding('alpha', owned_synthetic)])
+        self.assertEqual('ok', result.status)
+        self.assertEqual('https://example.org/orchids', result.results[0].url)
+        self.assertEqual((('alpha', 2),), result.results[0].source_ranks)
+        self.assertEqual(2, result.providers[0].accepted)
+
+    async def test_invalid_relevance_query_never_reaches_a_provider(self):
+        calls = []
+
+        async def should_not_run(*_args):
+            calls.append(True)
+            return []
+
+        for query in ('!!!', ' '.join(f'term{number}' for number in range(17))):
+            with self.subTest(query=query):
+                with self.assertRaises(ValueError):
+                    await dispatch_fusion(query, category='news',
+                                          providers=[binding('alpha', should_not_run,
+                                                             allowed('news'))])
+        self.assertEqual([], calls)
+
+    async def test_owned_image_source_is_explicitly_sealed_and_local_only(self):
+        with tempfile.TemporaryDirectory() as directory, SearchIndex(Path(directory) / 'owned.sqlite') as index:
+            index.add_image(page_url='https://example.org/photo',
+                            media_url='https://cdn.example.org/photo.png',
+                            title='Golden field', description='Nature photograph',
+                            rights_evidence='owner/photo-001')
+            rights = ProviderRights(frozenset({'images'}), True, True, True,
+                                    OWNED_IMAGE_EVIDENCE, 'owned_index')
+            own = ProviderBinding(OWNED_IMAGE_SOURCE, OwnedImageAdapter(index), rights)
+            result = await real_dispatch_fusion('Golden', category='images', providers=[own])
+            self.assertEqual('ok', result.status)
+            self.assertEqual('https://cdn.example.org/photo.png', result.results[0].media_url)
+            self.assertEqual((('goreecloud_images', 1),), result.results[0].source_ranks)
+            blocked_web = await real_dispatch_fusion('Golden', category='web', providers=[own])
+            self.assertEqual('unavailable', blocked_web.status)
+            self.assertEqual('blocked', blocked_web.providers[0].status)
+
+            calls = []
+
+            async def forged(*_args):
+                calls.append(True)
+                return [hit(OWNED_IMAGE_SOURCE, category='images')]
+
+            attempts = [
+                ProviderBinding(OWNED_IMAGE_SOURCE, forged, rights),
+                ProviderBinding('remote_image', forged, rights),
+                ProviderBinding(OWNED_IMAGE_SOURCE, forged, ProviderRights(
+                    frozenset({'images'}), True, True, True,
+                    OWNED_IMAGE_EVIDENCE, 'contract_reviewed')),
+                ProviderBinding(OWNED_IMAGE_SOURCE, OwnedImageAdapter(index), ProviderRights(
+                    frozenset({'images'}), True, True, True,
+                    'not-the-local-image-evidence', 'owned_index')),
+            ]
+            for candidate in attempts:
+                with self.subTest(source=candidate.source, basis=candidate.rights.rights_basis):
+                    response = await real_dispatch_fusion('Golden', category='images',
+                                                          providers=[candidate])
+                    self.assertEqual('unavailable', response.status)
+                    self.assertEqual('blocked', response.providers[0].status)
+            self.assertEqual([], calls)
+            with self.assertRaises(TypeError):
+                OwnedImageAdapter(object())
+
     async def test_owned_local_index_is_admitted_without_upstream_rights(self):
         with tempfile.TemporaryDirectory() as directory, SearchIndex(Path(directory) / 'owned.sqlite') as index:
             index.add(url='https://example.org/owned', title='Private orchard',
