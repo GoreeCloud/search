@@ -8,7 +8,7 @@ if (gallery) {
     const card = image.closest("article.result-images");
     image.addEventListener("error", () => card?.classList.add("goreecloud-thumbnail-unavailable"));
     image.addEventListener("load", () => card?.classList.remove("goreecloud-thumbnail-unavailable"));
-    if (image.complete && image.currentSrc && image.naturalWidth === 0) {
+    if (image.complete && image.getAttribute("src") && image.naturalWidth === 0) {
       card?.classList.add("goreecloud-thumbnail-unavailable");
     }
   }
@@ -34,8 +34,11 @@ if (gallery) {
       let cursor = 0;
       let active = 0;
       let finished = 0;
+      let loaded = 0;
+      let unavailable = 0;
       const update = () => {
-        status.textContent = finished + " of " + eligible.length + " additional previews checked.";
+        status.textContent = finished + " of " + eligible.length + " additional previews checked (" +
+          loaded + " loaded, " + unavailable + " unavailable).";
         if (finished === eligible.length) {
           button.textContent = "Previews requested";
         }
@@ -45,20 +48,31 @@ if (gallery) {
           const image = eligible[cursor++];
           active++;
           let done = false;
-          const complete = () => {
+          let timer;
+          const complete = (success) => {
             if (done) return;
             done = true;
+            clearTimeout(timer);
+            if (success) loaded++;
+            else unavailable++;
             active--;
             finished++;
             update();
             pump();
           };
-          image.addEventListener("load", complete, { once: true });
-          image.addEventListener("error", complete, { once: true });
+          image.addEventListener("load", () => complete(true), { once: true });
+          image.addEventListener("error", () => complete(false), { once: true });
           image.loading = "eager";
-          if (image.complete) complete();
-          // A denied or stalled provider must never wedge the control indefinitely.
-          else setTimeout(complete, 20000);
+          if (image.complete) complete(image.naturalWidth > 0);
+          else {
+            // A stalled proxy response is not a completed request. Abort the
+            // browser image load before releasing its bounded concurrency slot.
+            timer = setTimeout(() => {
+              image.removeAttribute("src");
+              image.closest("article.result-images")?.classList.add("goreecloud-thumbnail-unavailable");
+              complete(false);
+            }, 20000);
+          }
         }
         update();
       };

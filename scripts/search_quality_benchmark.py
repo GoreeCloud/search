@@ -22,6 +22,7 @@ if not __package__:
 
 from native_search.fusion import (
     SourceResult, SUPPORTED_CATEGORIES, canonical_result_url, fuse_results,
+    video_result_identity,
 )
 
 
@@ -36,6 +37,7 @@ REQUIRED_GATES = frozenset({
     'min_recall_percent_at_10', 'max_missing_image_media',
     'require_all_sources_healthy',
 })
+OPTIONAL_GATES = frozenset({'min_sources_with_unique_at_10'})
 
 
 class InvalidBenchmark(ValueError):
@@ -46,8 +48,9 @@ def _integer(value: object, *, minimum: int, maximum: int) -> bool:
     return type(value) is int and minimum <= value <= maximum
 
 
-def _identity(value: object) -> str:
-    identity = canonical_result_url(value)
+def _identity(value: object, *, category: str = 'web') -> str:
+    identity = (video_result_identity(value) if category == 'videos'
+                else canonical_result_url(value))
     if identity is None:
         raise InvalidBenchmark('invalid_result_url')
     return identity
@@ -65,7 +68,8 @@ def _parse_fixture(fixture: object) -> tuple[str, list[dict], list[SourceResult]
     if not isinstance(providers, list) or not 1 <= len(providers) <= MAX_SOURCES:
         raise InvalidBenchmark('source_budget')
     gates = fixture['gates']
-    if not isinstance(gates, dict) or set(gates) != REQUIRED_GATES:
+    if (not isinstance(gates, dict) or not REQUIRED_GATES.issubset(gates)
+            or not set(gates).issubset(REQUIRED_GATES | OPTIONAL_GATES)):
         raise InvalidBenchmark('gates_contract')
     for key, upper in (
         ('min_distinct', MAX_CANDIDATES), ('min_contributing_sources', MAX_SOURCES),
@@ -77,13 +81,18 @@ def _parse_fixture(fixture: object) -> tuple[str, list[dict], list[SourceResult]
             raise InvalidBenchmark('gate_range')
     if type(gates['require_all_sources_healthy']) is not bool:
         raise InvalidBenchmark('gate_type')
-    if gates['min_contributing_sources'] > len(providers):
+    if ('min_sources_with_unique_at_10' in gates and
+            not _integer(gates['min_sources_with_unique_at_10'], minimum=0,
+                         maximum=MAX_SOURCES)):
+        raise InvalidBenchmark('gate_range')
+    if (gates['min_contributing_sources'] > len(providers) or
+            gates.get('min_sources_with_unique_at_10', 0) > len(providers)):
         raise InvalidBenchmark('unachievable_source_gate')
 
     relevant = fixture['relevant']
     if not isinstance(relevant, list) or not 1 <= len(relevant) <= MAX_RELEVANT:
         raise InvalidBenchmark('relevance_judgments_required')
-    identities = [_identity(item) for item in relevant]
+    identities = [_identity(item, category=category) for item in relevant]
     if len(identities) != len(set(identities)):
         raise InvalidBenchmark('duplicate_relevance_judgment')
     if gates['min_relevant_at_10'] > len(identities):
@@ -136,12 +145,17 @@ def evaluate_fixture(fixture: object) -> dict:
     category, providers, cards, relevant, gates, missing_media = _parse_fixture(fixture)
     fused = fuse_results(cards, category=category, limit=100)
     top = fused[:10]
-    found = sum((canonical_result_url(item.media_url if category == 'images' else item.url)
-                 in relevant) for item in top)
+    def result_identity(item: object) -> str:
+        if category == 'images':
+            return canonical_result_url(item.media_url) or ''
+        return _identity(item.url, category=category)
+
+    found = sum(result_identity(item) in relevant for item in top)
     first = next((index for index, item in enumerate(top, 1)
-                  if canonical_result_url(item.media_url if category == 'images' else item.url)
-                  in relevant), None)
+                  if result_identity(item) in relevant), None)
     contributing = set(source for item in fused for source, _ in item.source_ranks)
+    top_unique = [item for item in top if len(item.source_ranks) == 1]
+    unique_sources = {item.source_ranks[0][0] for item in top_unique}
     failed = sorted(p['source'] for p in providers if p['state'] not in ('ok', 'empty'))
     empty = sorted(p['source'] for p in providers if p['state'] == 'empty')
     reasons = []
@@ -149,6 +163,8 @@ def evaluate_fixture(fixture: object) -> dict:
         reasons.append('insufficient_distinct_results')
     if len(contributing) < gates['min_contributing_sources']:
         reasons.append('insufficient_contributing_sources')
+    if len(unique_sources) < gates.get('min_sources_with_unique_at_10', 0):
+        reasons.append('insufficient_unique_source_discovery_at_10')
     if found < gates['min_relevant_at_10']:
         reasons.append('insufficient_relevant_at_10')
     recall_percent = (100 * found) // len(relevant)
@@ -166,6 +182,8 @@ def evaluate_fixture(fixture: object) -> dict:
         'collapsed_duplicates': len(cards) - len(fused),
         'configured_sources': len(providers),
         'contributing_sources': len(contributing),
+        'unique_results_at_10': len(top_unique),
+        'sources_with_unique_at_10': len(unique_sources),
         'failed_sources': failed, 'empty_sources': empty,
         'missing_image_media_identity': missing_media,
         'judged_relevant': len(relevant), 'relevant_at_10': found,

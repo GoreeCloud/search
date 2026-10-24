@@ -1,5 +1,10 @@
 # GoreeCloud Search — deterministic result-quality benchmark
 
+**Document type:** Development quality gate | **Owner:** GoreeCloud |
+**Status:** Active Development, not release-qualified | **Revision:** 0.2 |
+**Verified source:** GoreeCloud Search Development candidate, October 23, 2026 |
+**Canonical source:** `docs/goreecloud/SEARCH-QUALITY-BENCHMARK.md`
+
 **Scope:** Development source check only. This benchmark neither runs providers
 nor qualifies a release. It complements—not replaces—the seven-provider
 category-adapter tests and 24-adapter provider-qualification report gate.
@@ -24,7 +29,9 @@ The fixture contains two invented sources and six generated image cards. Two
 URLs refer to duplicate image assets even though their hosting pages differ.
 Expected outcome: **four distinct images, two duplicate cards collapsed, two
 contributing sources, three relevant assets in top ten, 100% recall of three
-prejudged relevant assets, no missing original/media identity**.
+prejudged relevant assets, no missing original/media identity**. The updated
+fixture also requires **two sources with distinct top-ten discoveries**: merely
+mirroring another provider's cards no longer passes the diversity gate.
 
 This is an offline contract assertion. The invented sources are **not** Google,
 Bing, Brave or any other live provider. These synthetic metrics are **not** a
@@ -40,13 +47,18 @@ Each fixture is bounded and has exactly five root fields:
 | `category` | One implemented fusion category: `web`, `images`, `videos`, `news`. Shopping, Maps and More are roadmap only. |
 | `sources` | Unique sanitized source IDs with explicit `ok`, `empty`, `timeout`, `rate_limited`, `access_denied` or `error` states. Only `ok` can contain candidate cards; errors may not disguise partial results as success. |
 | `relevant` | A small, hand-judged set of result URLs; for Images, the asset URLs rather than hosting-page URLs. |
-| `gates` | Minimum diversity, unique result count, relevant@10, recall@10, maximum images without original-media IDs, and optional full-source-health requirement. |
+| `gates` | Minimum diversity, unique result count, relevant@10, recall@10, maximum images without original-media IDs, optional distinct top-ten discovery-source count (`min_sources_with_unique_at_10`), and optional full-source-health requirement. |
 
 The evaluator emits only aggregate counts, source IDs and fixed failure codes:
 
 - `distinct_results` and `collapsed_duplicates` show how much the fusion
   engine truly adds rather than duplicating cards. `contributing_sources`
   counts distinct sources with at least one vote, not simply configured names.
+- `unique_results_at_10` and `sources_with_unique_at_10` report how many
+  top-ten results have only one contributing source and how many separate
+  sources contribute at least one such distinct discovery. Two providers
+  reporting the exact same images are *not* credited as two independent
+  discoverers. The optional threshold is evaluated alongside existing gates.
 - `failed_sources` and `empty_sources` distinguish upstream unavailability
   from a valid zero-result response. Missing source diversity fails a configured
   gate even if one source has enough cards to fill the page.
@@ -55,6 +67,12 @@ The evaluator emits only aggregate counts, source IDs and fixed failure codes:
 - `relevant_at_10`, `recall_percent_at_10`, `precision_percent_at_10`, and
   `reciprocal_rank_at_10` check the ranking of a fixed relevance corpus. A
   recalled result elsewhere beyond top ten does not satisfy the top-ten gate.
+
+For Videos, judged result matching now uses the same conservative canonical
+identity as the owned fusion engine: proven-identical YouTube watch, Shorts,
+live, embed and `youtu.be` links to an 11-character video ID count as one
+asset. This never follows those links, broadens provider permissions, or
+assumes two different video URLs are equivalent without a validated identity.
 
 An executable gate requires positive minimum relevance, diversity, results and
 recall thresholds; zero-threshold "success" cannot bypass the quality checks.

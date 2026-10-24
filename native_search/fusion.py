@@ -22,6 +22,12 @@ SUPPORTED_CATEGORIES = frozenset({'web', 'images', 'videos', 'news'})
 _PROVIDER_ID = re.compile(r'[a-z][a-z0-9_-]{0,47}\Z')
 _TRACKING_KEYS = frozenset({'fbclid', 'gclid', 'dclid', 'msclkid', 'igshid', 'mc_cid', 'mc_eid'})
 _CONTROL = re.compile(r'[\x00-\x20\x7f\\]')
+_YOUTUBE_VIDEO_ID = re.compile(r'[A-Za-z0-9_-]{11}\Z')
+_YOUTUBE_HOSTS = frozenset({
+    'youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com',
+    'youtube-nocookie.com', 'www.youtube-nocookie.com',
+})
+_YOUTU_BE_HOSTS = frozenset({'youtu.be', 'www.youtu.be'})
 _MAX_CANDIDATES = 1000
 
 
@@ -86,6 +92,41 @@ def canonical_result_url(url: object) -> str | None:
         return None
 
 
+def video_result_identity(url: object) -> str | None:
+    """Normalize only *provably identical* YouTube video link representations.
+
+    Different thumbnails, titles, channel pages and unrelated video-host URLs
+    remain independent. This is an equality key, never a URL to visit, display,
+    proxy, or send to a third party.
+    """
+    canonical = canonical_result_url(url)
+    if canonical is None:
+        return None
+    parsed = urlsplit(canonical)
+    # A nonstandard port can serve different content even at an official host.
+    if parsed.port is not None:
+        return canonical
+    host = parsed.hostname
+    video_id = None
+    if host in _YOUTU_BE_HOSTS:
+        parts = parsed.path.split('/')
+        if len(parts) == 2:
+            video_id = parts[1]
+    elif host in _YOUTUBE_HOSTS:
+        path_parts = parsed.path.split('/')
+        if parsed.path == '/watch':
+            values = [value for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+                      if key == 'v']
+            if len(values) == 1:
+                video_id = values[0]
+        elif (len(path_parts) == 3 and path_parts[1] in
+              ('shorts', 'live', 'embed', 'v')):
+            video_id = path_parts[2]
+    if video_id is not None and _YOUTUBE_VIDEO_ID.fullmatch(video_id):
+        return 'video:youtube:' + video_id
+    return canonical
+
+
 def fuse_results(
     candidates: Iterable[SourceResult], *, category: str, limit: int = 20, rrf_k: int = 60,
 ) -> list[FusedResult]:
@@ -127,7 +168,12 @@ def fuse_results(
         media_key = canonical_result_url(result.media_url) if result.media_url else None
         if result.media_url is not None and media_key is None:
             continue
-        identity = (media_key if category == 'images' else url_key)
+        if category == 'images':
+            identity = media_key
+        elif category == 'videos':
+            identity = video_result_identity(result.url)
+        else:
+            identity = url_key
         if identity is None:
             identity = 'unresolved-image:' + str(ordinal)
 

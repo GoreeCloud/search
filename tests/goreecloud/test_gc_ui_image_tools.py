@@ -3,6 +3,8 @@
 import unittest
 from pathlib import Path
 import re
+import shutil
+import subprocess
 
 import yaml
 
@@ -20,6 +22,15 @@ OLD = "html[data-glaze-consumer]"
 
 
 class GCUIImageToolTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("node"), "Node is required for the offline browser-DOM queue contract")
+    def test_bounded_thumbnail_queue_aborts_stalled_requests_and_reports_outcomes(self):
+        result = subprocess.run(
+            [shutil.which("node"), str(ROOT / "tests/goreecloud/image_preview_queue_contract.cjs")],
+            cwd=ROOT, capture_output=True, text=True, timeout=10, check=False,
+        )
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("PASS image gallery bounded queue", result.stdout)
+
     def test_preview_control_slice_no_longer_depends_on_retired_selector(self):
         css = STYLES.read_text(encoding="utf-8")
         for suffix in (

@@ -22,21 +22,27 @@ else:
     from source_baseline_inventory import BaselineError, REPO, REPO_URL, SHA, collect
 
 
-# Strict allowlist: no crawler, no network fetcher, no provider adapter and no
-# legacy SearXNG modules can become dependencies of this service artifact.
+# Strict allowlist: no crawler, outbound network fetcher, real upstream
+# provider adapter or legacy SearXNG module can enter the candidate artifact.
+# The included fusion dispatcher has no network implementation, and local
+# synthetic fixtures require an explicit operator-only command-line switch.
 SERVICE_FILES = (
     "native_search/__init__.py",
     "native_search/api.py",
+    "native_search/dispatch.py",
+    "native_search/fixture_provider.py",
+    "native_search/fusion.py",
     "native_search/index.py",
 )
 MAX_SOURCE_BYTES = 500_000
 MANIFEST_NAME = "goreecloud-native-search-build.json"
 ENTRYPOINT = '''# SPDX-License-Identifier: AGPL-3.0-or-later
-"""Only the owned, local SQLite index can be served from this artifact."""
+"""Loopback native index with optional explicit OFFLINE fusion preview."""
 import argparse
 from pathlib import Path
 
 from native_search.api import run_loopback
+from native_search.fixture_provider import load_synthetic_fixture
 from native_search.index import SearchIndex
 
 
@@ -44,11 +50,18 @@ def main():
     parser = argparse.ArgumentParser(prog="goreecloud-search-native-service")
     parser.add_argument("--db", required=True, type=Path)
     parser.add_argument("--port", type=int, default=8789)
+    parser.add_argument("--fusion-fixture", type=Path,
+                        help="operator-supplied local synthetic cards; NO upstream search")
     args = parser.parse_args()
     if args.db.is_symlink() or not args.db.is_file():
         parser.error("an existing, non-symlink local index database is required")
+    try:
+        sources = load_synthetic_fixture(args.fusion_fixture) if args.fusion_fixture else ()
+    except (ValueError, OSError) as error:
+        parser.error(str(error))
     with SearchIndex(args.db) as index:
-        run_loopback(index, port=args.port)
+        run_loopback(index, port=args.port, fusion_providers=sources,
+                     allow_synthetic_fixtures=bool(args.fusion_fixture))
 
 
 if __name__ == "__main__":
@@ -99,7 +112,10 @@ def build_bundle(repo: Path, expected_sha: str) -> bytes:
         "source_commit": expected_sha,
         "source_sha256": source_hashes,
         "mode": "development_loopback_service_only",
-        "included_capabilities": ["sqlite_fts5_index", "loopback_http_post_search"],
+        "included_capabilities": [
+            "sqlite_fts5_index", "loopback_http_post_search",
+            "explicit_offline_synthetic_fusion_preview",
+        ],
         "excluded_capabilities": [
             "outbound_crawling", "upstream_search_runtime", "provider_network_requests",
             "public_listeners", "shared_authentication", "native_graphical_interface",
