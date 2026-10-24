@@ -68,6 +68,7 @@ from searx.goreecloud_request_budget import RequestBudget
 from searx.goreecloud_policy import (
     SearchPolicyViolation, validate_disclosure, validate_transport, validate_no_external_redirects,
     distinct_selected_sources, safe_primary_result_url, represented_result_sources, validate_builtin_sources,
+    safe_external_media_url,
     all_selected_sources_access_restricted,
     validate_builtin_search_bangs, restrict_explicit_private_engines, validate_private_request_context,
     SEARCH_SOURCE_COOKIE, SEARCH_SOURCE_OPTIONS, SEARCH_SOURCE_FAMILIES,
@@ -325,6 +326,9 @@ def image_proxify(url: str):
             return url
         return None
 
+    # A provider-supplied media URL is untrusted even when the server signs it.
+    if not safe_external_media_url(url):
+        return None
     h = new_hmac(settings['server']['secret_key'], url.encode())
 
     return '{0}?{1}'.format(url_for('image_proxy'), urlencode(dict(url=url.encode(), h=h)))
@@ -453,7 +457,10 @@ def render(template_name: str, **kwargs):
     kwargs['private_query_transport'] = settings['goreecloud']['private_search']
     kwargs['goreecloud_native_dev_enabled'] = native_dev_available()
     if settings['goreecloud']['private_search']:
-        chosen_source = stored_search_source(flask.request.cookies.get(SEARCH_SOURCE_COOKIE))
+        chosen_source = stored_search_source(
+            flask.request.cookies.get(SEARCH_SOURCE_COOKIE),
+            default=settings['goreecloud'].get('default_source_choice', 'all'),
+        )
         available_tabs = []
         for category_name in SEARCH_SOURCE_FAMILIES:
             try:
@@ -795,6 +802,7 @@ def goreecloud_preview():
             stored=flask.request.cookies.get(SEARCH_SOURCE_COOKIE),
             query_specific=bool(raw_text_query and raw_text_query.specific),
             category=(query.categories[0] if query.categories else 'general'),
+            default=settings['goreecloud'].get('default_source_choice', 'all'),
         ), categories=tuple(name for name in SEARCH_SOURCE_FAMILIES if 'category_' + name in sxng_request.form) or None,
     )
     sources = distinct_selected_sources(ref.name for ref in query.engineref_list)
@@ -899,6 +907,7 @@ def search():
                     stored=flask.request.cookies.get(SEARCH_SOURCE_COOKIE),
                     query_specific=bool(raw_text_query and raw_text_query.specific),
                     category=(search_query.categories[0] if search_query.categories else 'general'),
+                    default=settings['goreecloud'].get('default_source_choice', 'all'),
                 ), categories=tuple(name for name in SEARCH_SOURCE_FAMILIES if 'category_' + name in sxng_request.form) or None,
             )
             validate_disclosure(
@@ -1270,7 +1279,10 @@ def preferences():
         # fmt: off
         'preferences.html',
         preferences = True,
-        goreecloud_source_choice = stored_search_source(flask.request.cookies.get(SEARCH_SOURCE_COOKIE)),
+        goreecloud_source_choice = stored_search_source(
+            flask.request.cookies.get(SEARCH_SOURCE_COOKIE),
+            default=settings['goreecloud'].get('default_source_choice', 'all'),
+        ),
         engines_with_tokens = any(getattr(e, "tokens", None) for e in engines.values()),
         selected_categories = get_selected_categories(sxng_request.preferences, sxng_request.form),
         locales = LOCALE_NAMES,
@@ -1300,12 +1312,31 @@ def preferences():
 app.add_url_rule('/favicon_proxy', methods=['GET'], endpoint="favicon_proxy", view_func=favicons.favicon_proxy)
 
 
+def _bounded_image_proxy_stream(chunks, maximum_size, close_stream):
+    """Stop the remote stream at the byte cap, even without Content-Length."""
+    forwarded = 0
+    try:
+        for chunk in chunks:
+            if not isinstance(chunk, (bytes, bytearray, memoryview)):
+                logger.warning('image-proxy: invalid upstream stream chunk')
+                return
+            forwarded += len(chunk)
+            if forwarded > maximum_size:
+                logger.warning('image-proxy: upstream stream size exceeded')
+                return
+            yield bytes(chunk)
+    except RequestException:
+        logger.warning('image-proxy: upstream stream interrupted')
+    finally:
+        close_stream()
+
+
 @app.route('/image_proxy', methods=['GET'])
 def image_proxy():
     # pylint: disable=too-many-return-statements, too-many-branches
 
     url = sxng_request.args.get('url')
-    if not url:
+    if not safe_external_media_url(url):
         return '', 400
 
     if not is_hmac_of(settings['server']['secret_key'], url.encode(), sxng_request.args.get('h', '')):
@@ -1322,9 +1353,9 @@ def image_proxy():
             'DNT': '1',
         }
         set_context_network_name('image_proxy')
-        resp, stream = http_stream(method='GET', url=url, headers=request_headers, allow_redirects=True)
+        resp, stream = http_stream(method='GET', url=url, headers=request_headers, allow_redirects=False)
         content_length = resp.headers.get('Content-Length')
-        if content_length and content_length.isdigit() and int(content_length) > maximum_size:
+        if content_length and (not content_length.isdigit() or int(content_length) > maximum_size):
             return 'Max size', 400
 
         if resp.status_code != 200:
@@ -1357,14 +1388,18 @@ def image_proxy():
         try:
             if resp:
                 resp.close()
-            del resp
-            del stream
         except RequestException as e:
             logger.debug('Exception while closing response: %s', e)
+        finally:
+            resp = None
+            stream = None
 
     try:
-        headers = dict_subset(resp.headers, {'Content-Type', 'Content-Encoding', 'Content-Length', 'Length'})
-        response = Response(stream, mimetype=resp.headers['Content-Type'], headers=headers, direct_passthrough=True)
+        # Do not forward an untrusted length claim; WSGI frames the bounded
+        # iterator rather than promising bytes a malicious upstream may omit.
+        headers = dict_subset(resp.headers, {'Content-Type', 'Content-Encoding'})
+        bounded_stream = _bounded_image_proxy_stream(stream, maximum_size, close_stream)
+        response = Response(bounded_stream, mimetype=resp.headers['Content-Type'], headers=headers, direct_passthrough=True)
         response.call_on_close(close_stream)
         return response
     except RequestException:

@@ -1,4 +1,7 @@
-FROM docker.io/searxng/base:searxng-builder AS builder
+# Preserve the existing Development default. A qualified release build must
+# supply a separately verified immutable ref through --build-arg.
+ARG BUILDER_BASE_IMAGE=docker.io/searxng/base:searxng-builder
+FROM ${BUILDER_BASE_IMAGE} AS builder
 
 COPY ./requirements.txt ./requirements-server.txt ./
 
@@ -13,13 +16,18 @@ RUN --mount=type=cache,id=uv,target=/root/.cache/uv set -eux -o pipefail; \
     find ./.venv/lib/ -type f -name "*.pyc" -delete; \
     python -m compileall -q -f -j 0 --invalidation-mode=unchecked-hash ./.venv/lib/
 
-COPY --exclude=./searx/version_frozen.py ./searx/ ./searx/
+# The builder-specific .dockerignore excludes version_frozen.py from this
+# context; the dist build uses the root .dockerignore to include its freshly
+# generated, verified copy. Avoid COPY --exclude (not portable on CI Docker).
+COPY ./searx/ ./searx/
 
 RUN set -eux -o pipefail; \
     python -m compileall -q -f -j 0 --invalidation-mode=unchecked-hash ./searx/; \
     find ./searx/static/ -type f \
     \( -name "*.html" -o -name "*.css" -o -name "*.js" -o -name "*.svg" \) \
-    -exec gzip -9 -k {} + \
-    -exec brotli -9 -k {} + \
-    -exec gzip --test {}.gz + \
-    -exec brotli --test {}.br +
+    -exec gzip -9 -k {} +; \
+    find ./searx/static/ -type f \
+    \( -name "*.html" -o -name "*.css" -o -name "*.js" -o -name "*.svg" \) \
+    -exec brotli -9 -k {} +; \
+    find ./searx/static/ -type f -name "*.gz" -exec gzip --test {} +; \
+    find ./searx/static/ -type f -name "*.br" -exec brotli --test {} +

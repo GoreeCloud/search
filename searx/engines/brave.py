@@ -120,13 +120,14 @@ Implementations
 import json
 import typing as t
 from collections.abc import Callable
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 from dateutil import parser
 
 from searx import locales, logger
 from searx.enginelib.traits import EngineTraits
 from searx.exceptions import SearxEngineResponseException
+from searx.goreecloud_policy import safe_external_media_url
 from searx.result_types import EngineResults, MainResult, Video
 from searx.result_types.image import Image
 from searx.utils import html_to_text, js_obj_str_to_json_str, js_obj_str_to_python
@@ -312,18 +313,57 @@ def parse_news_result(result: dict[str, t.Any]) -> MainResult:
     )
 
 
+def _image_http_url(value: object) -> str:
+    """Keep only safe, absolute provider image URLs (no user info or scripts)."""
+    if not isinstance(value, str):
+        return ''
+    value = value.strip()
+    if not value or '\\' in value or any(ord(ch) <= 32 or ord(ch) == 127 for ch in value):
+        return ''
+    try:
+        parsed = urlsplit(value)
+        port = parsed.port
+        if parsed.scheme in ('http', 'https') and parsed.hostname and parsed.username is None and parsed.password is None:
+            if port is None or port > 0:
+                return value
+    except ValueError:
+        pass
+    return ''
+
+
 def parse_image_result(result: dict[str, t.Any]) -> Image:
-    properties: dict[str, t.Any] = result.get("properties", {})
-    thumbnail: dict[str, t.Any] = result.get("thumbnail", {})
+    if not isinstance(result, dict):
+        raise ValueError('Malformed Brave image card')
+    properties = result.get("properties")
+    thumbnail = result.get("thumbnail")
+    properties = properties if isinstance(properties, dict) else {}
+    thumbnail = thumbnail if isinstance(thumbnail, dict) else {}
+
+    # Publisher page and original media URL are mandatory. The thumbnail is
+    # optional: fall back to the full image without manufacturing a new URL.
+    url = _image_http_url(result.get('url'))
+    # The same media policy is enforced by the image proxy. Accepting an
+    # HTTP/private thumbnail here would suppress our working original-image
+    # fallback, only for the proxy to reject the thumbnail later.
+    image = _image_http_url(properties.get('url'))
+    if not safe_external_media_url(image):
+        image = ''
+    if not url or not image:
+        raise ValueError('Brave image card lacks safe source or media URL')
+    preview = _image_http_url(thumbnail.get('src'))
+    if not safe_external_media_url(preview):
+        preview = image
     width, height = properties.get("width"), properties.get("height")
+    resolution = f'{width}x{height}' if str(width).isdigit() and str(height).isdigit() else ''
+    title, source = result.get('title'), result.get('source')
 
     return Image(
-        title=result.get("title", ""),
-        url=result.get("url"),
-        img_src=properties.get("url", ""),
-        thumbnail_src=thumbnail.get("src", "") if thumbnail else "",
-        source=result.get("source", ""),
-        resolution=f"{width}x{height}" if width and height else "",
+        title=title.strip() if isinstance(title, str) and title.strip() else 'Image result',
+        url=url,
+        img_src=image,
+        thumbnail_src=preview,
+        source=source if isinstance(source, str) else '',
+        resolution=resolution,
     )
 
 
@@ -384,6 +424,20 @@ def _parse_results(parse_func: Callable[..., MainResult | Image], resp: "SXNG_Re
         return results
 
     json_results: list[dict[str, t.Any]] = json_resp["results"]
+    if brave_category == 'images':
+        if not isinstance(json_results, list):
+            raise SearxEngineResponseException('Unexpected Brave images result list')
+        for result in json_results:
+            try:
+                results.add(parse_func(result))
+            except ValueError:
+                # A malformed item cannot blank a healthy neighboring card;
+                # do not log the provider payload, its URLs, or query.
+                continue
+        if json_results and not results:
+            raise SearxEngineResponseException('Brave returned no usable image cards')
+        return results
+
     for result in json_results:
         results.add(parse_func(result))
 

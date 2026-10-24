@@ -6,7 +6,7 @@
 
 Measure whether live free SearXNG returns **actual result links** for General, Images, Videos and News, not merely HTTP 200, engine names, or an empty-state page. Do not modify Caddy/NetBird routes, provider lists, public access, billing, Tor, persisted search data or production containers.
 
-Source base is GoreeCloud Search's currently deployed free-first canary from PR #65: pinned running Search image `goreecloud/search:staging-195b809575dd` at source commit `195b809575ddd1e5dc68ebcaabf832e8d349931c`. Its live HTTPS route at `https://search-dev.goreecloud.com` requires authorized NetBird connectivity. The original Search/Tor pair remains a rollback path. The smoke tool here is **developer-side verification code**, not yet an automatically deployed service.
+The historical observations below used the PR #65 free-first canary image `goreecloud/search:staging-195b809575dd` at source commit `195b809575ddd1e5dc68ebcaabf832e8d349931c`. The later, separately verified [working-free-sources Development cutover](../../deploy/vps/FREE-WORKING-SOURCES-CUTOVER.md) now routes the NetBird-restricted `https://search-dev.goreecloud.com` to source `40caeb47a1fd8fc15a60f54e5e383d1a9f280598`; the retained free-upgrade service is a rollback candidate. The smoke tool remains **developer-side verification code**, not a scheduled or deployed monitor.
 
 ## Recorded observations, one bounded test per category
 
@@ -22,6 +22,12 @@ This fixed-fixture smoke tool uses nonpersonal, subject-appropriate queries and 
 | News | DuckDuckGo News | 29 | 0 | Results observed |
 
 HTTPS readiness was HTTP 200 / READY with certificate verification enabled. Results are counted only when the structured JSON response identifies the expected selected engines and contains nonempty titles and syntactically valid, nonlocal HTTP(S) destination URLs. **Counts measure observed result links, not independent provider reachability or guarantee of future topical matching.** A provider may be selected but not respond; do not infer all selected providers were available merely from a combined result count. **Any reported engine failure now produces a nonhealthy partial-result state, even when another selected engine supplies enough links.** The tool emits only exact preapproved selected engine labels, not third-party error messages or private URLs. Never silently replace a denied source.
+
+### October 21 source-contract tightening (Development source only)
+
+The category checker now fails closed when a returned result has a malformed or nonpublic destination (including numeric/octal loopback aliases, link-local addresses, credential-bearing URLs, control characters and reserved private hostnames), missing title, or an unselected/unknown source attribution. It also cross-checks each result's primary and merged engine labels against the response's represented-engine counts, selected-engine count and explicit **not a provider-contact confirmation** markers. Malformed or unrecognized provider-error attribution is rejected without printing raw error details.
+
+These checks consume **no additional requests** and perform no DNS resolution. Local fixtures cover public links, merged attribution, wrong-source responses, false counts and unsafe URLs. The historical observed numbers in the table above were collected before this tightening; they must **not** be presented as a new live pass of the stricter checker. The tested-free-source preset separately uses Bing Images by default; this explicit two-engine diagnostic deliberately includes DuckDuckGo Images to expose its unresolved partial failure. No deployment or provider probe was performed for this source-only change.
 
 ## Reproduce through authorized NetBird connection
 

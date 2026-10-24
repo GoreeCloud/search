@@ -16,6 +16,11 @@ from pathlib import Path
 
 import yaml
 
+try:  # importable from tests at repository root and executable as a script
+    from scripts.search_development_ingress_guard import private_search_ingress_is_safe
+except ModuleNotFoundError:
+    from search_development_ingress_guard import private_search_ingress_is_safe
+
 OLD = "goreecloud-search-free-canary-gateway:8080"
 NEW = "goreecloud-search-free-upgrade-gateway:8080"
 OLD_SEARCH = "goreecloud-search-free-canary-search-1"
@@ -28,6 +33,35 @@ SHA = re.compile(r"[0-9a-f]{40}\Z")
 IMAGE = re.compile(r"goreecloud/search:staging-[0-9a-f]{12}\Z")
 
 PROFILE_IN_CONTAINER = "/usr/local/searxng/free-settings.yml"
+
+
+# The existing hardcoded definitions above remain the legacy default.
+# Explicit, immutable route specifications avoid mutating module globals.
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class CutoverRoute:
+    old: str
+    new: str
+    old_search: str
+    old_ingress: str
+    new_search: str
+    new_ingress: str
+    project: str
+
+
+LEGACY_ROUTE = CutoverRoute(OLD, NEW, OLD_SEARCH, OLD_INGRESS,
+                            NEW_SEARCH, NEW_INGRESS, PROJECT)
+WORKING_ROUTE = CutoverRoute(
+    "goreecloud-search-free-upgrade-gateway:8080",
+    "goreecloud-search-free-working-gateway:8080",
+    "goreecloud-search-free-upgrade-search-1",
+    "goreecloud-search-free-upgrade-ingress-1",
+    "goreecloud-search-free-working-search-1",
+    "goreecloud-search-free-working-ingress-1",
+    "goreecloud-search-free-working",
+)
 PROFILE_REPO_PATH = "configs/goreecloud/settings.free-first.yml"
 
 
@@ -59,7 +93,7 @@ def mounted_profile(container: dict | None) -> bytes | None:
     return source.read_bytes()
 
 
-def profile_is_safe(data: bytes | None) -> bool:
+def profile_is_safe(data: bytes | None, *, working: bool = False) -> bool:
     if not data:
         return False
     try:
@@ -79,6 +113,7 @@ def profile_is_safe(data: bytes | None) -> bool:
             and outgoing.get("proxies") == {}
             and outgoing.get("using_tor_proxy") is False
             and server.get("public_instance") is False
+            and (not working or goreecloud.get("default_source_choice") == "working")
         )
     except yaml.YAMLError:
         return False
@@ -126,6 +161,7 @@ def evaluate(
     expected_image: str, expected_sha: str,
     owner_current: int | None = None, owner_snapshot: int | None = None,
     profile_mounted: bytes | None = None, profile_committed: bytes | None = None,
+    route: CutoverRoute = LEGACY_ROUTE,
 ) -> dict:
     checks: list[dict] = []
 
@@ -140,12 +176,11 @@ def evaluate(
         "rollback snapshot must have the same owner UID as the current Caddyfile")
     text = current.decode("utf-8", "replace") if current is not None else ""
     block = site_block(text)
-    old_route = "reverse_proxy " + OLD
-    new_route = "reverse_proxy " + NEW
+    old_route = "reverse_proxy " + route.old
+    new_route = "reverse_proxy " + route.new
     add("unique_netbird_only_host", block is not None
-        and "remote_ip 100.64.0.0/10" in block
-        and 'respond "Forbidden" 403' in block,
-        "single Search host must retain NetBird matcher and explicit 403")
+        and private_search_ingress_is_safe(text, route.old),
+        "single Search host must gate its sole upstream behind NetBird and deny all other clients")
     add("active_route_remains_old", block is not None
         and block.count(old_route) == 1 and new_route not in block
         and text.count(old_route) == 1 and text.count(new_route) == 0,
@@ -159,10 +194,10 @@ def evaluate(
         and text.replace(old_route, new_route).replace(new_route, old_route) == text,
         "a proposed upgrade must change only the one Search upstream")
 
-    old = containers.get(OLD_SEARCH)
-    old_proxy = containers.get(OLD_INGRESS)
-    new = containers.get(NEW_SEARCH)
-    new_proxy = containers.get(NEW_INGRESS)
+    old = containers.get(route.old_search)
+    old_proxy = containers.get(route.old_ingress)
+    new = containers.get(route.new_search)
+    new_proxy = containers.get(route.new_ingress)
 
     def running(c: dict | None, health: bool = False) -> bool:
         return bool(c and c.get("State", {}).get("Status") == "running"
@@ -186,15 +221,17 @@ def evaluate(
         "the actual running container must use the pinned local image ID, not only a matching mutable tag")
     add("upgrade_project_identity",
         bool(new and new_proxy and
-             all(c.get("Config", {}).get("Labels", {}).get("com.docker.compose.project") == PROJECT
+             all(c.get("Config", {}).get("Labels", {}).get("com.docker.compose.project") == route.project
                  for c in (new, new_proxy))),
         "upgrade must use a separate Compose project")
 
+    old_project = route.old_search.removesuffix("-search-1")
+    new_project = route.new_search.removesuffix("-search-1")
     expected_networks = {
-        OLD_SEARCH: {"goreecloud-search-free-canary_app_link", "goreecloud-search-free-canary_provider_egress"},
-        OLD_INGRESS: {"goreecloud-search-free-canary_app_link", "proxy"},
-        NEW_SEARCH: {"goreecloud-search-free-upgrade_app_link", "goreecloud-search-free-upgrade_provider_egress"},
-        NEW_INGRESS: {"goreecloud-search-free-upgrade_app_link", "proxy"},
+        route.old_search: {old_project + "_app_link", old_project + "_provider_egress"},
+        route.old_ingress: {old_project + "_app_link", "proxy"},
+        route.new_search: {new_project + "_app_link", new_project + "_provider_egress"},
+        route.new_ingress: {new_project + "_app_link", "proxy"},
     }
     for name, expected in expected_networks.items():
         c = containers.get(name)
@@ -202,8 +239,8 @@ def evaluate(
         add("network_" + name.removeprefix("goreecloud-search-free-"),
             set(nets) == expected, "expected distinct, nonoverlapping Search/ingress networks")
 
-    for name, c in ((OLD_SEARCH, old), (OLD_INGRESS, old_proxy),
-                    (NEW_SEARCH, new), (NEW_INGRESS, new_proxy)):
+    for name, c in ((route.old_search, old), (route.old_ingress, old_proxy),
+                    (route.new_search, new), (route.new_ingress, new_proxy)):
         ports = (c or {}).get("NetworkSettings", {}).get("Ports") or {}
         ok = bool(c and c.get("HostConfig", {}).get("ReadonlyRootfs") is True
                   and not c.get("HostConfig", {}).get("PortBindings")
@@ -214,9 +251,9 @@ def evaluate(
     def has_alias(c: dict | None, gateway: str) -> bool:
         proxy = (c or {}).get("NetworkSettings", {}).get("Networks", {}).get("proxy", {})
         return gateway in (proxy.get("Aliases") or [])
-    add("distinct_old_gateway_alias", has_alias(old_proxy, OLD.split(":")[0]),
+    add("distinct_old_gateway_alias", has_alias(old_proxy, route.old.split(":")[0]),
         "old gateway must retain unique proxy alias")
-    add("distinct_new_gateway_alias", has_alias(new_proxy, NEW.split(":")[0]),
+    add("distinct_new_gateway_alias", has_alias(new_proxy, route.new.split(":")[0]),
         "new gateway must use nonconflicting proxy alias")
 
     add("single_worker_budget",
@@ -226,7 +263,8 @@ def evaluate(
         "upgrade must retain one worker and load the inspected free settings path")
     add("pinned_readonly_free_profile",
         profile_mounted is not None and profile_committed is not None
-        and profile_mounted == profile_committed and profile_is_safe(profile_committed),
+        and profile_mounted == profile_committed
+        and profile_is_safe(profile_committed, working=(route == WORKING_ROUTE)),
         "mounted free settings must match the exact source revision and enforce 12/min, NetBird-only and no paid or Tor proxy")
 
     return {"status": "admitted_for_manual_cutover_review" if all(c["passed"] for c in checks)
@@ -236,12 +274,20 @@ def evaluate(
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Read-only GoreeCloud free-search upgrade gate")
+    p.add_argument("--phase", choices=("legacy", "working"), default="legacy",
+                   help="Exact intended source and destination gateways")
     p.add_argument("--image", required=True, help="Pinned local staging image")
     p.add_argument("--revision", required=True, help="Exact 40-character source SHA")
     p.add_argument("--caddyfile", type=Path, default=Path("/srv/docker/caddy/Caddyfile"))
     p.add_argument("--snapshot", type=Path,
-                   default=Path("/srv/docker/caddy/Caddyfile.free-upgrade-snapshot"))
+                   help="Fresh protected byte-identical rollback Caddyfile")
     args = p.parse_args(argv)
+    route = WORKING_ROUTE if args.phase == "working" else LEGACY_ROUTE
+    snapshot = args.snapshot or Path(
+        "/srv/docker/caddy/Caddyfile.free-working-snapshot"
+        if args.phase == "working" else
+        "/srv/docker/caddy/Caddyfile.free-upgrade-snapshot"
+    )
     if not IMAGE.fullmatch(args.image) or not SHA.fullmatch(args.revision):
         p.error("pin a valid GoreeCloud staging image and exact source revision")
     try:
@@ -253,16 +299,17 @@ def main(argv: list[str] | None = None) -> int:
             return path.read_bytes(), mode, metadata.st_uid
 
         active, mode_active, owner_active = read(args.caddyfile)
-        old, mode_old, owner_old = read(args.snapshot)
-        names = (OLD_SEARCH, OLD_INGRESS, NEW_SEARCH, NEW_INGRESS)
+        old, mode_old, owner_old = read(snapshot)
+        names = (route.old_search, route.old_ingress, route.new_search, route.new_ingress)
         containers = {n: inspect(n) for n in names}
         source_image = image_inspect(args.image)
-        actual_profile = mounted_profile(containers.get(NEW_SEARCH))
+        actual_profile = mounted_profile(containers.get(route.new_search))
         expected_profile = committed_profile(args.revision)
         outcome = evaluate(active, old, mode_active, mode_old, containers,
                            source_image, args.image, args.revision,
                            owner_current=owner_active, owner_snapshot=owner_old,
-                           profile_mounted=actual_profile, profile_committed=expected_profile)
+                           profile_mounted=actual_profile, profile_committed=expected_profile,
+                           route=route)
     except (OSError, ValueError, subprocess.SubprocessError, json.JSONDecodeError):
         outcome = {"status": "blocked_do_not_cutover", "passed": 0, "total": 0,
                    "checks": [{"check": "inspection", "passed": False,

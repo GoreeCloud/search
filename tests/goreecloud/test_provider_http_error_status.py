@@ -1,5 +1,6 @@
 """Synthetic classification of upstream HTTP denial statuses without egress."""
 from timeit import default_timer
+import ssl
 import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -7,6 +8,7 @@ from unittest.mock import MagicMock, patch
 from curl_cffi.requests.exceptions import HTTPError, RequestException
 from searx.exceptions import (
     SearxEngineAccessDeniedException,
+    SearxEngineCaptchaException,
     SearxEngineTooManyRequestsException,
 )
 from searx.search.processors.online import (
@@ -75,6 +77,33 @@ class ProviderHttpStatusTests(unittest.TestCase):
         log_call = worker.logger.debug.call_args
         self.assertNotIn("sensitive query", str(log_call))
         self.assertNotIn("provider URL", str(log_call))
+
+    def test_ssl_denial_and_parser_failure_never_log_exception_payloads(self):
+        private_url = 'https://provider.example.org/?q=private-phrase-123'
+        cases = (
+            (ssl.SSLError('TLS failure at ' + private_url), True),
+            (SearxEngineAccessDeniedException(message='Access denied ' + private_url,
+                                              suspended_time=5), True),
+            (SearxEngineCaptchaException(message='Challenge ' + private_url,
+                                         suspended_time=5), True),
+            (ValueError('Failed to parse upstream body with query ' + private_url), False),
+        )
+        for failure, suspend in cases:
+            with self.subTest(exception=type(failure).__name__):
+                worker = OnlineProcessor.__new__(OnlineProcessor)
+                worker.logger = MagicMock()
+                with (
+                    patch.object(worker, 'init_network_in_thread'),
+                    patch.object(worker, '_search_basic', side_effect=failure),
+                    patch.object(worker, 'handle_exception') as handler,
+                ):
+                    worker.search('private-phrase-123', {}, MagicMock(), default_timer(), 12.0)
+                handler.assert_called_once()
+                self.assertIs(failure, handler.call_args.args[1])
+                self.assertEqual(suspend, handler.call_args.kwargs.get('suspend', False))
+                self.assertNotIn(private_url, str(worker.logger.mock_calls))
+                self.assertNotIn('private-phrase-123', str(worker.logger.mock_calls))
+                self.assertIn(type(failure).__name__, str(worker.logger.debug.call_args))
 
 
 if __name__ == "__main__":

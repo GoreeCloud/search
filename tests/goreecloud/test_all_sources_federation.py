@@ -58,7 +58,7 @@ class AllSourcesFederationTests(unittest.TestCase):
             doc = html.fromstring(prefs.data)
             options = doc.xpath('//input[@name="goreecloud_sources"]')
             self.assertEqual(['all'], [o.get('value') for o in options if o.get('checked') is not None])
-            self.assertEqual({'all', *self.families}, {o.get('value') for o in options})
+            self.assertEqual({'working', 'all', *self.families}, {o.get('value') for o in options})
             prefs.close()
             for route in ('/preview', '/search'):
                 reply = client.post(route, data={'q': 'synthetic', 'format': 'json'}, headers=self.headers)

@@ -119,6 +119,8 @@ goreecloud:
   private_search: true
   max_query_chars: 512
   max_provider_fanout: 7
+  # Prefer the verified free providers; All Sources remains user-selectable.
+  default_source_choice: working
   # Single-worker, global request admission, independent of client identifiers.
   request_budget_per_minute: 12
   # Free-first mode: standard HTTPS requests, with no Tor or paid API account.

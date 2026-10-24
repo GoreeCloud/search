@@ -42,6 +42,9 @@ class ProviderQualificationGateTests(unittest.TestCase):
         self.assertTrue(outcome['provider_coverage_complete'])
         self.assertFalse(outcome['release_qualified'])
         self.assertTrue(outcome['independent_egress_and_licensing_evidence_required'])
+        self.assertEqual(6, outcome['category_coverage']['images']['results_observed_pairs'])
+        self.assertEqual(0, outcome['category_coverage']['images']['missing_pairs'])
+        self.assertTrue(outcome['empty_does_not_confirm_provider_contact'])
 
     def test_missing_or_unresponsive_provider_fails_coverage(self):
         partial = gate.evaluate_reports(all_reports()[:-1])
@@ -58,6 +61,28 @@ class ProviderQualificationGateTests(unittest.TestCase):
         self.assertFalse(outcome['provider_coverage_complete'])
         self.assertEqual([{'category': 'general', 'provider': 'brave'}],
                          outcome['unqualified_pairs'])
+        self.assertEqual([{'category': 'general', 'provider': 'brave'}],
+                         outcome['classified_provider_failures']['rate_limited'])
+        self.assertEqual(1, outcome['category_coverage']['general']['provider_error_pairs'])
+
+    def test_category_breakdown_exposes_missing_empty_partial_without_positive_claim(self):
+        docs = all_reports()
+        docs[1]['results'] = docs[1]['results'][1:]  # First Images source absent
+        docs[1]['results'][0].update(state='no_results', result_count=0,
+                                      error_count=0, error_categories=[])
+        docs[1]['results'][1].update(state='partial_results', result_count=2,
+                                      error_count=1, error_categories=['timeout', 'rate_limited'])
+        summary = gate.evaluate_reports(docs)
+        images = summary['category_coverage']['images']
+        self.assertEqual(6, images['expected_pairs'])
+        self.assertEqual(5, images['reported_pairs'])
+        self.assertEqual(1, images['missing_pairs'])
+        self.assertEqual(1, images['no_results_unconfirmed_pairs'])
+        self.assertEqual(1, images['partial_results_pairs'])
+        self.assertEqual(3, images['results_observed_pairs'])
+        self.assertFalse(summary['provider_coverage_complete'])
+        self.assertEqual([{'category': 'images', 'provider': 'qwant'}],
+                         summary['classified_provider_failures']['timeout'])
 
     def test_malformed_or_fabricated_coverage_fails_closed(self):
         cases = []
@@ -152,6 +177,24 @@ class ProviderQualificationGateTests(unittest.TestCase):
         docs.append(report('general', selected=['brave']))
         with self.assertRaises(gate.InvalidEvidence):
             gate.evaluate_reports(docs)
+
+    def test_cli_rejects_ambiguous_json_and_never_echoes_raw_fields(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'ambiguous.json'
+            for payload, reason in (
+                ('{"development_only":true,"development_only":false,"category":"images","results":[]}',
+                 'duplicate_json_field'),
+                ('{"development_only":true,"category":"images","results":[],"secret":NaN}',
+                 'nonfinite_json_value'),
+            ):
+                path.write_text(payload, encoding='utf-8')
+                sink = StringIO()
+                with contextlib.redirect_stdout(sink):
+                    self.assertEqual(2, gate.main([str(path)]))
+                output = json.loads(sink.getvalue())
+                self.assertEqual(reason, output['reason'])
+                self.assertNotIn(directory, sink.getvalue())
+                self.assertNotIn('secret', sink.getvalue())
 
 
 if __name__ == '__main__':

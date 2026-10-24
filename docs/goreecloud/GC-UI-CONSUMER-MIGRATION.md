@@ -1,0 +1,88 @@
+# GoreeCloud Search — GC UI consumer migration ledger
+
+**Authority:** GoreeCloud UI (GC UI), as designated by the current GoreeCloud master instructions and `GoreeCloud/gc-ui` succession policy. **Status:** Migration required; Search is *not* a qualified GC UI consumer. This ledger inventories active legacy behavior without approving its continued expansion.
+
+## Verified Development source inventory (October 22, 2026)
+
+| Consumer boundary | Retired contract still used | Migration disposition |
+| --- | --- | --- |
+| `searx/templates/simple/base.html` | Bundled `glaze-v1.4.1.css` import, `data-glaze-*` document/surface attributes | Replace actual visual and semantic runtime contract before removing compatibility selectors. |
+| `searx/static/themes/simple/goreecloud-search.css` | `html[data-glaze-consumer]` styles and `--glz141-*` semantic variables | Map deliberate Search-specific styles to the official GC UI Foundations API; validate contrast and theme behavior. |
+| `searx/static/themes/simple/goreecloud-results.css` | Legacy selector-qualified result layout and feedback styles | Preserve truthful source attribution, incomplete-result notices, keyboard controls, result density and phone reflow during migration. |
+| `searx/static/themes/simple/goreecloud-mockup.css` | Legacy selector-qualified owner mockup treatment | Compare actual rendered desktop/phone screenshots against approved owner visual references; do not claim approval based on inherited screenshots. |
+| `searx/static/themes/simple/goreecloud-settings-categories.css` | Legacy selector-qualified settings/forms | Preserve native form semantics, POST-only preferences, source selection and assistive-technology navigation. |
+| `searx/static/themes/simple/glaze/css/` | 66 historical bundled CSS files, including imported stylesheet chain | Retain only as explicitly inventoried historical compatibility until no active Search route imports them. Never use as a basis for new design. |
+
+The source inventory counts **440 legacy-token-bearing first-party lines in five active files** at the pinned Development baseline. The count is a migration metric, not a measure of visual quality. The baseline is stored at `docs/goreecloud/gc-ui-legacy-baseline.json`.
+
+## Foundations 1.0.1 integration — initial, non-conformant increment
+
+The official `GoreeCloud/gc-ui` GitHub release `foundations-v1.0.1` was downloaded and verified before integration. Source archive: `goreecloud-gc-ui-1.0.1.tgz`, SHA-256 `275d7e6dc9503b2e74b3190bcecf176d73d2345860e8a20fa5faa3b326cd2298`. Its Apache-2.0 generated CSS token artifact (SHA-256 `0334a004bf55470f6e99ff938b54a94f83c4765ab44b098e25af9de9d00f6d50`) and original license (SHA-256 `b1d2870f1a00e4d7f56576e5f0870cba109e041f8af66866cf5b499478e654e7`) are checked in locally under `searx/static/themes/simple/gc-ui/` and validated in offline tests. Neither CDN nor npm registry access is required at Search runtime.
+
+The stylesheet is linked before the retained legacy styles. Search now consumes immutable GC UI Foundations geometry, touch-target, focus and typography tokens with compatible local fallbacks; its existing brand palette, dark/auto theme modes and legacy styling are deliberately preserved. This is a **real but limited token dependency**, not a new component library, a functional replacement of Glaze, complete accessible theme-controller adoption, native OS integration or GC UI consumer acceptance. The strict legacy gate remains open until separate visual and behavior work replaces the remaining contract.
+
+## Controlled private-UI slice — October 23, 2026 (local candidate, not released)
+
+The live Search template now identifies the official `data-gc-consumer="goreecloud-search"` contract alongside the retained compatibility attribute. A server-rendered fixed light/dark/black preference seeds the corresponding official `data-gc-mode`; on **private Search routes** the existing, local-only appearance controller synchronizes `data-gc-mode` after evaluating the explicit session override, page preference and OS dark-mode media query. That lets the verified Foundations v1.0.1 light/dark semantic CSS genuinely resolve for the private UI instead of remaining at its default light palette during dark appearances. Non-private auto mode is not a completed runtime bridge; this slice does not certify that route.
+
+The private appearance toggle's focus ring, button size and pill radius now consume official semantic/component tokens, preserving a 44px keyboard/touch target; its focus ring uses the verified official dark/light semantic color instead of the inherited Search-specific focus variable. The keyboard skip link and no-script/forced-colors control selectors migrate to the new consumer attribute while retaining their established accessible behavior. The CSS transition intentionally leaves unrelated active layouts and the historical vendor import intact. Actual first-party legacy-token-bearing lines decreased from the frozen **440** to **430** without changing the audit allowance. The live mode bridge has an offline JavaScript DOM contract; browser smoke gained computed-token/ARIA assertions but still needs a real private Development run and fresh desktop/phone, keyboard, reduced-motion, forced-colors and owner-reference visual review. No GC UI consumer acceptance, production release, full theme-controller adoption, vendor retirement, or five-surface migration is implied.
+
+## Next controlled slice — accessible search controls (October 23, 2026; local candidate)
+
+The visible **home and results search fields, submit buttons, reset controls, and their responsive/forced-colors rules** now use the first-party `data-gc-consumer="goreecloud-search"` selector boundary. The shared `.search_box`, query and button styling no longer depends on a retired document attribute. Existing native `<form role="search">`, explicit labels, `POST` routing, source selection, query limit, and SearXNG behavior are unchanged. Homepage geometry (54px desktop, 58px phone) and results geometry (52px) retain the owner mockup while enforcing the official **48px field floor**, **44px actionable target floor**, and **3px semantic focus ring**. The reset control previously inherited a roughly 29px upstream width; this slice assigns a 44px target and keyboard focus indicator. The field itself gains a tokenized `:focus-within` outline that follows GC UI light/dark semantic colors, and system colors override field text, focus and submit affordances in forced-colors mode. Search placeholders now consume the official `--gc-v1-color-on-surface-muted` light/dark semantic color instead of the pale hard-coded homepage value. Shared styles keep a Search-local color fallback when a non-private auto-themed route has not established `data-gc-mode`, avoiding a falsely assumed official dark bridge there.
+
+The static no-new-legacy audit now measures **406 active first-party legacy-token-bearing lines** (430 → 406, a 24-line decrease for this slice; the frozen allowable baseline remains 440), and still reports 66 historical vendor CSS files. Existing CI's offline synthetic Chromium browser smoke was extended to assert accessible roles/labels, minimum touch-target geometry, no overflow, actual computed focus outlines in light/dark, and Chrome forced-colors media emulation on both homepage and results. Local static/unit checks can run without browser infrastructure; real browser acceptance and complete rendered-page visual/assistive-technology comparison remain pending CI plus a qualified Development review. No screenshot or fixture generated by this candidate is, by itself, owner approval. **Search is still not an accepted GC UI consumer; other surfaces, retained compatibility bundle, dark/auto edge cases, and stable release gates remain open.**
+
+## Settings tab rail — bounded consumer migration (October 23, 2026; source candidate)
+
+The Settings rail's radio/label/tab-panel layout, checked styling, keyboard focus selector and 320px/650px responsive rules now use the official `data-gc-consumer="goreecloud-search"` boundary rather than relying on `data-glaze-consumer`. Existing native radio inputs, labels and POST-bound Settings content are preserved. The visible labels retain their 45px desktop/44px phone minimum, now checked against the supported Foundations comfortable-target token; the keyboard focus outline uses the official 3px width and semantic light/dark focus-ring color, with the existing forced-colors container rule retained. Offline contracts check actual selector removal, token provenance and label-to-radio markup; synthetic Chromium Settings smoke additionally measures label geometry and native control relationships. This is a scoped behavior-preserving consumer replacement, not a wholesale selector rename or full Settings redesign.
+
+The source-only audit has fallen **406 → 392 first-party legacy-token-bearing lines** against the unchanged 440-line frozen allowance. The 66 historical CSS files are still bundled and active outside this slice. Local focused offline test results do not establish Chromium, assistive-technology, mobile-device or Development-deployment acceptance. In particular, the inherited radio/label `role="tab"` and panel announcements still need an assistive-technology review before accessibility can be accepted. **No full GC UI conformance, owner screenshot approval, native host qualification, Seal or Anchor status is claimed.**
+
+## Results category navigation — bounded consumer migration (October 23, 2026; source candidate)
+
+The Web/Images/Videos/News navigation rail now uses `data-gc-consumer="goreecloud-search"` for its core selectors, selected and unavailable states, keyboard focus, 650px/410px responsive rules and forced-colors overrides. Available category actions remain independent, native **same-origin POST forms** with the query, selected category, explicit engine instances, language, safe search and other permitted state carried in hidden fields. Unavailable categories remain non-actionable `aria-disabled` text, with no implicit provider substitution or GET query leakage. The migration retains the existing full-size desktop rail and four-column phone geometry while applying supported Foundations 1.0.1 comfortable targets (at least 44px), semantic light/dark selected/muted/focus colors, focus-ring width and disabled-state opacity. Forced-colors mode now explicitly distinguishes an unavailable label and a keyboard-focused category button with system colors.
+
+This slice lowers observed active first-party legacy-token-bearing lines **392 → 377** without raising the frozen 440-line allowance. Offline contracts exercise selector removal, token provenance, semantic POST markup, baseline reduction and existing category dispatch regression tests. The synthetic Chromium browser smoke additionally inspects the computed desktop/phone category touch geometry and same-origin POST actions. This is **source-only candidate evidence**, not a fresh private Development rendering or assistive-technology review. Full light/dark, narrow viewport, forced-colors, keyboard/screen-reader and owner-reference screenshot acceptance remain pending, as do broader legacy CSS elimination and controlled release. **Search remains an unqualified GC UI consumer.**
+
+## Image-gallery cards — bounded consumer migration (October 23, 2026; source candidate)
+
+The Images results gallery's card grid, image/preview surface, card metadata,
+link affordances, focus styles and compact-phone layout now use the current
+`data-gc-consumer="goreecloud-search"` boundary and supported Foundations
+light/dark semantic colors, comfortable touch targets and focus-ring tokens.
+Explicit forced-colors rules preserve navigability for system high-contrast
+themes. The result's primary external link now respects the existing
+**open results in a new tab** preference while retaining safe `rel` attributes.
+Link-only attributes are no longer emitted on a nested `<img>` element, and
+the current image-proxy behavior remains unchanged.
+
+The exact combined Development candidate's static audit reports **325 active
+first-party legacy-token-bearing lines**, down from the preceding **377**
+without relaxing the frozen 440-line allowance; the 66 historical bundled CSS
+files remain. Three focused offline tests cover rendered new-tab choices,
+safe external-link attributes, proxy markup and selector/token migration.
+The full source-only audit passes in non-strict mode; strict GC UI conformance
+still fails by design. These are code and synthetic-template checks **only**:
+the owner's image-gallery mockup was not re-presented in this task and actual
+rendered desktop/phone, reduced-motion, keyboard, screen-reader, forced-colors,
+Light/Dark and Dev-runtime visual acceptance remain unverified. The gallery
+change does not establish completed GC UI consumer migration or release status.
+
+## Contract and automation
+
+- CI runs `python scripts/gc_ui_consumer_audit.py` and **fails on new legacy consumer files or increased legacy-token-bearing lines**. Legitimate migration can shrink any count without changing the baseline. Changing an allowance needs a separately justified migration review; do not raise the baseline merely to satisfy CI.
+- `python scripts/gc_ui_consumer_audit.py --json` shows the complete currently observed debt. `--strict` fails until there are **zero active first-party legacy references**. A strict pass is necessary for retirement, **not sufficient** for GC UI design, accessibility, platform or production qualification.
+- This is source-wide static detection of token-bearing lines, not CSS dependency-graph or computed-style analysis. The 66 bundled CSS files are reported separately. Changes with equivalent semantics that avoid these keywords still require human review.
+- The existing synthetic browser smoke tests the current legacy rendering for regressions. Its artifact is deliberately named `search-legacy-ui-browser-smoke`. These screenshots are not GC UI conformance evidence by themselves.
+
+## Controlled migration and separate acceptance gates
+
+1. **Pin a real supported GC UI Foundations release.** The scoped `foundations-v1.0.1` release has stable theme/token/contrast helpers and CSS/JSON tokens, but does **not** certify an entire component library or native implementations. The exact CSS and license have been verified and adopted for Search's invariant geometry; complete theme-controller integration and all visual compatibility checks remain open. Do not import unqualified alpha workspaces or assume public npm availability.
+2. **Map semantics instead of renaming selectors.** Inventory actual CSS cascade/DOM behavior and source-specific layout, implement the corresponding GC UI token/theme contract, remove the retired runtime import, then shrink the five first-party legacy surfaces without blindly replacing names.
+3. **Prove Search functionality.** Maintain safe POST navigation, selected-provider continuity, explicit source error and partial-result disclosure, privacy, translation, accessible focus, contrast, reduced-motion, forced-colors, screen-reader announcement and small-device no-overflow behavior.
+4. **Verify rendered experience.** Produce fresh authenticated Development screenshots at desktop and phone breakpoints, use approved owner references for comparison, test keyboard/assistive technology and real devices. A source edit or a synthetic screenshot alone is insufficient.
+5. **Qualify distinct systems honestly.** GC UI controls presentation. Identity, Policy, Privacy Shield, Wardveil Security, Manager, Everkeep, Mesh and Observability retain their separate authorities and must not be implied by visual decoration. Any native host requires native implementation/verification, not a WebView label.
+6. **Release only with runtime evidence.** Keep private Development and retained rollback intact until UI, provider availability, source privacy, access and rollback gates are independently satisfied. Do not equate a successful CI run or merged PR with Stable.
+
+Historical mentions of Glaze in prior test names and records may remain to describe exactly what is still running; these are not current design instructions. In particular, existing `GLAZE-INTEGRATION.md` describes an inherited contract and is superseded for new decisions by this ledger and the upstream GC UI succession policy.

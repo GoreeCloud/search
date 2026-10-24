@@ -2,7 +2,7 @@
 
 Privacy-focused, configurable federated search rebuilt from the SearXNG source engine toward GoreeCloud platform standards.
 
-**Lifecycle:** Development only. The [VPN-only VPS deployment profile](deploy/vps/README.md) is not a public release. **Upstream:** SearXNG `f4822b3`. **Glaze:** V1.7 / 1.7.0 inherited foundation, partial mapping (not formally accepted).
+**Release status:** NetBird-only **Development environment**, not an accepted Seal or Anchor release. Its precise official lifecycle stage remains unqualified: Development is an environment, not one of the eight stages. The [Development cutover record](deploy/vps/FREE-WORKING-SOURCES-CUTOVER.md) identifies deployed source `40caeb47a1fd8fc15a60f54e5e383d1a9f280598`, distinct from later integrated source. **Upstream foundation:** SearXNG. **UI authority:** [GoreeCloud UI](docs/goreecloud/GC-UI-CONSUMER-MIGRATION.md); this legacy consumer is not yet compliant. [Source baseline and Anchor gaps](docs/goreecloud/SOURCE-BASELINE-QUALIFICATION.md).
 
 ## Native Search foundation (isolated Development)
 
@@ -18,15 +18,15 @@ crawling or rollout.
 
 ## Working implementation
 
-The private Development profile offers seven approved upstream provider families: **Brave Search, Startpage, Qwant, DuckDuckGo, Ecosia, Bing and Google**. **All Sources** is the default and merges/deduplicates matching results with source attribution; single-provider selection remains in Settings. Web supports all seven, Images and News support six (except Ecosia), and Videos supports five (except Ecosia and Startpage). Other inherited SearXNG providers, including the Brave API, remain excluded. The private profile defaults to SafeSearch **None**, with user-controllable restrictions. Local HTML search and an unauthenticated loopback-only JSON extension remain available; neither provider inclusion nor a green test establishes real provider reachability. GoreeCloud Index, AI answers, business search, and alerting are not part of this implementation.
+The **free-first, direct-HTTPS NetBird Development deployment** uses **Tested free sources** for fresh browser profiles: DuckDuckGo, Bing and Startpage for Web; Bing Images; DuckDuckGo and Bing Videos; DuckDuckGo News. Saved choices remain authoritative. Settings still permits **All Sources** and individual selection among seven configured provider families: **Brave Search, Startpage, Qwant, DuckDuckGo, Ecosia, Bing and Google**. Web supports seven, Images and News six (except Ecosia), and Videos five (except Ecosia and Startpage). Other inherited SearXNG providers, including the Brave API, remain excluded. The Development profile defaults to SafeSearch **None**, with user-controllable restrictions. Provider availability is not guaranteed; a denied source is not silently replaced. The global budget is **12 search requests per minute in one process**, not a public or per-user limiter. No paid search API or Tor relay is required by the free-first profile; **external providers can see the VPS public IP and receive submitted queries**. Local HTML search and a loopback-only JSON extension remain available; neither provider inclusion nor green CI establishes current reachability. GoreeCloud Index, AI answers, business search, and alerting are not part of this web metasearch implementation.
 
 ## Owner-approved homepage design
 
-The October 11 desktop/mobile owner mockups established the Search visual direction; later owner feedback refined the responsive GoreeCloud/Glaze branding, prominent result cards, a cleaner homepage, category tabs (Web, Images, Videos, News), improved Settings and image gallery behavior. See [Official homepage](docs/goreecloud/OFFICIAL-HOMEPAGE.md) for the historical design baseline and [Settings and category navigation](docs/goreecloud/SEARCH-CATEGORIES-SETTINGS-UX.md) for the updated category contract. Search still submits queries via POST. Privacy slogans state design aims, not a promise that external providers do not track queries.
+The October 11 desktop/mobile owner mockups established the Search visual direction; later owner feedback refined the responsive historical Search presentation, prominent result cards, a cleaner homepage, category tabs (Web, Images, Videos, News), improved Settings and image gallery behavior. See [Official homepage](docs/goreecloud/OFFICIAL-HOMEPAGE.md) for the historical design baseline and [Settings and category navigation](docs/goreecloud/SEARCH-CATEGORIES-SETTINGS-UX.md) for the updated category contract. Search still submits queries via POST. Privacy slogans state design aims, not a promise that external providers do not track queries. Current GC UI conformance and visual acceptance remain open.
 
 ## Develop locally
 
-Follow [upstream SearXNG development instructions](docs/dev/index.rst) to install dependencies. Set a unique 32+-character secret in a local secret store, and launch through the fail-closed wrapper:
+For the **separately retained legacy Tor-oriented local profile**, follow [upstream SearXNG development instructions](docs/dev/index.rst) to install dependencies. Set a unique 32+-character secret in a local secret store, and launch through the fail-closed wrapper:
 
 ```sh
 export SEARXNG_SECRET="<unique-strong-secret-from-your-secret-store>"
@@ -39,17 +39,19 @@ Never use the upstream placeholder key. The profile binds **127.0.0.1**, disable
 
 The local profile now rejects query-bearing GET requests, preserves POST even on Android/WebKit, and disables caching for private search pages. It also refuses non-loopback Host headers and browser cross-origin/cross-site form submissions before any search dispatch (a limited DNS-rebinding/CSRF defense), and caps search/preview form bodies at 64 KiB. Local non-browser clients can omit Origin headers; browser POSTs with opaque `Origin: null` are accepted only when `Sec-Fetch-Site: same-origin` explicitly confirms local origin, matching a verified Chromium form submission. This limited boundary defense is not a substitute for public authentication or abuse prevention. Query-length and distinct-provider limits are set to 512 characters and **seven provider families** respectively; searches exceeding these limits return 413/422 rather than silently expanding disclosure. Private result pages omit query-bearing RSS/share URL metadata, and the private homepage does not advertise OpenSearch GET-query registration; the private server also returns uncached 404 responses for direct OpenSearch and autocomplete endpoints until an appropriately safe browser integration is qualified. The privacy-sensitive preferences for POST transport, title disclosure, autocomplete, favicons, and image proxy are locked against cookie and request overrides. The private profile also rejects external-bang redirects and first-result (double exclamation mark) navigation before dispatch; unexpected provider/plugin redirects are refused instead of navigating the browser to a third-party site. Query length is validated on the submitted value before operator parsing. The explicitly allowlisted provider shortcuts cover Brave, Startpage, Qwant, DuckDuckGo, Ecosia, Bing and Google, plus general/web category shortcuts. Unknown or third-party bangs are rejected rather than silently falling back; unsupported providers cannot be selected or dispatched. Shared serialized-preference GET/POST imports are rejected before parsing because upstream can otherwise change selected providers by following a URL; regular local Preferences forms remain available. Primary HTML/JSON search result links are restricted to well-formed HTTP(S) addresses, rejecting malformed or zero ports and invisible Unicode control characters. These safeguards do not cover all embedded or secondary URLs, cannot prevent configured upstream providers from receiving queries, and do not establish anonymity or production security acceptance.
 
-## Relay and anonymity qualification
+## Legacy Tor-profile relay qualification (not the free-first deployment)
 
-All seven configured provider families require the approved local SOCKS5H proxy,
+The separate legacy Tor-oriented profile requires the approved local SOCKS5H proxy for
+all seven configured provider families,
 including image-proxy traffic; there is no authorized direct fallback. **A SOCKS5H
-setting alone does not prove that the relay is Tor.** Current Development source
+setting alone does not prove that the relay is Tor.** This legacy profile
 sets `outgoing.using_tor_proxy: true` and requires a fresh Tor attestation before
 private provider traffic; failed attestation closes the client rather than
 silently sending a direct request. Offline tests also exercise actual
 `curl_cffi` SOCKS5H negotiation against a rejecting synthetic loopback gateway
-and confirm that a missing relay fails closed. These tests do not prove actual
-VPS network isolation. Before promotion, qualify the real image-proxy path,
+and confirm that a missing relay fails closed. These tests do not describe the
+active direct-HTTPS free-first route or prove VPS network isolation. Before promotion,
+qualify the real image-proxy path,
 provider behavior, relay identity, DNS/IPv6 and metadata isolation, and rollback
 in a separately isolated staging environment.
 The upstream providers can still receive the plaintext search terms over HTTPS,

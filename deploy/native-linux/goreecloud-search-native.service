@@ -1,0 +1,37 @@
+# Development candidate only: DO NOT install/enable on a production host.
+# Requires explicit provisioning of goreecloud-search user and offline index.
+[Unit]
+Description=GoreeCloud owned native Search development loopback service
+Documentation=https://github.com/GoreeCloud/search
+After=local-fs.target
+ConditionPathExists=/var/lib/goreecloud-search-native/index.db
+
+[Service]
+Type=simple
+User=goreecloud-search
+Group=goreecloud-search
+WorkingDirectory=/var/lib/goreecloud-search-native
+ExecStart=/usr/bin/python3 /opt/goreecloud-search-native/search-native.pyz --db /var/lib/goreecloud-search-native/index.db --port 8789
+Restart=on-failure
+RestartSec=3s
+UMask=0077
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+LockPersonality=yes
+RestrictSUIDSGID=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadWritePaths=/var/lib/goreecloud-search-native
+IPAddressDeny=any
+IPAddressAllow=localhost
+RestrictAddressFamilies=AF_INET AF_UNIX
+SystemCallArchitectures=native
+TasksMax=16
+
+# Intentionally no [Install] section: no enablement path is supplied.

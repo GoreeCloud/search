@@ -5,6 +5,11 @@
 ## Architecture
 
 - Domain: `search-dev.goreecloud.com`, with Caddy DNS-01 TLS and **NetBird-only HTTP access**.
+- The private Caddy route's **structure** is checked by the read-only
+  `scripts/search_development_ingress_guard.py` and the established free-upgrade
+  review checker; see [Development ingress security and public-release hold](../../docs/goreecloud/SEARCH-DEVELOPMENT-INGRESS-RELEASE-HOLD.md).
+  Passing static checks is not live non-NetBird denial evidence or authorization
+  to expose the separate `search.goreecloud.com` public service.
 - Docker network: external `proxy`; no published Search or Tor ports.
 - Application source: pinned GoreeCloud Search commit. Runtime secret in a protected, untracked env file on the VPS.
 - Tor: local SOCKS5H relay with application process in the same network namespace. The Search application must refuse direct provider egress if that proxy is unavailable or misconfigured.
@@ -73,6 +78,47 @@ from this older deployed Development image.
    # and neither pushes nor deploys containers.
    bash scripts/build_pinned_staging_image.sh "$SOURCE_SHA"
    ```
+   **Upstream base-image pinning (opt-in; release evidence still required):**
+   The default builder preserves the two existing mutable `docker.io/searxng/base`
+   tags for current Development/CI compatibility. For a separately approved
+   candidate, resolve and independently verify the **builder and runtime**
+   upstream registry manifest digests and platform details first. Set both
+   `GC_SEARCH_BUILDER_BASE_REF` and `GC_SEARCH_RUNTIME_BASE_REF` to the
+   corresponding `docker.io/searxng/base@sha256:<64-lowercase-hex>` references
+   in the build environment, then invoke the same script on the clean, exact
+   source SHA. A missing, partial, noncanonical or tag-only override fails
+   before Docker. The script passes both refs to the Dockerfiles as build args
+   and checks their declared `requested-*-base-ref` labels on the local image;
+   it prints `DIGEST_SYNTAX_ONLY_UNVERIFIED`, because syntax does not establish
+   origin, trust, platform closure, SBOM, reproducibility or a signed artifact.
+   Without both pins it prints `MUTABLE_DEFAULTS_RELEASE_HOLD`. Do not invent
+   digest values or treat either outcome as Seal/Anchor qualification.
+
+   For an independently obtained, trusted registry manifest snapshot, use
+   `scripts/verify_upstream_base_manifest.py` **separately for each** proposed
+   builder/runtime immutable reference. Preserve the registry's exact raw
+   top-level manifest bytes (not reformatted JSON); for a multi-platform index,
+   also preserve the exact selected platform-child manifest bytes. For example:
+
+   ```sh
+   python3 scripts/verify_upstream_base_manifest.py \
+     --base-ref "$GC_SEARCH_BUILDER_BASE_REF" \
+     --root-raw /protected/evidence/builder-index.raw \
+     --child-raw /protected/evidence/builder-linux-amd64.raw \
+     --platform linux/amd64 \
+     --output /protected/evidence/builder-manifest-verification.json
+   ```
+
+   Substitute the actual observed paths and platform, and repeat for the
+   runtime ref. For a single-image manifest, omit `--child-raw`; the tool
+   explicitly reports that its platform is **not** independently bound. A
+   successful index/child verification confirms only the supplied raw byte
+   digests and index-to-platform descriptor chain. It does **not** authenticate
+   the registry collection channel, prove those layers were used by the Docker
+   build, establish image signing/SBOM/license/vulnerability status, or lift the
+   Seal/Anchor release HOLD. Do not feed invented digests or snapshots to this
+   verifier.
+
    **Manual build alternative (do not run in addition to the preferred builder):**
    The version file is gitignored and must be generated from the *same* pinned
    clean checkout before Docker COPY. The following commands are only for an
@@ -89,7 +135,7 @@ from this older deployed Development image.
      -t "$IMAGE" .
    IMAGE_REVISION="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$IMAGE")"
    test "$IMAGE_REVISION" = "$SOURCE_SHA" || { echo "Image revision does not match the source" >&2; exit 1; }
-   printf 'Qualified candidate: %s (source: %s)\n' "$IMAGE" "$SOURCE_SHA"
+   printf 'Locally labeled candidate only: %s (source: %s)\n' "$IMAGE" "$SOURCE_SHA"
    ```
    A source-revision label establishes declared provenance, not a reproducible or cryptographically verified image; record and verify the local image ID/digest, build inputs and rollback target separately before staging. This step must not push an image or replace a running container.
 2. Set `SEARCH_IMAGE` to the exact verified image tag emitted in step 1 (for example, `goreecloud/search:vps-<12-character-source-commit-prefix>`) and set `SEARCH_SECRET` (32+ unique characters) in a private `0600` env file; never commit or print the secret.

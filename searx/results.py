@@ -83,7 +83,9 @@ class ResultContainer:
         self, engine_name: str | None, results: list[Result | LegacyResult]
     ):  # pylint: disable=too-many-branches
         if self._closed:
-            log.debug("container is closed, ignoring results: %s", results)
+            # Results may contain query-derived URLs and titles.  A late worker
+            # must not copy that payload into logs, even at debug level.
+            log.debug("container is closed, ignoring late provider results")
             return
         main_count = 0
 
@@ -176,9 +178,16 @@ class ResultContainer:
                 self.main_results_map[result_hash] = result
                 return
 
+            # A Web provider may return the same URL more than once.  Merging
+            # its text is useful, but each Web source earns just one ranking
+            # vote for that URL.  Preserve other result types' scoring policy.
+            # Check before merging, which adds the provider to ``engines``.
+            new_vote = result.template != "default.html" or (
+                bool(result.engine) and result.engine not in merged.engines
+            )
             merge_two_main_results(merged, result)
-            # add the new position
-            merged.positions.append(position)
+            if new_vote:
+                merged.positions.append(position)
 
     def close(self):
         self._closed = True

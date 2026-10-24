@@ -94,7 +94,7 @@ import typing as t
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from json import loads
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 from unicodedata import combining, normalize
 
 import babel.localedata
@@ -102,7 +102,10 @@ import dateutil.parser
 
 from searx.enginelib import EngineCache
 from searx.enginelib.traits import EngineTraits
-from searx.exceptions import SearxEngineCaptchaException, SearxEngineAccessDeniedException, SearxEngineXPathException
+from searx.exceptions import (
+    SearxEngineAPIException, SearxEngineCaptchaException,
+    SearxEngineAccessDeniedException, SearxEngineXPathException,
+)
 from searx.locales import region_tag
 from searx.network import get, post  # see https://github.com/searxng/searxng/issues/762
 from searx.utils import (
@@ -185,7 +188,10 @@ def is_startpage_blocked_response(resp) -> bool:
     A blocked response must not be reported as a successful empty search.
     """
     for target in (str(resp.url), resp.headers.get("Location", "")):
-        parsed = urlsplit(target)
+        try:
+            parsed = urlsplit(target)
+        except (TypeError, ValueError):
+            continue
         if parsed.scheme != "https":
             continue
         if (parsed.hostname in ("www.startpage.com", "startpage.com")
@@ -195,6 +201,26 @@ def is_startpage_blocked_response(resp) -> bool:
                 and parsed.path == "/sp/cdn/error-pages/blocked.html"):
             return True
     return False
+
+
+def require_startpage_response_origin(resp) -> None:
+    """Reject off-provider response bodies before parsing or caching tokens.
+
+    An apparent result is not attributable to Startpage when a redirect,
+    proxy error or malformed authority delivered it from another origin.
+    This is an offline syntax check, not proof of provider contact.
+    """
+    try:
+        parsed = urlsplit(str(resp.url))
+        allowed = (parsed.scheme == "https"
+                   and parsed.hostname in ("startpage.com", "www.startpage.com")
+                   and parsed.username is None and parsed.password is None
+                   and parsed.port in (None, 443) and "%" not in parsed.netloc)
+    except (TypeError, ValueError):
+        allowed = False
+    if not allowed:
+        # Do not echo the off-provider URL; it may contain search terms.
+        raise SearxEngineAPIException("Startpage returned unexpected response origin")
 
 
 sc_code_cache_sec = 3600
@@ -265,11 +291,13 @@ def get_sc_code(params):
     resp = get(get_sc_url, headers=headers)
     if is_startpage_blocked_response(resp):
         raise SearxEngineAccessDeniedException(message="Startpage blocked this request")
+    require_startpage_response_origin(resp)
 
     if 'id="anubis_challenge"' in resp.text:
         resp = get(get_sc_url, headers=headers, cookies={"spchal-auth": _solve_anubis(resp)})
         if is_startpage_blocked_response(resp):
             raise SearxEngineAccessDeniedException(message="Startpage blocked this request")
+        require_startpage_response_origin(resp)
 
     # ?? x = network.get('https://www.startpage.com/sp/cdn/images/filter-chevron.svg', headers=headers)
     # ?? https://www.startpage.com/sp/cdn/images/filter-chevron.svg
@@ -445,31 +473,51 @@ def _get_news_result(result):
 
 def _get_image_result(result) -> dict[str, t.Any] | None:
     url = result.get("altClickUrl")
-    if not url:
+    image_url = result.get("rawImageUrl")
+    # A provider card without its page or actual image cannot be rendered.
+    # Do not let that card discard other valid images from the response.
+    if not (isinstance(url, str) and url.strip()
+            and isinstance(image_url, str) and image_url.strip()):
         return None
 
     thumbnailUrl = None
-    if result.get("thumbnailUrl"):
-        thumbnailUrl = base_url + result["thumbnailUrl"]
+    if isinstance(result.get("thumbnailUrl"), str) and result["thumbnailUrl"].strip():
+        # Upstream may return either a relative Startpage thumbnail path or
+        # an already absolute CDN URL. Concatenation corrupts the latter.
+        try:
+            candidate = urljoin(base_url, result["thumbnailUrl"])
+            parsed = urlsplit(candidate)
+            if parsed.scheme in ("http", "https") and parsed.hostname:
+                thumbnailUrl = candidate
+        except ValueError:
+            # Invalid URL syntax must not discard otherwise valid images.
+            pass
 
     resolution = None
     if result.get("width") and result.get("height"):
         resolution = f"{result['width']}x{result['height']}"
 
     filesize = None
-    if result.get("filesize"):
-        size_str = "".join(filter(str.isdigit, result["filesize"]))
-        filesize = humanize_bytes(int(size_str))
+    size_value = result.get("filesize")
+    if isinstance(size_value, str):
+        size_digits = "".join(filter(str.isdigit, size_value))
+        size_value = int(size_digits) if 0 < len(size_digits) <= 12 else None
+    # A malformed or too-large size must not crash the full image gallery.
+    if type(size_value) is int and 0 <= size_value <= 1024**4:
+        filesize = humanize_bytes(size_value)
 
-    img_format = result.get("format").upper()
+    format_value = result.get("format")
+    img_format = format_value.upper() if isinstance(format_value, str) else ""
     if img_format == "UNKNOWN":
         img_format = ""
+    raw_title = result.get("title")
+    title = html_to_text(raw_title) if isinstance(raw_title, str) else ""
     return {
         "template": "images.html",
         "url": url,
-        "title": html_to_text(result["title"]),
+        "title": title or "Image result",
         "content": "",
-        "img_src": result.get("rawImageUrl"),
+        "img_src": image_url,
         "thumbnail_src": thumbnailUrl,
         "resolution": resolution,
         "img_format": img_format,
@@ -480,6 +528,7 @@ def _get_image_result(result) -> dict[str, t.Any] | None:
 def response(resp):
     if is_startpage_blocked_response(resp):
         raise SearxEngineAccessDeniedException(message="Startpage blocked this request")
+    require_startpage_response_origin(resp)
     if 'id="anubis_challenge"' in resp.text:
         params = resp.search_params
         params["cookies"]["spchal-auth"] = _solve_anubis(resp)
@@ -491,6 +540,7 @@ def response(resp):
         )
         if is_startpage_blocked_response(resp):
             raise SearxEngineAccessDeniedException(message="Startpage blocked this request")
+        require_startpage_response_origin(resp)
         if 'id="anubis_challenge"' in resp.text:
             raise SearxEngineCaptchaException()
 

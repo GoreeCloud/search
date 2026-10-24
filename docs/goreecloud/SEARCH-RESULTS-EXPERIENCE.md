@@ -18,6 +18,6 @@ The owner-provided desktop screenshot exposed results constrained to a very narr
 
 ## Verification and gates
 
-New browser smoke uses eight offline synthetic result objects to assert actual desktop/phone layout dimensions, mobile absence of horizontal scrolling, source details, provider action preservation and synthetic result rendering. Existing GoreeCloud privacy and backend tests must remain green. Screenshots from the test runner are disposable development evidence, not official Glaze acceptance.
+New browser smoke uses eight offline synthetic result objects to assert actual desktop/phone layout dimensions, mobile absence of horizontal scrolling, source details, provider action preservation and synthetic result rendering. Existing GoreeCloud privacy and backend tests must remain green. Screenshots from the test runner are disposable Development evidence, not official GC UI acceptance.
 
 Owner visual review at the private development URL, independent Glaze accessibility review, dark-mode physical-device acceptance, and the separate approved-provider reliability/public security gates remain open. This PR must stay draft until verified and accepted. No production deployment or external reviewer is imposed unless applicable repository protections require it.

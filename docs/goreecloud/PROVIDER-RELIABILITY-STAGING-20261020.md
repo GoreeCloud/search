@@ -122,6 +122,42 @@ still rebind to private IPs, so a verified network egress firewall remains
 mandatory; syntax checks cannot prove DNS safety. No provider queries are
 authorized or triggered by these source-only changes.
 
+Further source-only negative tests now enforce the complete private JSON
+selection/representation metadata on **empty results and upstream failures**,
+not only successful result lists. Missing or contradictory selection counts,
+proof disclaimers or zero-result representation labels return bounded invalid
+contract states, never `no_results` or `provider_error` evidence. The online
+engine processor also omits raw SSL, access-denial and parser exception text
+from its debug messages: these strings may embed upstream URLs, response
+fragments or search terms. Existing exception classes and suspension behavior
+are retained; this redaction is not a claim that all possible server logs or
+metrics are sanitized. These checks exercised only synthetic local failures,
+with no real provider requests or changes to the isolated VPS.
+
+An October 23 offline DuckDuckGo Web follow-up removed adapter DEBUG logs
+that previously included the full form body (including a user's query),
+headers, cookies, and cached `vqd` continuation token. The adapter now emits
+only fixed messages. A returned HTTP 303 redirect, previously misrepresented
+by the Web parser as an empty successful result, instead yields a bounded
+engine API error without following the redirect. Synthetic tests verify
+redaction and redirect rejection; these source changes were **not** validated
+against live providers. A previous Development staging query showing results
+alongside DuckDuckGo/Startpage errors is only point-in-time evidence, not
+proof that either provider is consistently available. No additional probe,
+provider bypass, retry or default-source change was introduced here.
+
+The subsequent offline Startpage response-attribution guard now rejects any
+search response or form-token homepage response that arrives from a different
+or ambiguously encoded origin, even if its body resembles valid Startpage
+markup. Explicit recognized CDN access-denial pages retain their bounded
+`SearxEngineAccessDeniedException` classification; other off-origin responses
+use a fixed engine API error without printing the response URL or caching a
+foreign form token. Synthetic tests cover lookalike hosts, HTTP downgrade,
+credential-bearing authorities, unexpected ports, malformed URLs, legitimate
+Startpage hosts, and protected blocked-page behavior. This validates only
+source-contract resilience; actual Startpage access and provider rights remain
+unqualified until separately authorized, representative live evidence exists.
+
 ## Next release acceptance gates
 
 - Confirm a sustainable provider access path that preserves GoreeCloud's

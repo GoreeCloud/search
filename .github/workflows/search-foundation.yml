@@ -16,6 +16,160 @@ on:
 permissions:
   contents: read
 jobs:
+  exact-source-baseline:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # A PR's default checkout is a synthetic merge SHA, not its source head.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify clean authorized source and inventory release inputs
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python3 scripts/source_baseline_inventory.py \
+            --expected-sha "$EXPECTED_SOURCE_SHA" \
+            --output "$RUNNER_TEMP/search-source-baseline.json"
+      - name: Retain source-only baseline evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: search-exact-source-baseline
+          path: ${{ runner.temp }}/search-source-baseline.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Record Dockerfile base image closure blockers (not a release pass)
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python3 scripts/audit_dockerfile_base_refs.py \
+            --expected-sha "$EXPECTED_SOURCE_SHA" \
+            --output "$RUNNER_TEMP/search-base-image-refs.json"
+      - name: Retain unsigned source-only base reference audit
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: search-dockerfile-base-reference-hold
+          path: ${{ runner.temp }}/search-base-image-refs.json
+          if-no-files-found: error
+          retention-days: 30
+  local-image-candidate-evidence:
+    # Only the integrated Development head receives the expensive isolated
+    # build. PRs still run offline evidence tests and source-only inventory.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/search-working-free-sources-20261020'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Inventory the clean exact integration source
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          python3 scripts/source_baseline_inventory.py \
+            --expected-sha "$EXPECTED_SOURCE_SHA" \
+            --output "$RUNNER_TEMP/search-build-source.json"
+      - name: Build isolated local image without publish or deployment
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+        run: bash scripts/build_pinned_staging_image.sh "$EXPECTED_SOURCE_SHA"
+      - name: Bind local candidate image ID and OCI labels to clean source
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          docker image inspect "goreecloud/search:staging-${EXPECTED_SOURCE_SHA:0:12}" |
+            python3 scripts/candidate_image_evidence.py \
+              --expected-sha "$EXPECTED_SOURCE_SHA" \
+              --source-baseline "$RUNNER_TEMP/search-build-source.json" \
+              --output "$RUNNER_TEMP/search-local-image-candidate.json"
+      - name: Retain unsigned local image identity for controlled comparison
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: search-unsigned-local-image-candidate
+          path: ${{ runner.temp }}/search-local-image-candidate.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Inspect installed Python distributions in the exact isolated image
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          IMAGE_ID="$(docker image inspect --format '{{.Id}}' "goreecloud/search:staging-${EXPECTED_SOURCE_SHA:0:12}")"
+          docker run --rm --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --pids-limit 32 --memory 128m --cpus 0.5 \
+            --user 977:977 \
+            --mount "type=bind,src=$GITHUB_WORKSPACE/scripts/runtime_python_inventory.py,dst=/tmp/gc_runtime_python_inventory.py,readonly" \
+            --entrypoint /usr/local/searxng/.venv/bin/python "$IMAGE_ID" \
+            -I -B /tmp/gc_runtime_python_inventory.py |
+            python3 scripts/verify_runtime_python_inventory.py \
+              --expected-sha "$EXPECTED_SOURCE_SHA" \
+              --image-id "$IMAGE_ID" \
+              --local-image-evidence "$RUNNER_TEMP/search-local-image-candidate.json" \
+              --output "$RUNNER_TEMP/search-local-python-distributions.json"
+      - name: Retain unsigned, Python-only installed dependency evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: search-local-python-distributions
+          path: ${{ runner.temp }}/search-local-python-distributions.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Observe OS registries or explicitly classify stripped Void XBPS runtime
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          IMAGE_ID="$(docker image inspect --format '{{.Id}}' "goreecloud/search:staging-${EXPECTED_SOURCE_SHA:0:12}")"
+          docker run --rm --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --pids-limit 32 --memory 128m --cpus 0.5 \
+            --user 977:977 \
+            --mount "type=bind,src=$GITHUB_WORKSPACE/scripts/runtime_os_inventory.py,dst=/tmp/gc_runtime_os_inventory.py,readonly" \
+            --entrypoint /usr/local/searxng/.venv/bin/python "$IMAGE_ID" \
+            -I -B /tmp/gc_runtime_os_inventory.py |
+            python3 scripts/verify_runtime_os_inventory.py \
+              --expected-sha "$EXPECTED_SOURCE_SHA" \
+              --image-id "$IMAGE_ID" \
+              --local-image-evidence "$RUNNER_TEMP/search-local-image-candidate.json" \
+              --python-evidence "$RUNNER_TEMP/search-local-python-distributions.json" \
+              --output "$RUNNER_TEMP/search-local-os-observation.json"
+      - name: Retain unsigned OS observation (may explicitly have no package inventory)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: search-local-os-observation
+          path: ${{ runner.temp }}/search-local-os-observation.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Hash selected ELF files from the exact isolated Void image
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          IMAGE_ID="$(docker image inspect --format '{{.Id}}' "goreecloud/search:staging-${EXPECTED_SOURCE_SHA:0:12}")"
+          docker run --rm --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --pids-limit 32 --memory 128m --cpus 0.5 \
+            --user 977:977 \
+            --mount "type=bind,src=$GITHUB_WORKSPACE/scripts/runtime_binary_hash_inventory.py,dst=/tmp/gc_runtime_binary_hash_inventory.py,readonly" \
+            --entrypoint /usr/local/searxng/.venv/bin/python "$IMAGE_ID" \
+            -I -B /tmp/gc_runtime_binary_hash_inventory.py |
+            python3 scripts/verify_runtime_binary_hash_inventory.py \
+              --expected-sha "$EXPECTED_SOURCE_SHA" \
+              --image-id "$IMAGE_ID" \
+              --local-image-evidence "$RUNNER_TEMP/search-local-image-candidate.json" \
+              --python-evidence "$RUNNER_TEMP/search-local-python-distributions.json" \
+              --os-evidence "$RUNNER_TEMP/search-local-os-observation.json" \
+              --output "$RUNNER_TEMP/search-local-selected-elf-hashes.json"
+      - name: Retain unsigned partial ELF file hashes (not an OS SBOM)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: search-local-selected-elf-hashes
+          path: ${{ runner.temp }}/search-local-selected-elf-hashes.json
+          if-no-files-found: error
+          retention-days: 30
   runtime-and-boundaries:
     runs-on: ubuntu-latest
     strategy:
@@ -32,6 +186,8 @@ jobs:
         run: python -m pip install -r requirements.txt
       - name: Compile imported search implementation
         run: python -m compileall -q searx
+      - name: Prevent new retired UI consumer dependencies
+        run: python scripts/gc_ui_consumer_audit.py
       - name: Private Search contract and runtime smoke
         run: python -m unittest discover -s tests/goreecloud -v
       - name: Install focused upstream test harness
@@ -52,14 +208,22 @@ jobs:
         run: |
           python -m pip install -r requirements.txt
           python -m pip install selenium==4.50.0
-      - name: Verify local homepage at desktop and phone widths
+      - name: Verify deterministic, bounded, strictly offline Images proxy fixtures
+        run: python -m unittest discover -s tests/goreecloud -p test_browser_image_fixtures.py -v
+      - name: Gate real Chrome home, Images proxy/decoding, responsive layout and image viewer
         run: python tests/goreecloud/browser_home_smoke.py
-      - name: Retain synthetic UI screenshots for review
+        timeout-minutes: 15
+      - name: Verify private preview native POST, keyboard, responsive and forced-color behavior in Chrome
+        run: python tests/goreecloud/browser_preview_smoke.py
+        timeout-minutes: 10
+      - name: Retain synthetic Chrome screenshots and numeric-only Images acceptance measurements
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: search-glaze-browser-smoke
-          path: artifacts/search-browser/*.png
+          name: search-synthetic-browser-acceptance
+          path: |
+            artifacts/search-browser/*.png
+            artifacts/search-browser/image-acceptance-layout.json
           retention-days: 7
           if-no-files-found: warn
 

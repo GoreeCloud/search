@@ -60,11 +60,27 @@ class FetchResult:
 
 
 class PinnedHttpsFetcher:
-    """Resolve once, reject private addresses, then pin TLS socket to checked IP."""
+    """Fetch canonical allowlisted HTTPS URLs through a checked, pinned TLS IP.
+
+    The fetch boundary enforces the same host policy as the crawler so a
+    future caller cannot accidentally bypass the URL checks in Crawler.
+    """
+
+    def __init__(self, allowed_hosts: frozenset[str]):
+        if (not isinstance(allowed_hosts, frozenset) or not allowed_hosts
+                or any(not isinstance(host, str) or not host
+                       or host != host.lower() or ':' in host or '/' in host
+                       or host.endswith('.') for host in allowed_hosts)):
+            raise ValueError('An explicit HTTPS hostname allowlist is required')
+        self.allowed_hosts = allowed_hosts
 
     def fetch(self, url: str) -> FetchResult:
+        # Check before DNS resolution, not with `assert` (which -O removes).
+        # Require a canonical URL: authority aliases, fragments and explicit
+        # ports cannot cross the actual network boundary.
+        if canonical_url(url, self.allowed_hosts) != url:
+            raise ValueError('Only canonical allowlisted HTTPS URLs can be fetched')
         parsed = urlsplit(url)
-        assert parsed.scheme == 'https' and parsed.hostname
         addresses = socket.getaddrinfo(parsed.hostname, 443, type=socket.SOCK_STREAM)
         verified: list[str] = []
         for address in addresses:
@@ -157,7 +173,7 @@ class Crawler:
     def __init__(self, index: SearchIndex, plan: CrawlPlan, fetcher=None, sleeper=time.sleep):
         self.index = index
         self.plan = plan
-        self.fetcher = fetcher if fetcher is not None else PinnedHttpsFetcher()
+        self.fetcher = fetcher if fetcher is not None else PinnedHttpsFetcher(plan.allowed_hosts)
         self.sleeper = sleeper
         self.robots: dict[str, RobotFileParser] = {}
         self.last_request: dict[str, float] = {}

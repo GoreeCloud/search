@@ -1,0 +1,38 @@
+{
+  "development_only": true,
+  "category": "images",
+  "sources": [
+    {
+      "source": "synthetic_alpha",
+      "state": "ok",
+      "results": [
+        {"rank": 1, "url": "https://example.test/album/1", "media_url": "https://assets.example.test/a.jpg", "title": "Synthetic galaxy A"},
+        {"rank": 2, "url": "https://example.test/album/1", "media_url": "https://assets.example.test/b.jpg", "title": "Synthetic galaxy B"},
+        {"rank": 3, "url": "https://example.test/album/2", "media_url": "https://assets.example.test/c.jpg", "title": "Synthetic galaxy C"}
+      ]
+    },
+    {
+      "source": "synthetic_beta",
+      "state": "ok",
+      "results": [
+        {"rank": 1, "url": "https://example.test/other/1", "media_url": "https://assets.example.test/b.jpg?utm_source=synthetic", "title": "Synthetic galaxy B alternate"},
+        {"rank": 2, "url": "https://example.test/other/2", "media_url": "https://assets.example.test/d.jpg", "title": "Synthetic galaxy D"},
+        {"rank": 3, "url": "https://example.test/other/3", "media_url": "https://assets.example.test/a.jpg", "title": "Synthetic galaxy A alternate"}
+      ]
+    }
+  ],
+  "relevant": [
+    "https://assets.example.test/a.jpg",
+    "https://assets.example.test/b.jpg",
+    "https://assets.example.test/d.jpg"
+  ],
+  "gates": {
+    "min_distinct": 4,
+    "min_contributing_sources": 2,
+    "min_sources_with_unique_at_10": 2,
+    "min_relevant_at_10": 3,
+    "min_recall_percent_at_10": 100,
+    "max_missing_image_media": 0,
+    "require_all_sources_healthy": true
+  }
+}

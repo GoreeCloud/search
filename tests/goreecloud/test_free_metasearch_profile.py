@@ -76,9 +76,9 @@ class FreeMetasearchProfileTests(unittest.TestCase):
     def test_page_explains_server_ip_and_provider_query_disclosure(self):
         self.assertIn('direct HTTPS',INDEX.read_text())
         notice=PRIVACY.read_text()
-        self.assertIn('search providers can see the server',notice)
-        self.assertIn('public IP address',notice)
-        self.assertIn('Neither profile grants paid API access',notice)
+        self.assertIn('providers can receive your search terms',notice)
+        self.assertIn('VPS public IP address',notice)
+        self.assertIn('no paid search API subscription',notice)
 
 if __name__=='__main__':
     unittest.main()

@@ -296,8 +296,18 @@ BUILTIN_SEARCH_SOURCES = frozenset(
     adapter for category in SEARCH_SOURCE_FAMILIES.values() for adapter in category.values()
 )
 SEARCH_CATEGORIES = tuple(SEARCH_SOURCE_FAMILIES)
+# Tested, no-fee public-interface choices on the DIRECT-HTTPS Development VPS.
+# Deliberately a fixed opt-in/default preset, never a runtime silent fallback.
+# Individual providers may still block, change markup or time out.
+WORKING_FREE_SOURCE_FAMILIES = {
+    'general': ('duckduckgo', 'bing', 'startpage'),
+    'images': ('bing',),
+    'videos': ('duckduckgo', 'bing'),
+    'news': ('duckduckgo',),
+}
 SEARCH_SOURCE_COOKIE = 'goreecloud_search_sources'
 SEARCH_SOURCE_OPTIONS = {
+    'working': ','.join(WORKING_FREE_SOURCE_FAMILIES['general']),
     'all': ','.join(SEARCH_SOURCE_FAMILIES['general']),
     'both': ','.join(SEARCH_SOURCE_FAMILIES['general']),  # legacy cookie
     **{family: family for family in SEARCH_SOURCE_FAMILIES['general']},
@@ -315,29 +325,41 @@ def selected_engines_for_category(category: str, choice: str = 'all') -> str:
     available = SEARCH_SOURCE_FAMILIES[category]
     # All Sources selects available per-category engines, never substitutes an
     # unsupported adapter for an explicitly requested single-source category.
-    wanted = tuple(available) if choice in ('all', 'both') else (choice,)
+    wanted = (
+        tuple(available) if choice in ('all', 'both') else
+        WORKING_FREE_SOURCE_FAMILIES[category] if choice == 'working' else
+        (choice,)
+    )
     if any(family not in available for family in wanted):
         raise SearchPolicyViolation('The selected search provider does not support this category.', 422)
     return ','.join(available[family] for family in wanted)
 
 
-def stored_search_source(raw: str | None) -> str:
-    """Migrate legacy multi-source cookies and default to All Sources."""
-    return raw if raw in SEARCH_SOURCE_OPTIONS and raw != 'both' else 'all'
+def stored_search_source(raw: str | None, *, default: str = 'all') -> str:
+    """Use an explicit source cookie or a validated deployment default."""
+    chosen_default = default if default in ('working', 'all') else 'all'
+    if raw == 'both':
+        return 'all'  # preserve meaning of the legacy All Sources cookie
+    return raw if raw in SEARCH_SOURCE_OPTIONS else chosen_default
 
 
 def requested_search_source(*, explicit: str | None, stored: str | None, query_specific: bool,
-                            category: str = 'general') -> str | None:
-    """Explicit POST selections and supported !bangs supersede saved preferences.
+                            category: str = 'general', default: str = 'all') -> str | None:
+    """Preserve explicit choices and !bangs; use optional free-first preset.
 
-    A missing cookie preserves SearXNG defaults; no additional data collection
-    or silent provider failover is performed.
+    With the legacy 'all' default, a missing cookie preserves SearXNG's own
+    defaults. With 'working', explicitly select its supported adapter subset.
+    Never add a hidden backup provider on failure.
     """
     if explicit is not None:
         return explicit
-    if query_specific or stored is None:
+    if query_specific:
         return None
-    return selected_engines_for_category(category, stored_search_source(stored))
+    if stored is None and default == 'all':
+        return None
+    return selected_engines_for_category(
+        category, stored_search_source(stored, default=default)
+    )
 
 
 

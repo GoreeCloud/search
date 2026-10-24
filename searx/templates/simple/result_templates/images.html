@@ -1,4 +1,4 @@
-{% macro _target(url, new_tab=False) -%}
+{% macro _target(new_tab=False) -%}
   {%- if new_tab %} target="_blank" rel="noopener noreferrer"
   {%- else %} rel="noreferrer"
   {%- endif %}
@@ -15,7 +15,7 @@
   {%- endif -%}"
 >
   <a {{ _target(results_on_new_tab) }} href="{{ result.img_src }}">
-    <img class="image_thumbnail" {{ _target(results_on_new_tab) }}
+    <img class="image_thumbnail"
       src="
       {%- if result.thumbnail_src -%}
       {{ image_proxify(result.thumbnail_src) }}

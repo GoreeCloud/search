@@ -6,16 +6,21 @@ query to an actual upstream provider. Screenshot fixtures contain no user data.
 from __future__ import annotations
 
 import os
+import json
+from collections import Counter
 from pathlib import Path
 import secrets
 import sys
-from threading import Thread
+from threading import Lock, Thread
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from werkzeug.serving import make_server
-from flask import request
+from flask import Response, abort, request
+
+from browser_image_fixtures import (IMAGE_GALLERY_COUNT, IMAGE_FIXTURE_ORIGIN,
+                                    image_fixture_index, synthetic_image_png)
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))  # direct-script CI launch from nested tests directory
@@ -57,6 +62,17 @@ class SyntheticBrowserFailedSearch(SyntheticBrowserSearch):
         ]
         return response
 
+
+class SyntheticBrowserFailedImageSearch(SyntheticBrowserSearch):
+    """An Images provider failed; test the truthful no-image layout offline."""
+
+    def search(self):
+        response = super().search()
+        response.unresponsive_engines = [
+            SimpleNamespace(engine='startpage images', error_type='TimeoutException', suspended=False)
+        ]
+        return response
+
 class SyntheticBrowserPartialSearch(SyntheticBrowserFailedSearch):
     """Show an offline fixture result plus one synthetic provider error."""
 
@@ -95,33 +111,16 @@ class SyntheticBrowserResultsCollection(SyntheticBrowserSearch):
 
 
 class SyntheticBrowserImageResultsCollection(SyntheticBrowserSearch):
-    """Real image-result templates backed only by inline PNG fixture bytes."""
+    """Image cards with signed same-origin proxy URLs, NEVER external fetches."""
 
     def search(self):
-        import base64
-        import struct
-        import zlib
-
         response = super().search()
 
-        def sample_png(index: int) -> str:
-            # A locally generated 4x3 RGB PNG; never fetches a remote asset.
-            color = ((index * 39) % 205 + 35, (index * 71) % 205 + 35, (index * 101) % 205 + 35)
-            scanline = b"\x00" + bytes(color) * 4
-            pixels = scanline * 3
-
-            def chunk(kind: bytes, payload: bytes) -> bytes:
-                return (struct.pack(">I", len(payload)) + kind + payload +
-                        struct.pack(">I", zlib.crc32(kind + payload) & 0xffffffff))
-
-            png = (b"\x89PNG\r\n\x1a\n" +
-                   chunk(b"IHDR", struct.pack(">IIBBBBB", 4, 3, 8, 2, 0, 0, 0)) +
-                   chunk(b"IDAT", zlib.compress(pixels)) + chunk(b"IEND", b""))
-            return "data:image/png;base64," + base64.b64encode(png).decode("ascii")
-
         images = []
-        for i in range(1, 13):
-            img = sample_png(i)
+        for i in range(1, IMAGE_GALLERY_COUNT + 1):
+            # The browser receives only signed /image_proxy URLs; a temporary
+            # Flask view below returns the local pixels, without outbound I/O.
+            img = f'{IMAGE_FIXTURE_ORIGIN}{i:02d}.png'
             result = LegacyResult(
                 title=f"Synthetic gallery image {i}",
                 url=f"https://example.org/offline-image-{i}",
@@ -142,6 +141,118 @@ class SyntheticBrowserImageResultsCollection(SyntheticBrowserSearch):
             images.append(result)
         response.get_ordered_results = lambda: images
         return response
+
+
+def assert_gc_search_controls(driver, context: str) -> None:
+    """Computed browser acceptance for both private home/results search forms."""
+    geometry = driver.execute_script(r"""
+        const root = document.documentElement;
+        const field = document.querySelector('form#search .search_box');
+        const query = document.querySelector('form#search #q');
+        const clear = document.querySelector('form#search #clear_search');
+        const submit = document.querySelector('form#search #send_search');
+        const r = node => node.getBoundingClientRect();
+        const luminance = cssColor => {
+            const rgb = cssColor.match(/[\d.]+/g).slice(0, 3).map(v => Number(v) / 255);
+            const linear = rgb.map(v => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+            return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+        };
+        const foreground = luminance(getComputedStyle(query, '::placeholder').color);
+        const background = luminance(getComputedStyle(field).backgroundColor);
+        return {
+            consumer: root.getAttribute('data-gc-consumer'),
+            role: document.querySelector('form#search').getAttribute('role'),
+            accessibleQuery: !!document.querySelector('label[for="q"]'),
+            accessibleClear: !!clear.getAttribute('aria-label'),
+            accessibleSubmit: !!submit.getAttribute('aria-label'),
+            field: {left:r(field).left, right:r(field).right, height:r(field).height},
+            query: {width:r(query).width},
+            clear: {left:r(clear).left, right:r(clear).right, width:r(clear).width, height:r(clear).height},
+            submit: {left:r(submit).left, right:r(submit).right, width:r(submit).width, height:r(submit).height},
+            placeholderContrast: (Math.max(foreground, background) + 0.05) /
+                (Math.min(foreground, background) + 0.05),
+            viewport: root.clientWidth,
+            overflow: root.scrollWidth - root.clientWidth,
+        };
+    """)
+    assert geometry['consumer'] == 'goreecloud-search', (context, geometry)
+    assert geometry['role'] == 'search', (context, geometry)
+    assert all(geometry[name] for name in ('accessibleQuery', 'accessibleClear', 'accessibleSubmit')), (context, geometry)
+    assert geometry['field']['height'] >= 48, (context, geometry)
+    assert geometry['query']['width'] >= 75, (context, geometry)
+    assert geometry['placeholderContrast'] >= 4.5, (context, geometry)
+    for control in ('clear', 'submit'):
+        measured = geometry[control]
+        assert measured['width'] >= 44 and measured['height'] >= 44, (context, geometry)
+        assert measured['left'] >= geometry['field']['left'] - 2, (context, geometry)
+        assert measured['right'] <= geometry['field']['right'] + 2, (context, geometry)
+    assert geometry['overflow'] <= 2, (context, geometry)
+
+    # Keyboard/programmatic focus is perceptible on the entire field while the
+    # individual actionable buttons retain their own visible focus indicator.
+    for control in ('q', 'clear_search', 'send_search'):
+        element = driver.find_element(By.CSS_SELECTOR, f'form#search #{control}')
+        focus = driver.execute_script("""
+            arguments[0].focus();
+            const field = document.querySelector('form#search .search_box');
+            const outline = getComputedStyle(field);
+            const token = getComputedStyle(document.documentElement).getPropertyValue('--gc-v1-color-focus-ring').trim();
+            const probe = document.createElement('span');
+            probe.style.color = 'var(--gc-v1-color-focus-ring)';
+            document.body.appendChild(probe);
+            const expected = getComputedStyle(probe).color;
+            probe.remove();
+            return {
+                active: document.activeElement === arguments[0],
+                style: outline.outlineStyle,
+                width: parseFloat(outline.outlineWidth),
+                color: outline.outlineColor,
+                expected, token,
+            };
+        """, element)
+        assert focus['active'] and focus['style'] == 'solid', (context, control, focus)
+        assert focus['width'] >= 3 and focus['color'] == focus['expected'], (context, control, focus)
+        assert focus['token'], (context, control, focus)
+
+
+def assert_gc_search_forced_colors(driver, context: str) -> None:
+    """Chrome's actual forced-colors media emulation, not a CSS text check."""
+    driver.execute_cdp_cmd('Emulation.setEmulatedMedia', {
+        'features': [{'name': 'forced-colors', 'value': 'active'}],
+    })
+    try:
+        result = driver.execute_script("""
+            const field = document.querySelector('form#search .search_box');
+            const query = document.querySelector('form#search #q');
+            const submit = document.querySelector('form#search #send_search');
+            query.focus();
+            const probe = document.createElement('span');
+            probe.style.cssText = 'color:CanvasText;background:ButtonFace;outline:3px solid Highlight';
+            document.body.appendChild(probe);
+            const expected = getComputedStyle(probe);
+            const colors = {
+                canvasText: expected.color,
+                buttonFace: expected.backgroundColor,
+                highlight: expected.outlineColor,
+            };
+            probe.remove();
+            return {
+                enabled: matchMedia('(forced-colors: active)').matches,
+                fieldShadow: getComputedStyle(field).boxShadow,
+                fieldBorder: getComputedStyle(field).borderStyle,
+                focusColor: getComputedStyle(field).outlineColor,
+                queryColor: getComputedStyle(query).color,
+                buttonColor: getComputedStyle(submit).backgroundColor,
+                colors,
+            };
+        """)
+        assert result['enabled'], (context, result)
+        assert result['fieldShadow'] == 'none' and result['fieldBorder'] == 'solid', (context, result)
+        assert result['focusColor'] == result['colors']['highlight'], (context, result)
+        assert result['queryColor'] == result['colors']['canvasText'], (context, result)
+        assert result['buttonColor'] == result['colors']['buttonFace'], (context, result)
+    finally:
+        driver.execute_cdp_cmd('Emulation.setEmulatedMedia', {'features': []})
 
 
 def main() -> None:
@@ -169,6 +280,12 @@ def main() -> None:
     driver = None
     try:
         driver = webdriver.Chrome(options=options)
+        # Fail closed if a gallery regression bypasses /image_proxy: synthetic
+        # remote-looking fixture origins are blocked at the browser boundary.
+        driver.execute_cdp_cmd('Network.enable', {})
+        driver.execute_cdp_cmd('Network.setBlockedURLs', {
+            'urls': [f'{IMAGE_FIXTURE_ORIGIN}*'],
+        })
         url = f"http://127.0.0.1:{server.server_port}/"
         artifacts = ROOT / "artifacts" / "search-browser"
         artifacts.mkdir(parents=True, exist_ok=True)
@@ -194,6 +311,18 @@ def main() -> None:
             assert driver.execute_script(
                 "return [...document.styleSheets].some(s => s.href && s.href.includes('goreecloud-mockup.css'))"
             )
+            assert driver.execute_script(
+                "return [...document.styleSheets].some(s => s.href && s.href.includes('gc-ui/css/gc.v1.generated.css'))"
+            ), f"{label}: pinned local GC UI Foundations CSS did not load"
+            gc_geometry = driver.execute_script("""
+                const computed = getComputedStyle(document.documentElement);
+                return [
+                    computed.getPropertyValue('--gc-v1-foundation-radius-md').trim(),
+                    computed.getPropertyValue('--gc-v1-foundation-target-comfortable').trim(),
+                    computed.getPropertyValue('--gc-v1-component-focus-width').trim()
+                ];
+            """)
+            assert gc_geometry == ['18px', '44px', '3px'], f"{label}: GC UI Foundations token contract failed: {gc_geometry}"
             site_header = driver.find_element(By.CSS_SELECTOR, '.goreecloud-site-header')
             site_footer = driver.find_element(By.CSS_SELECTOR, '.goreecloud-site-footer')
             hero_mark = driver.find_element(By.CSS_SELECTOR, '.goreecloud-mark-hero')
@@ -205,6 +334,7 @@ def main() -> None:
             why = driver.find_element(By.CSS_SELECTOR, '#why-goreecloud-search')
             search_box = driver.find_element(By.CSS_SELECTOR, '.goreecloud-hero .search_box')
             assert all(part.is_displayed() for part in (site_header, site_footer, hero_mark, why, search_box))
+            assert_gc_search_controls(driver, f'home-{label}')
             assert len(driver.find_elements(By.CSS_SELECTOR, '.goreecloud-home-benefits li')) == 4
             assert hero_mark.rect['width'] >= 64, hero_mark.rect
             assert 260 <= search_box.rect['width'] <= 820, search_box.rect
@@ -229,7 +359,7 @@ def main() -> None:
                 print(f'OFFSCREEN {label}: {offscreen}', flush=True)
             assert spill <= 2, f"{label}: horizontal overflow of {spill}px"
             driver.save_screenshot(str(artifacts / f"{label}.png"))
-            print(f"PASS {label} {width}x{height}; overflow={spill}px; POST and Glaze styles verified")
+            print(f"PASS {label} {width}x{height}; overflow={spill}px; POST and local GC UI Foundations geometry verified (legacy UI remains)")
             if label == 'desktop':
                 skip = driver.find_element(By.CSS_SELECTOR, '.goreecloud-skip-link')
                 driver.execute_script('arguments[0].focus()', skip)
@@ -264,13 +394,23 @@ def main() -> None:
         assert theme_button.rect['width'] >= 44 and theme_button.rect['height'] >= 44, 'Theme touch target too small'
         theme_button.send_keys(Keys.SPACE)
         assert driver.execute_script("return document.documentElement.classList.contains('theme-dark')"), 'Dark toggle failed'
+        assert driver.execute_script("return document.documentElement.getAttribute('data-gc-mode')") == 'dark', 'GC UI dark mode not synchronized'
+        assert driver.execute_script("return getComputedStyle(document.documentElement).getPropertyValue('--gc-v1-color-focus-ring').trim()") == '#D8D2FF', 'GC UI dark semantic focus token not active'
         assert theme_button.get_attribute('aria-label') == 'Switch to light mode'
+        assert theme_button.get_attribute('aria-pressed') == 'true', 'Dark toggle ARIA state not synchronized'
+        assert_gc_search_controls(driver, 'home-dark')
         driver.save_screenshot(str(artifacts / 'phone-dark.png'))
         driver.refresh()
         assert driver.execute_script("return document.documentElement.classList.contains('theme-dark')"), 'Session appearance did not persist'
+        assert driver.execute_script("return document.documentElement.getAttribute('data-gc-mode')") == 'dark', 'GC UI session dark mode lost'
         driver.find_element(By.CSS_SELECTOR, '.goreecloud-theme-toggle').click()
         assert driver.execute_script("return document.documentElement.classList.contains('theme-light')"), 'Light toggle failed'
+        assert driver.execute_script("return document.documentElement.getAttribute('data-gc-mode')") == 'light', 'GC UI light mode not synchronized'
+        assert driver.execute_script("return getComputedStyle(document.documentElement).getPropertyValue('--gc-v1-color-focus-ring').trim()") == '#4132B3', 'GC UI light semantic focus token not active'
+        assert_gc_search_controls(driver, 'home-light')
         print('PASS moon button toggles light/dark appearance for this browser tab')
+        assert_gc_search_forced_colors(driver, 'home-forced-colors')
+        print('PASS homepage field, clear/search targets, visible focus and forced colors')
         # The slash shortcut is an optional focus aid, not a query-submission action.
         driver.get(url)
         driver.find_element(By.TAG_NAME, 'body').send_keys('/')
@@ -288,7 +428,7 @@ def main() -> None:
         assert settings_link.get_attribute('href').endswith('/preferences')
         driver.get(url + 'preferences')
         options = driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')
-        assert sorted(option.get_attribute('value') for option in options) == ['all', 'bing', 'brave', 'duckduckgo', 'ecosia', 'google', 'qwant', 'startpage']
+        assert sorted(option.get_attribute('value') for option in options) == ['all', 'bing', 'brave', 'duckduckgo', 'ecosia', 'google', 'qwant', 'startpage', 'working']
         brave_choice = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="brave"]')
         driver.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})", brave_choice)
         brave_choice.click()
@@ -319,13 +459,50 @@ def main() -> None:
             driver.get(url + 'preferences')
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-preferences-intro h1').text == 'Settings'
             assert not driver.find_elements(By.CSS_SELECTOR, '#main_preferences > a img.logo')
-            assert len(driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')) == 8
+            assert len(driver.find_elements(By.CSS_SELECTOR, 'input[name="goreecloud_sources"]')) == 9
             prefs_geom = driver.execute_script("""
-              return {width:document.documentElement.clientWidth,
+              const root = document.documentElement;
+              const radio = document.querySelector('#tab-ui');
+              const label = document.querySelector('#tab-label-ui');
+              const tabs = document.querySelector('#search_form > .tabs');
+              const source = document.querySelector('#search_form .goreecloud-provider-option input[name="goreecloud_sources"]');
+              const language = document.querySelector('#search_form select[name="language"]');
+              const save = document.querySelector('.goreecloud-preferences-actions > input[type="submit"]');
+              const token = getComputedStyle(root).getPropertyValue('--gc-v1-foundation-target-comfortable').trim();
+              return {consumer: root.getAttribute('data-gc-consumer'),
+                token, tabHeight: label.getBoundingClientRect().height,
+                tabRelation: label.control === radio && tabs.getAttribute('role') === 'tablist',
+                tabPanel: !!document.querySelector('#tab-content-ui[role="tabpanel"]'),
+                fieldToken: getComputedStyle(root).getPropertyValue('--gc-v1-component-field-height').trim(),
+                buttonToken: getComputedStyle(root).getPropertyValue('--gc-v1-component-button-height-medium').trim(),
+                sourceLabelHeight: source?.closest('label')?.getBoundingClientRect().height ?? 0,
+                sourceLabelAccessible: source?.closest('label')?.textContent.trim().length > 0,
+                languageHeight: language?.getBoundingClientRect().height ?? 0,
+                languageLabelled: !!language?.getAttribute('aria-labelledby'),
+                saveHeight: save?.getBoundingClientRect().height ?? 0,
+                width:document.documentElement.clientWidth,
                 scroll:document.documentElement.scrollWidth,
                 title:document.querySelector('#main_preferences h1').getBoundingClientRect().width}
             """)
+            assert prefs_geom['consumer'] == 'goreecloud-search', (label, prefs_geom)
+            assert prefs_geom['token'] == '44px' and prefs_geom['tabHeight'] >= 44, (label, prefs_geom)
+            assert prefs_geom['tabRelation'] and prefs_geom['tabPanel'], (label, prefs_geom)
+            assert prefs_geom['fieldToken'] == '48px' and prefs_geom['languageHeight'] >= 48, (label, prefs_geom)
+            assert prefs_geom['buttonToken'] == '44px' and prefs_geom['saveHeight'] >= 44, (label, prefs_geom)
+            assert prefs_geom['sourceLabelAccessible'] and prefs_geom['sourceLabelHeight'] >= 44, (label, prefs_geom)
+            assert prefs_geom['languageLabelled'], (label, prefs_geom)
             assert prefs_geom['scroll'] <= prefs_geom['width'] + 1, (label, prefs_geom)
+            keyboard_source = driver.find_element(By.CSS_SELECTOR, 'input[name="goreecloud_sources"][value="working"]')
+            keyboard_source.send_keys(Keys.SPACE)
+            source_focus = driver.execute_script("""
+              const input=arguments[0];
+              const label=input.closest('.goreecloud-provider-option');
+              const style=getComputedStyle(label);
+              return {focused:document.activeElement===input, visible:input.matches(':focus-visible'),
+                outline:style.outlineStyle, width:parseFloat(style.outlineWidth)};
+            """, keyboard_source)
+            assert source_focus['focused'] and source_focus['visible'], (label, source_focus)
+            assert source_focus['outline'] == 'solid' and source_focus['width'] >= 3, (label, source_focus)
             if width == 320:
                 # The visible word 'Interface' must remain intact at 320px.
                 # A Range returns two rectangles when the browser splits it.
@@ -376,6 +553,8 @@ def main() -> None:
             assert driver.find_element(By.CSS_SELECTOR, '.goreecloud-empty-state').is_displayed()
             assert not driver.find_elements(By.CSS_SELECTOR, '.goreecloud-source-switch')
             assert not driver.execute_script('return location.search')
+            assert_gc_search_controls(driver, 'results-phone')
+            assert_gc_search_forced_colors(driver, 'results-phone-forced-colors')
             driver.save_screenshot(str(artifacts / 'phone-synthetic-results.png'))
             print('PASS results-first no-results state with collapsible provider diagnostics')
             driver.get(url)
@@ -405,7 +584,26 @@ def main() -> None:
                 "const r=arguments[0].getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight;",
                 retry
             ))
-            retry.click()
+            # Keyboard users must see GC UI's visible focus and may retry via
+            # the same native POST without a pointer or changing providers.
+            retry.send_keys(Keys.ARROW_LEFT)
+            retry_focus = driver.execute_script("""
+              const retry=arguments[0];
+              const css=getComputedStyle(retry);
+              const root=document.documentElement;
+              return {visible:retry.matches(':focus-visible'), focused:document.activeElement===retry,
+                outline:css.outlineStyle, outlineWidth:parseFloat(css.outlineWidth),
+                height:retry.getBoundingClientRect().height,
+                buttonToken:getComputedStyle(root).getPropertyValue('--gc-v1-component-button-height-medium').trim(),
+                method:retry.form?.method, type:retry.type,
+                viewport:root.clientWidth, scroll:root.scrollWidth};
+            """, retry)
+            assert retry_focus['visible'] and retry_focus['focused'], retry_focus
+            assert retry_focus['outline'] == 'solid' and retry_focus['outlineWidth'] >= 3, retry_focus
+            assert retry_focus['height'] >= 44 and retry_focus['buttonToken'] == '44px', retry_focus
+            assert retry_focus['method'] == 'post' and retry_focus['type'] == 'submit', retry_focus
+            assert retry_focus['scroll'] <= retry_focus['viewport'] + 1, retry_focus
+            retry.send_keys(Keys.SPACE)
             WebDriverWait(driver, 12).until(lambda page: failed.call_count == 2)
             assert driver.current_url.endswith('/search'), 'Retry left the private result route'
             assert not driver.execute_script('return location.search'), 'Retry leaked search terms into URL'
@@ -473,10 +671,29 @@ def main() -> None:
         print('PASS desktop 2-column results and mobile stacked cards, 8 synthetic results, no provider traffic')
 
 
-        # Render actual image-result cards (not generic search results), checking
-        # the responsive thumbnail grid and upstream detail viewer without
-        # real search or image network traffic.
-        with patch('searx.search.SearchWithPlugins', SyntheticBrowserImageResultsCollection):
+        # Accept the actual browser-rendered Images route and its same-origin
+        # signed /image_proxy flow. This temporary view serves synthetic PNGs;
+        # neither Chrome nor SearXNG contacts a live search/image provider.
+        proxy_seen = Counter()
+        proxy_lock = Lock()
+
+        def synthetic_image_proxy():
+            raw = request.args.get('url', '')
+            index = image_fixture_index(raw)
+            if index is None or not request.args.get('h'):
+                abort(404)
+            with proxy_lock:
+                proxy_seen[index] += 1
+            return Response(synthetic_image_png(index), mimetype='image/png', headers={
+                'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+            })
+
+        image_measurements = []
+        image_report = {'scope': 'synthetic-loopback-only',
+                        'owner_mockup_fidelity_accepted': False,
+                        'measurements': image_measurements}
+        with (patch('searx.search.SearchWithPlugins', SyntheticBrowserImageResultsCollection),
+              patch.dict(app.view_functions, {'image_proxy': synthetic_image_proxy})):
             for width, height, label in ((1440, 900, 'desktop'), (390, 844, 'phone'), (320, 760, 'phone-small')):
                 driver.set_window_size(width, height)
                 driver.get(url)
@@ -489,20 +706,29 @@ def main() -> None:
                 driver.find_element(By.XPATH,
                     "//nav[contains(@class,'goreecloud-category-tabs')]//button[normalize-space()='Images']").click()
                 WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
-                    lambda page: len(page.find_elements(By.CSS_SELECTOR, '#urls.goreecloud-image-results article.result-images')) == 12
+                    lambda page: len(page.find_elements(By.CSS_SELECTOR, '#urls.goreecloud-image-results article.result-images')) == IMAGE_GALLERY_COUNT
                 )
                 geometry = driver.execute_script("""
                     const root=document.querySelector('#urls');
                     const cards=[...root.querySelectorAll('article.result-images')];
                     const image=cards[0].querySelector('img.image_thumbnail');
+                    const loadAll=root.querySelector('#goreecloud-image-load-all');
                     const css=getComputedStyle(root);
                     const cr=cards.map(c=>c.getBoundingClientRect());
                     const widths=new Set(cr.map(r=>Math.round(r.left)));
                     return {display:css.display, columns:css.gridTemplateColumns.split(' ').length,
+                        gcConsumer:document.documentElement.getAttribute('data-gc-consumer'),
+                        imageLoadTarget:loadAll?.getBoundingClientRect().height ?? 0,
+                        imageLoadButton:loadAll?.type === 'button' && !loadAll.disabled,
+                        targetToken:getComputedStyle(document.documentElement).getPropertyValue('--gc-v1-component-button-height-medium').trim(),
                         distinctX:widths.size, viewport:document.documentElement.clientWidth,
                         scroll:document.documentElement.scrollWidth,
                         cardWidth:cr[0].width, imageWidth:image.getBoundingClientRect().width,
-                        inlineImages:cards.every(c=>c.querySelector('img.image_thumbnail').src.startsWith('data:image/png;base64,')),
+                        proxiedImages:cards.every(c=>{
+                            const image=c.querySelector('img.image_thumbnail');
+                            const src=new URL(image.currentSrc || image.src, location.href);
+                            return src.origin===location.origin && src.pathname==='/image_proxy';
+                        }),
                         tileTitles:cards.every(c=>!!c.querySelector('span.title')?.textContent?.trim()),
                         captionsBelow:cards.every(c=>{
                             let i=c.querySelector('img.image_thumbnail').getBoundingClientRect();
@@ -526,12 +752,10 @@ def main() -> None:
                 """)
                 print('IMAGE GRID', label, geometry, flush=True)
                 assert geometry['display'] == 'grid', (label, geometry)
-                assert geometry['inlineImages'], (label, geometry)
-                WebDriverWait(driver, 5).until(
-                    lambda page: page.execute_script(
-                        "return [...document.querySelectorAll('#urls article.result-images img.image_thumbnail')].slice(0,2).every(img => img.complete && img.naturalWidth > 0)"
-                    )
-                )
+                assert geometry['gcConsumer'] == 'goreecloud-search', (label, geometry)
+                assert geometry['imageLoadButton'] and geometry['imageLoadTarget'] >= 44, (label, geometry)
+                assert geometry['targetToken'] == '44px', (label, geometry)
+                assert geometry['proxiedImages'], (label, geometry)
                 assert geometry['tileTitles'], (label, geometry)
                 assert geometry['captionsBelow'] and geometry['badgesCompact'], (label, geometry)
                 if label != 'desktop':
@@ -542,7 +766,95 @@ def main() -> None:
                     assert geometry['distinctX'] >= 4, (label, geometry)
                 else:
                     assert geometry['distinctX'] == 2, (label, geometry)
+                # Real pointer activation must request any remaining lazy
+                # thumbnails. It is valid for Chrome to have already loaded
+                # some or all thumbnails while filling the first viewport.
+                load_all = driver.find_element(By.ID, 'goreecloud-image-load-all')
+                driver.execute_script(
+                    "arguments[0].scrollIntoView({block:'center',behavior:'instant'})", load_all
+                )
+                load_all.click()
+                WebDriverWait(driver, 12).until(
+                    lambda page: page.find_element(By.ID, 'goreecloud-image-load-all').get_attribute('disabled')
+                    and page.find_element(By.ID, 'goreecloud-image-load-all').text == 'Previews requested'
+                )
+                WebDriverWait(driver, 12).until(
+                    lambda page: page.execute_script("""
+                        const imgs=[...document.querySelectorAll('#urls article.result-images img.image_thumbnail')];
+                        return imgs.length === arguments[0] && imgs.every(img => img.complete);
+                    """, IMAGE_GALLERY_COUNT)
+                )
+                # naturalWidth alone is metadata, not proof that Chrome can
+                # decode an image. Real decode() must resolve on every image.
+                decoded = driver.execute_async_script("""
+                    const done=arguments[arguments.length-1];
+                    const imgs=[...document.querySelectorAll('#urls article.result-images img.image_thumbnail')];
+                    Promise.all(imgs.map(img => img.decode().then(() => true, () => false)))
+                        .then(done, () => done([]));
+                """)
+                rendering = driver.execute_script("""
+                    const imgs=[...document.querySelectorAll('#urls article.result-images img.image_thumbnail')];
+                    const cards=[...document.querySelectorAll('#urls article.result-images')];
+                    const root=document.documentElement;
+                    const rects=cards.map(card => card.getBoundingClientRect());
+                    const imageRects=imgs.map(img => img.getBoundingClientRect());
+                    const seenColumns=new Set(rects.map(rect => Math.round(rect.left)));
+                    const externalImages=performance.getEntriesByType('resource').filter(entry => {
+                        if (entry.initiatorType !== 'img') return false;
+                        try { return new URL(entry.name).origin !== location.origin; }
+                        catch { return true; }
+                    });
+                    const status=document.getElementById('goreecloud-image-load-status');
+                    return {
+                        viewport_width:root.clientWidth,
+                        viewport_height:innerHeight,
+                        page_scroll_width:root.scrollWidth,
+                        card_count:cards.length,
+                        image_count:imgs.length,
+                        loaded_count:imgs.filter(img => img.complete && img.naturalWidth===4 && img.naturalHeight===3).length,
+                        unavailable_count:cards.filter(card => card.classList.contains('goreecloud-thumbnail-unavailable')).length,
+                        // On a 320px device two 4:3 image columns have ~126px
+                        // previews with ~95px heights. Check responsive
+                        // dimensions/aspect ratio, not a desktop height floor.
+                        visible_image_count:imageRects.filter(rect => rect.width>=100 &&
+                            rect.height>=70 && rect.height/rect.width>=0.70 &&
+                            rect.height/rect.width<=0.85).length,
+                        grid_columns:seenColumns.size,
+                        minimum_card_width:Math.round(Math.min(...rects.map(rect => rect.width))),
+                        minimum_image_width:Math.round(Math.min(...imageRects.map(rect => rect.width))),
+                        minimum_image_height:Math.round(Math.min(...imageRects.map(rect => rect.height))),
+                        external_image_requests:externalImages.length,
+                        previews_action_finished:!!status && /of \\d+ additional previews checked \\(\\d+ loaded, \\d+ unavailable\\)\\./.test(status.textContent),
+                        previews_action_disabled:document.getElementById('goreecloud-image-load-all').disabled
+                    };
+                """)
+                with proxy_lock:
+                    unique_proxy_fixtures = len(proxy_seen)
+                image_measurements.append({'viewport': label, **rendering,
+                                           'decoded_count': sum(bool(ok) for ok in decoded),
+                                           'unique_local_proxy_fixtures': unique_proxy_fixtures})
+                # Preserve observations and screenshot even if a subsequent
+                # acceptance assertion fails, to make CI failures actionable.
+                (artifacts / 'image-acceptance-layout.json').write_text(
+                    json.dumps(image_report, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+                )
+                driver.execute_script('window.scrollTo(0, 0)')
                 driver.save_screenshot(str(artifacts / f'{label}-image-gallery.png'))
+                assert len(decoded) == IMAGE_GALLERY_COUNT and all(decoded), (label, 'PNG decode failed')
+                assert rendering['image_count'] == IMAGE_GALLERY_COUNT, (label, rendering)
+                assert rendering['loaded_count'] == IMAGE_GALLERY_COUNT, (label, rendering)
+                assert rendering['unavailable_count'] == 0, (label, rendering)
+                assert rendering['visible_image_count'] == IMAGE_GALLERY_COUNT, (label, rendering)
+                assert rendering['external_image_requests'] == 0, (label, rendering)
+                assert rendering['previews_action_finished'] and rendering['previews_action_disabled'], (label, rendering)
+                assert rendering['page_scroll_width'] <= rendering['viewport_width'] + 1, (label, rendering)
+                assert rendering['minimum_card_width'] >= 120 and rendering['minimum_image_width'] >= 100, (label, rendering)
+                assert rendering['minimum_image_height'] >= 70, (label, rendering)
+                if label == 'desktop':
+                    assert rendering['grid_columns'] >= 4, (label, rendering)
+                else:
+                    assert rendering['grid_columns'] == 2, (label, rendering)
+                assert unique_proxy_fixtures == IMAGE_GALLERY_COUNT, (label, unique_proxy_fixtures)
                 first = driver.find_element(By.CSS_SELECTOR, '#urls article.result-images')
                 first.find_element(By.CSS_SELECTOR, 'a').click()
                 WebDriverWait(driver, 5).until(
@@ -550,11 +862,109 @@ def main() -> None:
                 )
                 assert driver.current_url.endswith('#image-viewer'), 'Image viewer should open in page'
                 assert not driver.execute_script('return location.search'), 'Image viewer leaked search query'
+                WebDriverWait(driver, 5).until(lambda page: page.execute_script("""
+                    const img=document.querySelector('.result-images[data-vim-selected] .result-images-source img');
+                    return !!img && img.complete && img.naturalWidth===4 && img.naturalHeight===3;
+                """))
+                driver.find_element(By.CSS_SELECTOR,
+                                    '.result-images[data-vim-selected] .result-detail-next').click()
+                WebDriverWait(driver, 5).until(lambda page: page.execute_script("""
+                    const cards=[...document.querySelectorAll('#urls article.result-images')];
+                    return cards[1]?.hasAttribute('data-vim-selected')===true;
+                """))
                 driver.find_element(By.CSS_SELECTOR, '.result-images[data-vim-selected] .result-detail-close').click()
                 WebDriverWait(driver, 5).until(
                     lambda page: 'image-detail-open' not in page.find_element(By.ID, 'results').get_attribute('class')
                 )
-        print('PASS desktop and phone image grid, 12 loaded offline PNGs, image details and POST privacy')
+        # Only aggregate fixture counts/layout numbers are exported; neither
+        # user queries nor source/proxy URLs belong in CI screenshots/reports.
+        print('IMAGE ACCEPTANCE', json.dumps(image_report, sort_keys=True), flush=True)
+        step_summary = os.environ.get('GITHUB_STEP_SUMMARY')
+        if step_summary:
+            lines = [
+                '### GoreeCloud Search — synthetic Chrome Images gate',
+                '',
+                '| Viewport | Decoded PNGs | Grid columns | Horizontal overflow | External image requests |',
+                '| --- | ---: | ---: | ---: | ---: |',
+            ]
+            for item in image_measurements:
+                lines.append(
+                    f"| {item['viewport']} | {item['decoded_count']}/{IMAGE_GALLERY_COUNT} | "
+                    f"{item['grid_columns']} | "
+                    f"{item['page_scroll_width'] - item['viewport_width']}px | "
+                    f"{item['external_image_requests']} |"
+                )
+            lines += ['', 'Screenshots and numeric measurements are retained as short-lived CI artifacts.',
+                      'Owner mockup visual fidelity remains unaccepted; synthetic runtime checks only.', '']
+            with Path(step_summary).open('a', encoding='utf-8') as summary:
+                summary.write('\n'.join(lines) + '\n')
+        print(f'PASS desktop and phone image grid, all {IMAGE_GALLERY_COUNT} decoded local proxy PNGs per viewport, image details and POST privacy')
+
+        # A provider error must not force the desktop retry/source panel into
+        # a second off-screen grid column on phones or tablets. Verify actual
+        # browser geometry, not only the presence of media-query CSS text.
+        empty_image_measurements = []
+        with patch('searx.search.SearchWithPlugins', SyntheticBrowserFailedImageSearch):
+            for width, height, label in ((1440, 900, 'desktop'), (768, 900, 'tablet'),
+                                         (390, 844, 'phone'), (320, 760, 'phone-small')):
+                driver.set_window_size(width, height)
+                driver.get(url)
+                driver.find_element(By.ID, 'q').send_keys('synthetic image outage')
+                driver.find_element(By.ID, 'send_search').click()
+                WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
+                    lambda page: page.current_url.endswith('/search') and
+                    bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-category-form'))
+                )
+                driver.find_element(By.XPATH,
+                    "//nav[contains(@class,'goreecloud-category-tabs')]//button[normalize-space()='Images']").click()
+                WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
+                    lambda page: bool(page.find_elements(By.CSS_SELECTOR,
+                        '#urls.goreecloud-image-results .goreecloud-empty-state'))
+                )
+                geometry = driver.execute_script("""
+                    const root=document.documentElement;
+                    const results=document.querySelector('#main_results #results');
+                    const empty=document.querySelector('#urls.goreecloud-image-results .goreecloud-empty-state');
+                    const sidebar=document.querySelector('#results > #sidebar');
+                    const panel=sidebar?.querySelector('.goreecloud-source-diagnostics');
+                    const r=e=>e.getBoundingClientRect();
+                    const a=r(empty), b=r(sidebar);
+                    return {
+                        viewport:root.clientWidth, scroll:root.scrollWidth,
+                        grid_track_widths:getComputedStyle(results).gridTemplateColumns
+                            .split(' ').map(track=>Number.parseFloat(track)),
+                        empty_width:Math.round(a.width), sidebar_width:Math.round(b.width),
+                        sidebar_visible:b.width>0 && b.height>0,
+                        sidebar_within_viewport:b.left>=-1 && b.right<=root.clientWidth+1,
+                        sidebar_below:b.top>=a.bottom-1,
+                        sidebar_beside:b.left>=a.right-1,
+                        details_present:!!panel, retry_method:empty.querySelector('form.goreecloud-empty-retry')?.method,
+                        external_image_requests:performance.getEntriesByType('resource').filter(e=>
+                            e.initiatorType==='img' && new URL(e.name, location.href).origin!==location.origin).length
+                    };
+                """)
+                empty_image_measurements.append({'viewport_name': label, **geometry})
+                driver.save_screenshot(str(artifacts / f'{label}-image-empty-outage.png'))
+                assert geometry['scroll']<=geometry['viewport']+1, (label, geometry)
+                assert geometry['sidebar_visible'] and geometry['sidebar_within_viewport'], (label, geometry)
+                assert geometry['details_present'] and geometry['retry_method']=='post', (label, geometry)
+                assert geometry['external_image_requests']==0, (label, geometry)
+                if label=='desktop':
+                    assert len(geometry['grid_track_widths'])>=2 and geometry['sidebar_beside'], (label, geometry)
+                else:
+                    # CSS Grid can report a *zero-width implicit track* even
+                    # when the sidebar is visibly stacked full width. Judge
+                    # actual geometry, not the number of computed track tokens.
+                    assert geometry['sidebar_below'], (label, geometry)
+                    assert geometry['empty_width']>=geometry['viewport']*.75, (label, geometry)
+                    assert geometry['sidebar_width']>=geometry['viewport']*.75, (label, geometry)
+                    assert all(width<=1 for width in geometry['grid_track_widths'][1:]), (label, geometry)
+        (artifacts / 'image-empty-layout.json').write_text(
+            json.dumps({'scope':'offline-synthetic-only', 'owner_mockup_accepted':False,
+                        'measurements':empty_image_measurements}, indent=2, sort_keys=True) + '\n',
+            encoding='utf-8')
+        print('IMAGE EMPTY LAYOUT', json.dumps(empty_image_measurements, sort_keys=True), flush=True)
+        print('PASS responsive Images outage: truthful retry/sidebar, no overflow or external images')
 
         # Category tabs must really submit POST, preserve the original query,
         # and never send it through the browser URL.
@@ -569,6 +979,29 @@ def main() -> None:
             labels = [button.text.strip() for button in driver.find_elements(
                 By.CSS_SELECTOR, '.goreecloud-category-tab')]
             assert labels == ['Web', 'Images', 'Videos', 'News'], labels
+            # Verify the actual computed GC UI category touch geometry and
+            # native POST forms before following a category transition.
+            category_contract = driver.execute_script("""
+                const root=document.documentElement;
+                const nav=document.querySelector('nav.goreecloud-category-tabs');
+                const buttons=[...nav.querySelectorAll('form button.goreecloud-category-tab')];
+                const current=buttons.filter(b=>b.getAttribute('aria-current')==='page');
+                const tokens=getComputedStyle(root);
+                return {
+                    gcConsumer:root.dataset.gcConsumer,
+                    comfortableTarget:tokens.getPropertyValue('--gc-v1-foundation-target-comfortable').trim(),
+                    categoryTargetHeights:buttons.map(b=>b.getBoundingClientRect().height),
+                    postOnly:[...nav.querySelectorAll('form')].every(f=>f.method==='post' &&
+                        f.action.endsWith('/search') && !f.action.includes('?')),
+                    currentCount:current.length,
+                    disabled:[...nav.querySelectorAll('[aria-disabled="true"]')].length
+                };
+            """)
+            assert category_contract['gcConsumer'] == 'goreecloud-search', category_contract
+            assert category_contract['comfortableTarget'] == '44px', category_contract
+            assert min(category_contract['categoryTargetHeights']) >= 44, category_contract
+            assert category_contract['postOnly'], category_contract
+            assert category_contract['currentCount'] == 1, category_contract
             driver.save_screenshot(str(artifacts / 'desktop-category-tabs.png'))
             driver.find_element(By.XPATH,
                 "//nav[contains(@class,'goreecloud-category-tabs')]//button[normalize-space()='Images']").click()
@@ -587,6 +1020,11 @@ def main() -> None:
             overflow = driver.execute_script(
                 'return document.documentElement.scrollWidth - document.documentElement.clientWidth')
             assert overflow <= 1, f'Category tabs overflow phone width: {overflow}'
+            mobile_heights = driver.execute_script("""
+                return [...document.querySelectorAll('.goreecloud-category-tab')]
+                    .map(tab=>tab.getBoundingClientRect().height)
+            """)
+            assert min(mobile_heights) >= 44, mobile_heights
         print('PASS category tabs Web/Images/Videos/News, private POST navigation and phone overflow')
 
 
@@ -607,9 +1045,44 @@ def main() -> None:
                 By.CSS_SELECTOR, 'details'
             ).get_attribute('open') is not None, 'Provider error details were collapsed'
             assert driver.find_element(By.CSS_SELECTOR, '#urls').is_displayed()
-            driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-diagnostics > summary').click()
+            summary = driver.find_element(By.CSS_SELECTOR, '.goreecloud-source-diagnostics > summary')
+            summary.send_keys(Keys.SPACE)
+            summary_focus = driver.execute_script("""
+              const summary=arguments[0];
+              const style=getComputedStyle(summary);
+              return {expanded:summary.parentElement.open,
+                focused:document.activeElement===summary,
+                visible:summary.matches(':focus-visible'),
+                outline:style.outlineStyle, outlineWidth:parseFloat(style.outlineWidth)};
+            """, summary)
+            assert summary_focus['expanded'] and summary_focus['focused'] and summary_focus['visible'], summary_focus
+            assert summary_focus['outline'] == 'solid' and summary_focus['outlineWidth'] >= 3, summary_focus
             retry = driver.find_element(By.CSS_SELECTOR, '.goreecloud-partial-retry button')
             assert retry.is_displayed(), 'Partial retry action hidden'
+            for width, height, label in ((1440, 900, 'desktop'), (390, 844, 'phone'), (320, 760, 'phone-small')):
+                driver.set_window_size(width, height)
+                controls = driver.execute_script("""
+                  const root=document.documentElement;
+                  const details=document.querySelector('.goreecloud-source-diagnostics');
+                  const summary=details.querySelector('summary');
+                  const retry=details.querySelector('.goreecloud-partial-retry button');
+                  return {consumer:root.getAttribute('data-gc-consumer'),
+                    targetToken:getComputedStyle(root).getPropertyValue('--gc-v1-foundation-target-comfortable').trim(),
+                    buttonToken:getComputedStyle(root).getPropertyValue('--gc-v1-component-button-height-medium').trim(),
+                    open:details.open,
+                    summaryHeight:summary.getBoundingClientRect().height,
+                    summaryMarker:getComputedStyle(summary).display,
+                    buttonHeight:retry.getBoundingClientRect().height,
+                    nativePost:retry.type==='submit' && retry.form?.method==='post',
+                    viewport:root.clientWidth, scroll:root.scrollWidth};
+                """)
+                assert controls['consumer'] == 'goreecloud-search', (label, controls)
+                assert controls['open'] and controls['summaryMarker'] == 'list-item', (label, controls)
+                assert controls['targetToken'] == '44px' and controls['summaryHeight'] >= 44, (label, controls)
+                assert controls['buttonToken'] == '44px' and controls['buttonHeight'] >= 44, (label, controls)
+                assert controls['nativePost'], (label, controls)
+                assert controls['scroll'] <= controls['viewport'] + 1, (label, controls)
+            driver.set_window_size(1440, 900)
             selected = driver.find_element(
                 By.CSS_SELECTOR, '.goreecloud-partial-retry input[name="engines"]'
             ).get_attribute('value')
