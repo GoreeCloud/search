@@ -931,7 +931,8 @@ def main() -> None:
                     const a=r(empty), b=r(sidebar);
                     return {
                         viewport:root.clientWidth, scroll:root.scrollWidth,
-                        grid_columns:getComputedStyle(results).gridTemplateColumns.split(' ').length,
+                        grid_track_widths:getComputedStyle(results).gridTemplateColumns
+                            .split(' ').map(track=>Number.parseFloat(track)),
                         empty_width:Math.round(a.width), sidebar_width:Math.round(b.width),
                         sidebar_visible:b.width>0 && b.height>0,
                         sidebar_within_viewport:b.left>=-1 && b.right<=root.clientWidth+1,
@@ -949,9 +950,15 @@ def main() -> None:
                 assert geometry['details_present'] and geometry['retry_method']=='post', (label, geometry)
                 assert geometry['external_image_requests']==0, (label, geometry)
                 if label=='desktop':
-                    assert geometry['grid_columns']==2 and geometry['sidebar_beside'], (label, geometry)
+                    assert len(geometry['grid_track_widths'])>=2 and geometry['sidebar_beside'], (label, geometry)
                 else:
-                    assert geometry['grid_columns']==1 and geometry['sidebar_below'], (label, geometry)
+                    # CSS Grid can report a *zero-width implicit track* even
+                    # when the sidebar is visibly stacked full width. Judge
+                    # actual geometry, not the number of computed track tokens.
+                    assert geometry['sidebar_below'], (label, geometry)
+                    assert geometry['empty_width']>=geometry['viewport']*.75, (label, geometry)
+                    assert geometry['sidebar_width']>=geometry['viewport']*.75, (label, geometry)
+                    assert all(width<=1 for width in geometry['grid_track_widths'][1:]), (label, geometry)
         (artifacts / 'image-empty-layout.json').write_text(
             json.dumps({'scope':'offline-synthetic-only', 'owner_mockup_accepted':False,
                         'measurements':empty_image_measurements}, indent=2, sort_keys=True) + '\n',
