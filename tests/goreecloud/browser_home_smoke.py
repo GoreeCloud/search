@@ -802,10 +802,16 @@ def main() -> None:
                         image_count:imgs.length,
                         loaded_count:imgs.filter(img => img.complete && img.naturalWidth===4 && img.naturalHeight===3).length,
                         unavailable_count:cards.filter(card => card.classList.contains('goreecloud-thumbnail-unavailable')).length,
-                        visible_image_count:imageRects.filter(rect => rect.width>=100 && rect.height>=100).length,
+                        // On a 320px device two 4:3 image columns have ~126px
+                        // previews with ~95px heights. Check responsive
+                        // dimensions/aspect ratio, not a desktop height floor.
+                        visible_image_count:imageRects.filter(rect => rect.width>=100 &&
+                            rect.height>=70 && rect.height/rect.width>=0.70 &&
+                            rect.height/rect.width<=0.85).length,
                         grid_columns:seenColumns.size,
                         minimum_card_width:Math.round(Math.min(...rects.map(rect => rect.width))),
                         minimum_image_width:Math.round(Math.min(...imageRects.map(rect => rect.width))),
+                        minimum_image_height:Math.round(Math.min(...imageRects.map(rect => rect.height))),
                         external_image_requests:externalImages.length,
                         previews_action_finished:!!status && /of \\d+ additional previews checked \\(\\d+ loaded, \\d+ unavailable\\)\\./.test(status.textContent),
                         previews_action_disabled:document.getElementById('goreecloud-image-load-all').disabled
@@ -832,6 +838,7 @@ def main() -> None:
                 assert rendering['previews_action_finished'] and rendering['previews_action_disabled'], (label, rendering)
                 assert rendering['page_scroll_width'] <= rendering['viewport_width'] + 1, (label, rendering)
                 assert rendering['minimum_card_width'] >= 120 and rendering['minimum_image_width'] >= 100, (label, rendering)
+                assert rendering['minimum_image_height'] >= 70, (label, rendering)
                 if label == 'desktop':
                     assert rendering['grid_columns'] >= 4, (label, rendering)
                 else:
