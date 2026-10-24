@@ -22,6 +22,17 @@ DENY = 'respond "Forbidden" 403'
 _ENV = re.compile(r"\{\$[A-Z][A-Z0-9_]*\}")
 _HOST_TOKEN_BOUNDARY = r"(?<![A-Za-z0-9.-]){}(?![A-Za-z0-9.-])"
 _PROXY = re.compile(r"^reverse_proxy\s+(.+)$", re.IGNORECASE)
+# A wildcard vhost or a hostless listener can match Search Development
+# without ever spelling out its exact hostname. Such site addresses need a
+# separate, adapted-Caddyfile and live-routing review before cutover.
+_WILDCARD_SEARCH_HOST = re.compile(
+    r"(?<![a-z0-9.-])(?:https?://)?\*\.goreecloud\.com(?=\s|[:,{]|$)",
+    re.IGNORECASE,
+)
+_HOSTLESS_LISTENER = re.compile(
+    r"^(?:(?:https?://)?:(?:80|443)|https?://|\*|(?:0\.0\.0\.0|\[::\]):(?:80|443))\s*\{$",
+    re.IGNORECASE,
+)
 # Restrict private backend identities even when they are not suffixed with
 # `gateway`: an ingress/container DNS alias is still the same release domain.
 _PRIVATE_BACKENDS = re.compile(
@@ -103,6 +114,13 @@ def private_search_ingress_is_safe(config: str, expected_upstream: str) -> bool:
     clean_config = "\n".join(_clean(line) for line in config.splitlines())
     if any(re.match(r"import(?:\s|$)", line, flags=re.IGNORECASE)
            for line in clean_config.splitlines()):
+        return False
+    if _WILDCARD_SEARCH_HOST.search(clean_config):
+        return False
+    # This is intentionally conservative even if Caddy would prioritize an
+    # exact host matcher today: a second default listener is an unreviewed
+    # alternate ingress route for all hosts, including Development.
+    if any(_HOSTLESS_LISTENER.fullmatch(line) for line in clean_config.splitlines()):
         return False
     lines = _site_lines(config, PRIVATE_HOST)
     if lines is None:

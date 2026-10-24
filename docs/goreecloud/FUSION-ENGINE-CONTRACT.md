@@ -1,7 +1,7 @@
 # GoreeCloud Search Fusion Engine - Development integration contract
 
 **Document type:** Engineering contract | **Owner:** GoreeCloud |
-**Status:** Active Development, not release-qualified | **Revision:** 0.3 |
+**Status:** Active Development, not release-qualified | **Revision:** 0.4 |
 **Verified source:** GoreeCloud Search Development candidate, October 24, 2026 |
 **Canonical source:** `docs/goreecloud/FUSION-ENGINE-CONTRACT.md`
 
@@ -25,12 +25,14 @@ query-free per-provider health states (`blocked`, `ok`, `empty`, `timeout`,
 `failed`). It neither ships provider adapters nor authorizes provider use.
 
 `native_search/api.py` exposes `POST /v1/fusion` on the Linux-native service's
-existing `127.0.0.1` listener. The default **Web** category now automatically
-fuses results from GoreeCloud's own local SQLite FTS5 index through a sealed,
-built-in `goreecloud_index` adapter. Its indexed documents remain local and
-no external provider is configured or contacted by default. Other categories
-(`images`, `videos`, `news`) still return HTTP 503 from this route when they
-have no configured providers. A developer must explicitly start the service
+existing `127.0.0.1` listener. The default **Web** and **Images** categories
+now fuse GoreeCloud's own local SQLite FTS5 documents and operator-approved
+image metadata through sealed `goreecloud_index` and `goreecloud_images`
+adapters. No external provider is configured or contacted by default. The
+Images route returns an honest HTTP 200 empty response if the owned image
+index has no matching records; that does not imply external image coverage.
+Unconfigured `videos` and `news` still return HTTP 503. A developer must
+explicitly start the service
 with `--fusion-fixture /absolute/path/to/synthetic.json` to admit strictly
 bounded, local synthetic cards for an offline preview. The response combines
 source cards in one category and reports only bounded, query-free result
@@ -48,13 +50,26 @@ cards and provider states; it is not live metasearch.
   assertion. A code flag is not independent legal permission, nor is a
   synthetic fixture rights grant permission for Google, Bing, Brave, or any
   other real upstream.
-- First-party Web index admission is separate from the external-rights gate:
-  source identity `goreecloud_index`, evidence marker
-  `goreecloud-local-sqlite-fts5`, the exact built-in `OwnedIndexAdapter` type,
-  and `owned_index` rights must all match. No caller may register an external
-  adapter with that reserved identity. The local adapter performs no outbound
-  fetch and is limited to the Web category; a token that merely claims
-  `owned_index` cannot authorize a network source.
+- First-party owned-index admission is separate from the external-rights gate.
+  For Web, source `goreecloud_index`, evidence
+  `goreecloud-local-sqlite-fts5`, exact `OwnedIndexAdapter` type and
+  `owned_index` rights must match. For Images, the respective requirements are
+  `goreecloud_images`, `goreecloud-local-sqlite-images-fts5`, exact
+  `OwnedImageAdapter` type and `owned_index` rights. Each adapter is sealed to
+  its one category; neither performs outbound fetches. An external adapter
+  cannot borrow either reserved identity, and a self-declared `owned_index`
+  token cannot authorize network access.
+- The owned Images database stores *metadata only*: approved page URL, original
+  image URL, title, description and nonempty operator rights-evidence reference.
+  Page and media links must be canonical public HTTPS URLs without credentials,
+  queries, fragments or private-network targets. A bounded, version-one local
+  manifest (`schema_version: 1`, `images` list, up to 100 records) can be
+  imported with `python -m native_search import-images-json --db DB --input
+  /absolute/operator-approved-images.json`. This operator-only command is in
+  the **source checkout**, not a packaged `.pyz` ingestion interface. Media
+  files are never downloaded by this operation. Operators must independently
+  verify image-display rights and can remove stored image metadata promptly;
+  no outside feed, crawling permission or third-party image license is implied.
 - Up to eight named providers may be registered; each can return at most 40
   `SourceResult` cards, with at most four concurrent calls **within one
   invocation**. The current Linux-native HTTPServer has one synchronous
@@ -84,7 +99,8 @@ cards and provider states; it is not live metasearch.
   produced no publishable results. Only the isolated native loopback adapter
   exposes this as Development JSON. This is **not** a public route or a
   promise of user-facing production behavior.
-- The native fusion service may read the owner's local FTS5 index for Web;
+- The native fusion service may read the owner's local FTS5 indexes for Web
+  and approved Images;
   synthetic provider fixtures remain offline and opt-in. The currently deployed
   SearXNG-derived Development site, Caddy ingress, public host and source
   provider configuration are unchanged; a new unshipped `.pyz` candidate
@@ -108,12 +124,19 @@ cards and provider states; it is not live metasearch.
 - A duplicate receives at most one vote per distinct source; if a single
   source returns that URL more than once, its best position wins. A score
   sums `1 / (60 + position)` across its source votes (reciprocal rank
-  fusion). Stable encounter order breaks exact-score ties.
+  fusion). Stable encounter order breaks exact-score ties. An optional
+  *validated* search query adds deterministic whole-token title, description
+  and exact-phrase credit, bounded to **20% of one source's rank-one vote**.
+  The dispatcher validates at most 16 distinct query terms before contacting
+  providers and applies the signal only at the final fusion step. It cannot
+  invent additional provider votes, and omitted-query calls preserve the
+  original reciprocal-rank scores and order.
 - Source/rank evidence is internal to the model, not a provider-selection
   requirement in the product UI. Exposing or hiding attribution is subject
   to each approved provider agreement.
-- Inputs are bounded to 1,000 cards, output to 100; no user query, response,
-  logging, HTTP handler, SQLite table, cache or provider SDK is involved.
+- Inputs are bounded to 1,000 cards, output to 100; the pure fusion primitive
+  has no network I/O, logging, HTTP handler, SQLite table, cache or provider
+  SDK. The optional query is used solely for in-memory ranking.
   Title (512 characters), description (2,000) and URL (4,096) fields are
   separately bounded before inclusion.
 
@@ -135,12 +158,13 @@ cards and provider states; it is not live metasearch.
    invisible fallback source, expose degraded-state telemetry without raw user
    queries, and explain privacy implications of automatic provider fanout.
    Prefer POST for private Search to avoid query URLs.
-4. **Ranking acceptance:** Compare fused results against a pinned synthetic
-   and (separately authorized) real relevance corpus. Add query relevance,
-   recency, quality/spam, domain diversity, language and visual/media
-   similarity signals only after correctness and benchmark evidence.
+4. **Ranking acceptance:** A bounded lexical query-overlap signal is now
+   Development-only. Compare it against pinned synthetic and separately
+   authorized real relevance judgments; add recency, quality/spam, domain
+   diversity, language and visual/media similarity only after benchmark
+   evidence. Lexical overlap alone is not semantic relevance or a safety signal.
 5. **Runtime:** A real loopback-owned `POST /v1/fusion` exists for local-index
-   Web results and optional synthetic Development data. It is not the deployed
+   Web/Images results and optional synthetic Development data. It is not the deployed
    public Search service. Provide
    load, stalled-client, recovery, rate limiting, security, authentication,
    privacy, observability and rollback acceptance on the exact candidate
@@ -152,3 +176,12 @@ The candidate native Linux `.pyz` allowlist now includes the owned fusion,
 dispatch, sealed index-provider and synthetic-fixture modules. Local package tests and source-revision
 checks do not substitute for install, systemd lifecycle, signed-distribution,
 upgrade, real-provider, or live ingress acceptance.
+
+Current integration constraints: Bing Search APIs retired in August 2025;
+Google Custom Search JSON API is closed to new customers and scheduled to end
+January 1, 2027; Brave Search API result storage, derivatives and redistribution
+require an agreement-specific legal review. None is enabled by this change.
+Official lifecycle/terms references:
+https://learn.microsoft.com/en-us/lifecycle/announcements/bing-search-api-retirement;
+https://developers.google.com/custom-search/v1/overview;
+https://api-dashboard.search.brave.com/documentation/resources/terms-of-service.

@@ -64,6 +64,82 @@ class IndexTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.store.add(url=url, title='Bad', body='content')
 
+    def test_owned_images_index_without_media_or_provider_fetch(self):
+        self.assertEqual(0, self.store.count_images())
+        self.store.add_image(
+            page_url='https://gallery.example.org/iris',
+            media_url='https://cdn.example.org/iris.png',
+            title='Purple iris garden', description='A bright spring flower photo',
+            rights_evidence='owner-approved/iris-001')
+        hit = self.store.search_images('purple garden')[0]
+        self.assertEqual('https://gallery.example.org/iris', hit.page_url)
+        self.assertEqual('https://cdn.example.org/iris.png', hit.media_url)
+        self.assertEqual('owner-approved/iris-001', hit.rights_evidence)
+        self.assertGreaterEqual(hit.score, 0)
+        self.assertEqual([], self.store.search_images('unrelated'))
+        self.assertEqual(1, self.store.count_images())
+        self.store.close()
+        self.store = SearchIndex(self.path)
+        self.assertEqual(1, len(self.store.search_images('flower')))
+
+    def test_images_upsert_atomicity_and_takedown(self):
+        page = 'https://gallery.example.org/iris'
+        media = 'https://cdn.example.org/iris.png'
+        self.store.add_image(page_url=page, media_url=media, title='Old tulip',
+                             rights_evidence='owner/001')
+        self.store.add_image(page_url=page, media_url=media, title='New violet',
+                             rights_evidence='owner/002')
+        self.assertEqual(1, self.store.count_images())
+        self.assertEqual([], self.store.search_images('tulip'))
+        self.assertEqual('owner/002', self.store.search_images('violet')[0].rights_evidence)
+        with self.assertRaises(ValueError):
+            self.store.add_images([
+                (page, 'https://cdn.example.org/good.jpg', 'Blue orchid', '', 'owner/003'),
+                (page, 'http://localhost/private.jpg', 'Bad', '', 'owner/004'),
+            ])
+        self.assertEqual(1, self.store.count_images())
+        self.assertEqual([], self.store.search_images('orchid'))
+        self.assertTrue(self.store.remove_image(media))
+        self.assertEqual(0, self.store.count_images())
+        self.assertEqual([], self.store.search_images('violet'))
+        self.assertFalse(self.store.remove_image(media))
+
+    def test_owned_image_urls_and_provenance_fail_closed(self):
+        good = ('https://gallery.example.org/photo',
+                'https://cdn.example.org/photo.png', 'Good image', 'Painted landscape', 'owner/image-1')
+        for bad_media in (
+            'http://cdn.example.org/photo.jpg',
+            'https://user:secret@cdn.example.org/photo.jpg',
+            'https://localhost/image.png', 'https://127.0.0.1/image.png',
+            'https://192.168.1.30/img.png', 'https://metadata.internal/photo.png',
+            'https://images.example/photo.png', 'https://cdn.example.org/image?token=abc',
+            'https://cdn.example.org/img#fragment',
+            'https://cdn.example.org:8443/img.png', 'javascript:alert(1)',
+            'https://cdn.example.org\\@private/image.png',
+        ):
+            with self.subTest(bad_media=bad_media), self.assertRaises(ValueError):
+                self.store.add_images([(*good[:1], bad_media, *good[2:])])
+        for bad_source in ('https://localhost/', 'http://gallery.example.org/',
+                           'https://gallery.example.org/?token=secret'):
+            with self.subTest(bad_source=bad_source), self.assertRaises(ValueError):
+                self.store.add_images([(bad_source, *good[1:])])
+        for evidence in ('', 'a b', 'secret@mail.example.org', 'ref?api_key=123',
+                         'x' * 257, 17):
+            with self.subTest(evidence=evidence), self.assertRaises(ValueError):
+                self.store.add_images([(*good[:4], evidence)])
+        for malformed in ([], [good] * 101, [(1, 2)], [good, ('broken',)]):
+            with self.subTest(batch=repr(malformed)[:80]), self.assertRaises(ValueError):
+                self.store.add_images(malformed)
+        self.assertEqual(0, self.store.count_images())
+
+    def test_owned_images_query_and_limit_are_bounded(self):
+        with self.assertRaises(ValueError):
+            self.store.search_images('flower', limit=True)
+        with self.assertRaises(ValueError):
+            self.store.search_images('flower', limit=21)
+        with self.assertRaises(ValueError):
+            self.store.search_images('x' * 257)
+
 
 if __name__ == '__main__':
     unittest.main()

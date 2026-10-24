@@ -13,7 +13,7 @@ from dataclasses import dataclass
 import re
 from typing import Awaitable, Callable, Sequence
 
-from .fusion import FusedResult, SourceResult, SUPPORTED_CATEGORIES, fuse_results
+from .fusion import FusedResult, SourceResult, SUPPORTED_CATEGORIES, _query_terms, fuse_results
 
 
 _SOURCE_ID = re.compile(r'[a-z][a-z0-9_-]{0,47}\Z')
@@ -102,6 +102,10 @@ async def dispatch_fusion(
     """
     if not isinstance(query, str) or not 0 < len(query.strip()) <= 512 or _QUERY_CONTROL.search(query):
         raise ValueError('Invalid bounded query')
+    # The query-aware ranker has a stricter lexical budget. Validate it here,
+    # before any source sees the query; otherwise a late ranking ValueError
+    # could misreport healthy providers as failed after dispatch.
+    _query_terms(query)
     if category not in SUPPORTED_CATEGORIES:
         raise ValueError('Unsupported category')
     if type(limit) is not int or not 1 <= limit <= 100:
@@ -124,7 +128,8 @@ async def dispatch_fusion(
     # adapter *type*, identity and evidence marker. An arbitrary network
     # adapter cannot receive first-party rights by setting a string flag.
     from .owned_index_provider import (OWNED_INDEX_EVIDENCE, OWNED_INDEX_SOURCE,
-                                       OwnedIndexAdapter)
+                                       OWNED_IMAGE_EVIDENCE, OWNED_IMAGE_SOURCE,
+                                       OwnedIndexAdapter, OwnedImageAdapter)
 
     for binding in providers:
         if (not isinstance(binding, ProviderBinding) or not isinstance(binding.source, str)
@@ -133,12 +138,19 @@ async def dispatch_fusion(
                 or not isinstance(binding.rights, ProviderRights)):
             raise ValueError('Invalid or duplicated provider binding')
         seen.add(binding.source)
-        verified_owned = (binding.source == OWNED_INDEX_SOURCE
+        verified_web = (binding.source == OWNED_INDEX_SOURCE
                           and type(binding.search) is OwnedIndexAdapter
                           and binding.rights.evidence_reference == OWNED_INDEX_EVIDENCE
                           and binding.rights.rights_basis == 'owned_index'
                           and binding.rights.categories == frozenset({'web'}))
-        if (binding.source != OWNED_INDEX_SOURCE or verified_owned) and binding.rights.admits(
+        verified_images = (binding.source == OWNED_IMAGE_SOURCE
+                           and type(binding.search) is OwnedImageAdapter
+                           and binding.rights.evidence_reference == OWNED_IMAGE_EVIDENCE
+                           and binding.rights.rights_basis == 'owned_index'
+                           and binding.rights.categories == frozenset({'images'}))
+        verified_owned = verified_web or verified_images
+        if (binding.source not in (OWNED_INDEX_SOURCE, OWNED_IMAGE_SOURCE)
+                or verified_owned) and binding.rights.admits(
                 category, allow_synthetic_fixtures=allow_synthetic_fixtures,
                 allow_owned_index=verified_owned):
             admitted.append(binding)
@@ -193,7 +205,7 @@ async def dispatch_fusion(
     # admitted cards are bounded, this must be treated as a failed response,
     # not an arbitrary uncaught exception carrying provider data.
     try:
-        fused = tuple(fuse_results(cards, category=category, limit=limit))
+        fused = tuple(fuse_results(cards, category=category, limit=limit, query=query))
     except ValueError:
         fused = ()
         for outcome, _ in completed:

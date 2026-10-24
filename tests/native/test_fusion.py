@@ -130,6 +130,77 @@ class FusionTests(unittest.TestCase):
             fuse_results((hit('alpha', 1, 'https://example.com/%d' % i)
                           for i in range(1001)), category='web')
 
+    def test_explicit_query_promotes_relevant_title_over_nearby_irrelevant_rank(self):
+        cards = [
+            hit('alpha', 1, 'https://example.org/advertisement', title='Sponsored landing page'),
+            hit('alpha', 2, 'https://example.org/search-guide', title='GoreeCloud Search Guide'),
+        ]
+        # Legacy no-query RRF remains untouched for every existing caller.
+        original = fuse_results(cards, category='web')
+        self.assertEqual(cards[0].url, original[0].url)
+        self.assertEqual(1 / 61, original[0].score)
+        self.assertEqual(original, fuse_results(cards, category='web', query=None))
+        ranked = fuse_results(cards, category='web', query='goreecloud search')
+        self.assertEqual(cards[1].url, ranked[0].url)
+        self.assertEqual((('alpha', 2),), ranked[0].source_ranks)
+        self.assertGreater(ranked[0].score, ranked[1].score)
+
+    def test_relevance_credit_is_repeat_insensitive_and_strictly_capped(self):
+        relevant = hit('alpha', 1, 'https://example.org/guide', title='Cloud Cloud Cloud')
+        stuffing = hit('alpha', 1, 'https://example.org/guide', title='Cloud ' * 40)
+        base = fuse_results([relevant], category='web')[0].score
+        ordinary = fuse_results([relevant], category='web', query='cloud')[0]
+        repeated = fuse_results([stuffing], category='web', query='cloud')[0]
+        self.assertEqual(ordinary.score, repeated.score)
+        self.assertLessEqual(ordinary.score - base, 0.2 / 61 + 1e-12)
+        # A repeat from the SAME provider never gains another fusion vote.
+        both = fuse_results([relevant, stuffing], category='web', query='cloud')[0]
+        self.assertEqual((('alpha', 1),), both.source_ranks)
+        self.assertEqual(ordinary.score, both.score)
+
+    def test_query_cannot_override_strong_distinct_source_consensus(self):
+        cards = [
+            hit('alpha', 1, 'https://example.org/consensus', title='Independent factual overview'),
+            hit('beta', 1, 'https://example.org/consensus#part', title='Same overview'),
+            hit('gamma', 1, 'https://example.org/marketing', title='GoreeCloud Search Guide'),
+        ]
+        ranked = fuse_results(cards, category='web', query='goreecloud search')
+        self.assertEqual('https://example.org/consensus', ranked[0].url)
+        self.assertEqual((('alpha', 1), ('beta', 1)), ranked[0].source_ranks)
+
+    def test_query_matches_whole_unicode_words_not_substrings(self):
+        cards = [
+            hit('alpha', 1, 'https://example.org/only-substring', title='Artisan painting'),
+            hit('alpha', 2, 'https://example.org/full-token', title='Art forms'),
+        ]
+        ranked = fuse_results(cards, category='web', query='art')
+        self.assertEqual('https://example.org/full-token', ranked[0].url)
+        other = [
+            hit('alpha', 1, 'https://example.org/untouched', title='Alternative routes'),
+            hit('alpha', 2, 'https://example.org/german', title='Straße network'),
+        ]
+        self.assertEqual('https://example.org/german', fuse_results(
+            other, category='web', query='STRASSE')[0].url)
+
+    def test_optional_description_matches_less_than_title(self):
+        cards = [
+            SourceResult('alpha', 'web', 1, 'https://example.org/a', 'Other page',
+                         'GoreeCloud search'),
+            SourceResult('beta', 'web', 1, 'https://example.org/b', 'GoreeCloud search', ''),
+        ]
+        fused = fuse_results(cards, category='web', query='goreecloud search')
+        self.assertEqual('https://example.org/b', fused[0].url)
+
+    def test_relevance_query_is_bounded_and_fails_closed(self):
+        card = hit('alpha', 1, 'https://example.org/a')
+        invalid = (True, 123, '', '\n', 'bad\nquery', 'x' * 513,
+                   ' '.join('term%d' % index for index in range(17)),
+                   'a' * 65)
+        for query in invalid:
+            with self.subTest(query=str(query)[:30]), self.assertRaises(ValueError):
+                fuse_results([card], category='web', query=query)
+        self.assertEqual(1, len(fuse_results([card], category='web', query='hello')))
+
 
 if __name__ == '__main__':
     unittest.main()

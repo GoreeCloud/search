@@ -37,7 +37,9 @@ REQUIRED_GATES = frozenset({
     'min_recall_percent_at_10', 'max_missing_image_media',
     'require_all_sources_healthy',
 })
-OPTIONAL_GATES = frozenset({'min_sources_with_unique_at_10'})
+OPTIONAL_GATES = frozenset({
+    'min_sources_with_unique_at_10', 'min_reciprocal_rank_percent_at_10',
+})
 
 
 class InvalidBenchmark(ValueError):
@@ -84,6 +86,10 @@ def _parse_fixture(fixture: object) -> tuple[str, list[dict], list[SourceResult]
     if ('min_sources_with_unique_at_10' in gates and
             not _integer(gates['min_sources_with_unique_at_10'], minimum=0,
                          maximum=MAX_SOURCES)):
+        raise InvalidBenchmark('gate_range')
+    if ('min_reciprocal_rank_percent_at_10' in gates and
+            not _integer(gates['min_reciprocal_rank_percent_at_10'], minimum=1,
+                         maximum=100)):
         raise InvalidBenchmark('gate_range')
     if (gates['min_contributing_sources'] > len(providers) or
             gates.get('min_sources_with_unique_at_10', 0) > len(providers)):
@@ -167,6 +173,9 @@ def evaluate_fixture(fixture: object) -> dict:
         reasons.append('insufficient_unique_source_discovery_at_10')
     if found < gates['min_relevant_at_10']:
         reasons.append('insufficient_relevant_at_10')
+    reciprocal_rank_percent = 100 // first if first else 0
+    if reciprocal_rank_percent < gates.get('min_reciprocal_rank_percent_at_10', 0):
+        reasons.append('insufficient_first_relevant_rank_at_10')
     recall_percent = (100 * found) // len(relevant)
     if recall_percent < gates['min_recall_percent_at_10']:
         reasons.append('insufficient_recall_at_10')
@@ -190,6 +199,7 @@ def evaluate_fixture(fixture: object) -> dict:
         'recall_percent_at_10': recall_percent,
         'precision_percent_at_10': 10 * found,
         'reciprocal_rank_at_10': round(1.0 / first, 4) if first else 0.0,
+        'reciprocal_rank_percent_at_10': reciprocal_rank_percent,
         'passed': not reasons, 'failed_gates': reasons,
     }
 

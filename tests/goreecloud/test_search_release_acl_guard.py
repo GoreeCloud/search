@@ -134,6 +134,31 @@ class SearchReleaseAclGuardTests(unittest.TestCase):
         bad = SITE.decode() + '\nsearch-dev.goreecloud.com, search.goreecloud.com {\n    respond "ok"\n}\n'
         self.assertFalse(private_search_ingress_is_safe(bad, OLD))
 
+    def test_wildcard_and_hostless_catchall_listeners_fail_closed(self):
+        for extra in (
+            '*.goreecloud.com {\n    respond "public" 200\n}\n',
+            'https://*.goreecloud.com:443 {\n    respond "ok" 200\n}\n',
+            'search.goreecloud.com, *.goreecloud.com {\n    respond "public" 200\n}\n',
+            ':443 {\n    respond "public" 200\n}\n',
+            'https://:443 {\n    respond "public" 200\n}\n',
+            'http:// {\n    respond "public" 200\n}\n',
+            '0.0.0.0:443 {\n    respond "public" 200\n}\n',
+            '[::]:443 {\n    respond "public" 200\n}\n',
+        ):
+            with self.subTest(extra=extra):
+                config = SITE.decode() + '\n' + extra
+                self.assertFalse(private_search_ingress_is_safe(config, OLD))
+                self.assertEqual('blocked_do_not_cutover',
+                                 evaluate(source=config.encode(), snapshot=config.encode())['status'])
+
+    def test_wildcard_host_matcher_cannot_alias_private_dev(self):
+        config = SITE.decode() + '\nother.example {\n    @overlap host *.goreecloud.com\n}\n'
+        self.assertFalse(private_search_ingress_is_safe(config, OLD))
+
+    def test_noncapturing_wildcard_for_unrelated_domain_remains_allowed(self):
+        config = SITE.decode() + '\n*.unrelated.example {\n    respond "ok" 200\n}\n'
+        self.assertTrue(private_search_ingress_is_safe(config, OLD))
+
     def test_matcher_and_deny_in_comments_do_not_count(self):
         bad = SITE.decode().replace(
             "@netbird_client remote_ip 100.64.0.0/10",
