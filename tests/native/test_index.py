@@ -140,6 +140,47 @@ class IndexTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.store.search_images('x' * 257)
 
+    def test_sparse_owned_images_return_real_partial_matches_after_exact(self):
+        page = 'https://gallery.example.org/image'
+        for filename, title, description in (
+                ('1.png', 'Blue orchid', 'Botanical garden'),
+                ('2.png', 'Orchid blooms', 'Close-up of blue petals'),
+                ('3.png', 'Blue sky', 'Spring meadow'),
+                ('4.png', 'Tropical orchid', 'Pink petals'),
+                ('5.png', 'Red lantern', 'No matching photo')):
+            self.store.add_image(page_url=page, media_url='https://cdn.example.org/'+filename,
+                                 title=title, description=description,
+                                 rights_evidence='operator-reviewed/'+filename)
+        cards = self.store.search_images('blue orchid', limit=5)
+        self.assertEqual(4, len(cards))
+        self.assertEqual({'1.png', '2.png'},
+                         {card.media_url.rsplit('/', 1)[-1] for card in cards[:2]})
+        self.assertEqual({'3.png', '4.png'},
+                         {card.media_url.rsplit('/', 1)[-1] for card in cards[2:]})
+        self.assertEqual(2, len(self.store.search_images('blue orchid', limit=2)))
+        self.assertEqual([], self.store.search_images('absent'))
+        self.assertEqual(cards, self.store.search_images('blue orchid', limit=5))
+
+    def test_partial_images_require_half_of_distinct_query_terms(self):
+        page = 'https://gallery.example.org/image'
+        for filename, title in (
+                ('a.png', 'Purple tropical orchids in rain forest'),
+                ('b.png', 'Purple orchids against sky'),
+                ('c.png', 'Orchids in a ceramic pot')):
+            self.store.add_image(page_url=page, media_url='https://cdn.example.org/'+filename,
+                                 title=title, rights_evidence='operator-reviewed/'+filename)
+        results = self.store.search_images('purple tropical orchids clouds', limit=20)
+        self.assertEqual(['a.png', 'b.png'],
+                         [row.media_url.rsplit('/', 1)[-1] for row in results])
+        self.assertEqual([], self.store.search_images('clouds'))
+
+    def test_partial_image_match_folds_accents_consistently_with_fts(self):
+        self.store.add_image(page_url='https://gallery.example.org/cafe',
+                             media_url='https://cdn.example.org/cafe.png',
+                             title='Café table', description='Mug beside a window',
+                             rights_evidence='operator-reviewed/cafe')
+        self.assertEqual(1, len(self.store.search_images('cafe garden', limit=3)))
+
 
 if __name__ == '__main__':
     unittest.main()

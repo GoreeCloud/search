@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 from pathlib import Path
+from urllib.parse import quote
 
 from .api import run_loopback
 from .crawler import Crawler, CrawlPlan
@@ -66,6 +68,10 @@ def main() -> None:
         'import-images-json', help='Import operator-approved LOCAL image metadata (no fetch)')
     images.add_argument('--db', required=True)
     images.add_argument('--input', required=True, type=Path)
+    takedown = commands.add_parser(
+        'remove-image', help='Remove one owned Images media URL and its FTS entries (no fetch)')
+    takedown.add_argument('--db', required=True, type=Path)
+    takedown.add_argument('--media-url', required=True)
     approved = commands.add_parser('import-approved-repo')
     approved.add_argument('--db', required=True)
     approved.add_argument('--repo-root', required=True)
@@ -122,6 +128,32 @@ def main() -> None:
         except (OSError, TypeError, ValueError) as error:
             # Do not print image URLs or rights references from rejected data.
             parser.error(str(error))
+    elif args.command == 'remove-image':
+        # A misspelled database path must never create a new empty index and
+        # falsely appear to have completed a rights takedown.
+        if (not args.db.is_file() or args.db.is_symlink()
+                or not 0 < len(args.media_url) <= 2000
+                or any(ord(char) < 33 or ord(char) == 127 for char in args.media_url)):
+            parser.error('Existing owned index and bounded media identity required')
+        # Likewise, never bootstrap native-search tables inside an unrelated
+        # SQLite database just because the operator supplied a valid path.
+        probe_uri = 'file:' + quote(str(args.db.absolute()), safe='/') + '?mode=ro'
+        try:
+            probe = sqlite3.connect(probe_uri, uri=True)
+            try:
+                names = {row[0] for row in probe.execute('''
+                  SELECT name FROM sqlite_master WHERE type IN ('table', 'view')
+                    AND name IN ('pages', 'pages_fts', 'images', 'images_fts')
+                ''')}
+            finally:
+                probe.close()
+        except sqlite3.Error:
+            parser.error('Unable to inspect existing owned Images index')
+        if names != {'pages', 'pages_fts', 'images', 'images_fts'}:
+            parser.error('An existing GoreeCloud Images index is required')
+        with SearchIndex(args.db) as index:
+            removed = index.remove_image(args.media_url)
+            print(json.dumps({'removed': removed, 'owned_images': index.count_images()}))
     elif args.command == 'serve':
         from .fixture_provider import load_synthetic_fixture
 

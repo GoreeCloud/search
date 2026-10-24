@@ -1,0 +1,37 @@
+{
+  "development_only": true,
+  "category": "web",
+  "synthetic_terms": ["orchid"],
+  "sources": [
+    {
+      "source": "synthetic_alpha",
+      "state": "ok",
+      "results": [
+        {"rank": 1, "url": "https://example.test/weather", "title": "Synthetic weather bulletin"},
+        {"rank": 2, "url": "https://example.test/orchid-guide", "title": "Synthetic orchid guide"}
+      ]
+    },
+    {
+      "source": "synthetic_beta",
+      "state": "ok",
+      "results": [
+        {"rank": 1, "url": "https://example.test/hardware", "title": "Synthetic hardware inventory"},
+        {"rank": 2, "url": "https://example.test/orchid-care", "title": "Synthetic orchid care"}
+      ]
+    }
+  ],
+  "relevant": [
+    "https://example.test/orchid-guide",
+    "https://example.test/orchid-care"
+  ],
+  "gates": {
+    "min_distinct": 4,
+    "min_contributing_sources": 2,
+    "min_sources_with_unique_at_10": 2,
+    "min_relevant_at_10": 2,
+    "min_recall_percent_at_10": 100,
+    "min_reciprocal_rank_percent_at_10": 100,
+    "max_missing_image_media": 0,
+    "require_all_sources_healthy": true
+  }
+}

@@ -7,7 +7,8 @@ import unittest
 from unittest.mock import patch
 
 from scripts import search_development_ingress_guard as guard
-from scripts.search_development_ingress_guard import private_search_ingress_is_safe
+from scripts.search_development_ingress_guard import (private_search_ingress_is_safe,
+                                                     public_search_hostname_is_separate)
 from test_free_upgrade_preflight import m, evaluate, SITE
 
 
@@ -41,6 +42,71 @@ class SearchReleaseAclGuardTests(unittest.TestCase):
                          evaluate(source=separate.encode(), snapshot=separate.encode())['status'])
         bad = SITE.decode() + '\n' + PUBLIC + ' {\n    reverse_proxy ' + OLD + '\n}\n'
         self.assertFalse(private_search_ingress_is_safe(bad, OLD))
+
+    def test_public_mode_requires_explicit_independent_site(self):
+        self.assertFalse(public_search_hostname_is_separate(SITE.decode(), OLD))
+        staging = SITE.decode() + '\n' + PUBLIC + ' {\n    respond "Service unavailable" 503\n}\n'
+        self.assertTrue(public_search_hostname_is_separate(staging, OLD))
+        separate = SITE.decode() + '\n' + PUBLIC + ' {\n    reverse_proxy goreecloud-search-public-gateway:8080\n}\n'
+        self.assertTrue(public_search_hostname_is_separate(separate, OLD))
+
+    def test_public_mode_rejects_redirects_unknown_routes_and_false_readiness(self):
+        invalid = (
+            'redir https://search-dev.goreecloud.com',
+            'respond "Working" 200',
+            'respond "Service unavailable" 503\n    reverse_proxy goreecloud-search-public-gateway:8080',
+            'reverse_proxy goreecloud-search-free-working-gateway:8080',
+            'reverse_proxy localhost:8080',
+            'reverse_proxy goreecloud-search-public-gateway:8080\n    handle {\n        respond "ok" 200\n    }',
+            '@netbird_client remote_ip 100.64.0.0/10\n    respond "Service unavailable" 503',
+            'respond "Service unavailable" 503\n    header {\n        X-Robots-Tag "noindex, nofollow"\n    }',
+        )
+        for body in invalid:
+            with self.subTest(body=body):
+                candidate = SITE.decode() + '\n' + PUBLIC + ' {\n    ' + body + '\n}\n'
+                self.assertFalse(public_search_hostname_is_separate(candidate, OLD))
+
+    def test_public_mode_rejects_unreviewed_alias_and_malformed_tls(self):
+        public = PUBLIC + ' {\n    respond "Service unavailable" 503\n}\n'
+        alias = SITE.decode() + '\n' + public + '\nother.example {\n    @alias host ' + PUBLIC + '\n}\n'
+        self.assertFalse(public_search_hostname_is_separate(alias, OLD))
+        incomplete_dns = SITE.decode() + '\n' + PUBLIC + ''' {
+    tls {
+        dns porkbun {
+            api_key {$PORKBUN_API_KEY}
+        }
+    }
+    respond "Service unavailable" 503
+}
+'''
+        self.assertFalse(public_search_hostname_is_separate(incomplete_dns, OLD))
+        complete_dns = incomplete_dns.replace(
+            'api_key {$PORKBUN_API_KEY}\n',
+            'api_key {$PORKBUN_API_KEY}\n            api_secret_key {$PORKBUN_API_SECRET_KEY}\n')
+        self.assertTrue(public_search_hostname_is_separate(complete_dns, OLD))
+
+    def test_public_mode_cli_reports_missing_hostname_without_disclosing_config(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / 'Caddyfile'
+            config.write_bytes(SITE)
+            with patch('builtins.print') as output:
+                self.assertEqual(2, guard.main([
+                    '--caddyfile', str(config), '--expected-upstream', OLD,
+                    '--require-public-host']))
+                report = json.loads(output.call_args.args[0])
+                self.assertEqual('search_public_private_site_separation', report['check'])
+                self.assertEqual('blocked_do_not_cutover', report['status'])
+                self.assertIs(report['runtime_verified'], False)
+                self.assertNotIn(str(config), output.call_args.args[0])
+            config.write_text(SITE.decode() + '\n' + PUBLIC +
+                              ' {\n    respond "Service unavailable" 503\n}\n',
+                              encoding='utf-8')
+            with patch('builtins.print') as output:
+                self.assertEqual(0, guard.main([
+                    '--caddyfile', str(config), '--expected-upstream', OLD,
+                    '--require-public-host']))
+                self.assertEqual('pass_static_only',
+                                 json.loads(output.call_args.args[0])['status'])
 
     def test_includes_fail_closed_until_entire_expanded_config_is_audited(self):
         for injection in (

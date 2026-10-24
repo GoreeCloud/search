@@ -1,7 +1,7 @@
 # GoreeCloud Search Fusion Engine - Development integration contract
 
 **Document type:** Engineering contract | **Owner:** GoreeCloud |
-**Status:** Active Development, not release-qualified | **Revision:** 0.4 |
+**Status:** Active Development, not release-qualified | **Revision:** 0.5 |
 **Verified source:** GoreeCloud Search Development candidate, October 24, 2026 |
 **Canonical source:** `docs/goreecloud/FUSION-ENGINE-CONTRACT.md`
 
@@ -70,6 +70,23 @@ cards and provider states; it is not live metasearch.
   files are never downloaded by this operation. Operators must independently
   verify image-display rights and can remove stored image metadata promptly;
   no outside feed, crawling permission or third-party image license is implied.
+- Owned Images search first returns exact all-term FTS5 matches. If fewer than
+  the requested limit qualify, a second local-only pass examines at most 200
+  candidate records matching one or more whole indexed terms. A partial match
+  must cover at least half of the **distinct** normalized query terms in its
+  title/description; accepted supplements follow all exact matches and are
+  sorted by term coverage and SQLite BM25. This improves recall only within
+  the existing approved catalog, without inventing cards or external fetches.
+- A narrowly scoped operator CLI `python -m native_search remove-image --db
+  /absolute/existing-owned-index.sqlite --media-url HTTPS_MEDIA` removes one
+  stored image and its FTS entry. The command rejects symlinks, missing paths
+  and non-GoreeCloud SQLite databases instead of creating a new index or
+  silently declaring a takedown. Its output contains only aggregate counts,
+  not the media URL. The import and takedown commands live in the **source
+  checkout**; they are not bundled into the service-only Linux `.pyz`.
+  Third-party Commons or other CC imagery remains unqualified for ingestion
+  until required creator, license and source attribution can be retained and
+  shown to users under each asset's actual license.
 - Up to eight named providers may be registered; each can return at most 40
   `SourceResult` cards, with at most four concurrent calls **within one
   invocation**. The current Linux-native HTTPServer has one synchronous

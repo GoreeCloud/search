@@ -48,6 +48,7 @@ _ALLOWED_HEADERS = {
     'X-Robots-Tag "noindex, nofollow"',
     'Cache-Control no-store',
 }
+_PUBLIC_HOLD = re.compile(r'^respond\s+"[^"\r\n]{1,100}"\s+503$')
 
 
 def _clean(line: str) -> str:
@@ -226,21 +227,107 @@ def private_search_ingress_is_safe(config: str, expected_upstream: str) -> bool:
             and observed.get("api_secret_key {$PORKBUN_API_SECRET_KEY}") == 1)))
 
 
+def public_search_hostname_is_separate(config: str, expected_upstream: str) -> bool:
+    """Require an explicit public vhost without using the private Search app.
+
+    This optional *static* gate detects the missing public hostname seen on the
+    VPS. A 503 hold page is an acceptable TLS placeholder, never a live-service
+    or release pass. Only the narrowly reviewed public/prod backend form can
+    be routed to a service. Do not infer effective Caddy routes or TLS issuance
+    from a text check alone.
+    """
+    if not private_search_ingress_is_safe(config, expected_upstream):
+        return False
+    lines = _site_lines(config, PUBLIC_HOST)
+    if lines is None:
+        return False
+    public_token = _HOST_TOKEN_BOUNDARY.format(re.escape(PUBLIC_HOST))
+    cleaned = '\n'.join(_clean(line) for line in config.splitlines())
+    if len(re.findall(public_token, cleaned, flags=re.IGNORECASE)) != 1:
+        return False
+    stack = ['site']
+    destinations = 0
+    seen_tls = 0
+    seen_header = 0
+    seen_dns = 0
+    dns_env: set[str] = set()
+    for line in lines:
+        if line == '}':
+            if len(stack) == 1:
+                return False
+            stack.pop()
+            continue
+        if line.endswith(' {'):
+            directive = line[:-2]
+            if ((stack[-1] == 'site' and directive in ('tls', 'header'))
+                    or (stack[-1] == 'tls' and directive == 'dns porkbun')):
+                stack.append(directive)
+                if directive == 'tls':
+                    seen_tls += 1
+                elif directive == 'header':
+                    seen_header += 1
+                else:
+                    seen_dns += 1
+                if max(seen_tls, seen_header, seen_dns) > 1:
+                    return False
+                continue
+            return False
+        if '{' in _ENV.sub('ENV', line) or '}' in _ENV.sub('ENV', line):
+            return False
+        section = stack[-1]
+        if section == 'site':
+            if _PUBLIC_HOLD.fullmatch(line):
+                destinations += 1
+            else:
+                proxy = _PROXY.fullmatch(line)
+                if not proxy or not _PUBLIC_BACKEND.fullmatch(proxy.group(1)):
+                    return False
+                destinations += 1
+        elif section == 'header':
+            if line not in _ALLOWED_HEADERS or line == 'X-Robots-Tag "noindex, nofollow"':
+                return False
+        elif section == 'tls':
+            if not (line.startswith('propagation_delay ')
+                    or line.startswith('propagation_timeout ')
+                    or line.startswith('resolvers ')):
+                return False
+        elif section == 'dns porkbun':
+            if line not in ('api_key {$PORKBUN_API_KEY}',
+                            'api_secret_key {$PORKBUN_API_SECRET_KEY}'):
+                return False
+            if line in dns_env:
+                return False
+            dns_env.add(line)
+        else:
+            return False
+    return (stack == ['site'] and destinations == 1
+            and (not seen_tls or (seen_dns == 1 and dns_env == {
+                'api_key {$PORKBUN_API_KEY}',
+                'api_secret_key {$PORKBUN_API_SECRET_KEY}',
+            })))
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Read-only private Development Caddy structural guard")
     p.add_argument("--caddyfile", type=Path, required=True,
                    help="Explicit local Caddy configuration to inspect without mutating it")
     p.add_argument("--expected-upstream", required=True,
                    help="Exact approved Development gateway host:8080")
+    p.add_argument('--require-public-host', action='store_true',
+                   help='Also require an explicit, strictly separate public TLS vhost (static only)')
     args = p.parse_args(argv)
     try:
         if args.caddyfile.is_symlink() or not args.caddyfile.is_file():
             raise OSError("missing file or symlink")
         config = args.caddyfile.read_text(encoding="utf-8")
-        ok = private_search_ingress_is_safe(config, args.expected_upstream)
+        ok = (public_search_hostname_is_separate(config, args.expected_upstream)
+              if args.require_public_host else
+              private_search_ingress_is_safe(config, args.expected_upstream))
     except (OSError, UnicodeError):
         ok = False
-    print(json.dumps({"check": "development_caddy_private_acl_structure",
+    print(json.dumps({"check": ("search_public_private_site_separation"
+                                if args.require_public_host else
+                                "development_caddy_private_acl_structure"),
                       "status": "pass_static_only" if ok else "blocked_do_not_cutover",
                       "runtime_verified": False}, sort_keys=True))
     return 0 if ok else 2

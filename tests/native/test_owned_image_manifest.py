@@ -5,6 +5,7 @@ from contextlib import redirect_stdout
 from io import StringIO
 import json
 from pathlib import Path
+import sqlite3
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -97,6 +98,60 @@ class OperatorImageImportTests(unittest.TestCase):
         self.source.write_bytes(b'x' * 262145)
         with self.assertRaises(ValueError):
             load_approved_image_manifest(self.source)
+
+    def test_operator_can_immediately_remove_approved_image_through_cli(self):
+        self.write(manifest())
+        with patch('sys.argv', ['native_search', 'import-images-json',
+                                '--db', str(self.db), '--input', str(self.source)]):
+            with redirect_stdout(StringIO()):
+                main()
+        target = manifest()['images'][0]['media_url']
+        with patch('sys.argv', ['native_search', 'remove-image', '--db', str(self.db),
+                                '--media-url', target]):
+            with redirect_stdout(StringIO()) as output:
+                main()
+        self.assertEqual({'removed': True, 'owned_images': 0}, json.loads(output.getvalue()))
+        self.assertNotIn(target, output.getvalue())
+        with SearchIndex(self.db) as index:
+            self.assertEqual([], index.search_images('orchid'))
+        with patch('sys.argv', ['native_search', 'remove-image', '--db', str(self.db),
+                                '--media-url', target]):
+            with redirect_stdout(StringIO()) as output:
+                main()
+        self.assertEqual({'removed': False, 'owned_images': 0}, json.loads(output.getvalue()))
+
+    def test_missing_or_symlink_takedown_database_fails_without_creating_index(self):
+        self.assertFalse(self.db.exists())
+        target = manifest()['images'][0]['media_url']
+        with patch('sys.argv', ['native_search', 'remove-image', '--db', str(self.db),
+                                '--media-url', target]):
+            with redirect_stdout(StringIO()), self.assertRaises(SystemExit) as caught:
+                main()
+        self.assertEqual(2, caught.exception.code)
+        self.assertFalse(self.db.exists())
+
+        with SearchIndex(self.db):
+            pass
+        symlink = self.root / 'link.db'
+        symlink.symlink_to(self.db)
+        with patch('sys.argv', ['native_search', 'remove-image', '--db', str(symlink),
+                                '--media-url', target]):
+            with redirect_stdout(StringIO()), self.assertRaises(SystemExit) as caught:
+                main()
+        self.assertEqual(2, caught.exception.code)
+
+    def test_takedown_never_adds_search_tables_to_an_unrelated_sqlite_file(self):
+        unrelated = self.root / 'unrelated.sqlite'
+        with sqlite3.connect(unrelated) as database:
+            database.execute('CREATE TABLE unrelated(value TEXT)')
+        with patch('sys.argv', ['native_search', 'remove-image', '--db', str(unrelated),
+                                '--media-url', manifest()['images'][0]['media_url']]):
+            with redirect_stdout(StringIO()), self.assertRaises(SystemExit) as caught:
+                main()
+        self.assertEqual(2, caught.exception.code)
+        with sqlite3.connect(unrelated) as database:
+            self.assertEqual(['unrelated'], [row[0] for row in database.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'")])
 
 
 if __name__ == '__main__':

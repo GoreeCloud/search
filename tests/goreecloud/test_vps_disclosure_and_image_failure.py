@@ -70,6 +70,9 @@ class VPSDisclosureAndImageFailureTests(unittest.TestCase):
         self.assertIn('#results:has(#urls.goreecloud-image-results .goreecloud-empty-state)', css)
         self.assertIn('grid-template-columns: minmax(0, 1fr) minmax(245px, 285px);', css)
         self.assertIn('max-width: none; box-sizing: border-box;', css)
+        self.assertIn('grid-template-columns: minmax(0, 1fr);', css)
+        self.assertIn('grid-column: 1; grid-row: 3;', css)
+        self.assertNotIn('html[data-glaze-consumer] body.results_endpoint #results:has(#urls.goreecloud-image-results .goreecloud-empty-state)', css)
 
 
 if __name__ == '__main__':

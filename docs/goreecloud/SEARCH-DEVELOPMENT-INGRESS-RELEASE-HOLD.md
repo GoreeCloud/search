@@ -1,6 +1,12 @@
 # GoreeCloud Search — Development Ingress Security and Public Release Hold
 
-**Scope:** private Search Development source admission; not a live-service or public-release certificate.
+**Document type:** Engineering security/release hold | **Owner:** GoreeCloud |
+**Status:** Active Development, not release-qualified | **Revision:** 0.2 |
+**Verified:** October 24, 2026 (source guard and read-only network checks) |
+**Canonical source:** `docs/goreecloud/SEARCH-DEVELOPMENT-INGRESS-RELEASE-HOLD.md`
+
+**Scope:** private Search Development source admission and independently verified
+public-host configuration gap; not a live-service or public-release certificate.
 **Authority:** GoreeCloud's current operating instructions, current repository configuration, and governed release lifecycle.
 
 ## Two distinct hostnames
@@ -36,6 +42,14 @@ guard also backs the `unique_netbird_only_host` check of the established
 gateway phases. The surrounding preflight retains its independent exact-image,
 snapshot, owner, network, volume and provider-profile checks.
 
+The optional `--require-public-host` mode also rejects configurations without
+an exact separate `search.goreecloud.com` block. A narrowly validated static
+503 maintenance response with usable TLS, or a distinctly public/prod-named
+backend, may pass **structural** admission. Redirects, catchalls, private Search
+upstreams, aliases and a false-success 200 placeholder cannot. This opt-in
+check does not provision DNS, issue certificates, qualify a public image, or
+authorize a cutover. The default check remains private-only.
+
 Adversarial fixtures deliberately reject a bypassing site-level proxy,
 public-client fallback proxy, malformed 403, altered NetBird mask, duplicate
 handler, unexpected Caddy route/log directives, duplicate host alias,
@@ -64,7 +78,27 @@ Before any public service or Dev promotion, retain the separate requirements:
    public exposure; do not infer public readiness from CI or a green static
    gate.
 
-**Current finding:** Only repository-source inspection and synthetic offline
-tests are covered here. No DNS, NetBird policy, Caddy instance, running
-container, public endpoint, provider account or user traffic was changed or
-tested by this source milestone.
+## Verified read-only network findings
+
+From the connected NetBird laptop and primary VPS, with no configuration
+changes, the public `search.goreecloud.com` A record resolved to
+`135.148.45.22`, with no public AAAA returned. Plain HTTP returned a 308
+redirect to HTTPS; HTTPS reached the public VPS but failed its TLS handshake.
+The running Caddy container used the mounted `/srv/docker/caddy/Caddyfile`,
+which had **no `search.goreecloud.com` site block**. This is a concrete
+public-ingress configuration gap, not evidence of a qualified public backend.
+
+The NetBird-only `search-dev.goreecloud.com/readyz` returned HTTP 200 with
+valid TLS from the authorized laptop. The same hostname pinned to the VPS's
+public IPv4 returned HTTP 403 with valid TLS. No public IPv6 endpoint was
+observed; independent IPv6 denial remains **unverified**, not passed. The
+source-only acceptance probe and static Caddy check cannot replace exact
+running-config adaptation, live TLS issuance, public backend qualification,
+dual-stack route testing where applicable, rollback or production acceptance.
+
+**Current release hold:** Keep Development private. Before any live public
+host mutation, prepare and validate a separately named Caddy site, initially
+serving a truthful HTTP 503 if no qualified public backend exists; preserve a
+validated backup/rollback and recheck every existing host after a staged reload.
+No DNS, NetBird policy, Caddy instance, running container, provider account,
+certificate or user traffic was modified by this source milestone.

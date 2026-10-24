@@ -1,7 +1,7 @@
 # GoreeCloud Search — deterministic result-quality benchmark
 
 **Document type:** Development quality gate | **Owner:** GoreeCloud |
-**Status:** Active Development, not release-qualified | **Revision:** 0.3 |
+**Status:** Active Development, not release-qualified | **Revision:** 0.4 |
 **Verified source:** GoreeCloud Search Development candidate, October 24, 2026 |
 **Canonical source:** `docs/goreecloud/SEARCH-QUALITY-BENCHMARK.md`
 
@@ -21,7 +21,8 @@ Run from the Search repository root:
 
 ```bash
 python3 -m scripts.search_quality_benchmark \
-  tests/goreecloud/fixtures/search_quality/images_multi_source.json
+  tests/goreecloud/fixtures/search_quality/images_multi_source.json \
+  tests/goreecloud/fixtures/search_quality/query_relevance_synthetic.json
 python3 -m unittest discover -s tests/goreecloud -p 'test_search_quality_benchmark.py' -v
 ```
 
@@ -39,7 +40,8 @@ measurement of actual web, shopping or image quality.
 
 ## Evidence contract and pass/fail semantics
 
-Each fixture is bounded and has exactly five root fields:
+Each fixture is bounded and has five required root fields and one optional,
+strictly synthetic relevance-token field:
 
 | Field | Meaning |
 | --- | --- |
@@ -48,6 +50,7 @@ Each fixture is bounded and has exactly five root fields:
 | `sources` | Unique sanitized source IDs with explicit `ok`, `empty`, `timeout`, `rate_limited`, `access_denied` or `error` states. Only `ok` can contain candidate cards; errors may not disguise partial results as success. |
 | `relevant` | A small, hand-judged set of result URLs; for Images, the asset URLs rather than hosting-page URLs. |
 | `gates` | Minimum diversity, unique result count, relevant@10, recall@10, maximum images without original-media IDs, optional distinct top-ten discovery-source count (`min_sources_with_unique_at_10`), optional integer first-relevant reciprocal-rank percentage (`min_reciprocal_rank_percent_at_10`), and optional full-source-health requirement. |
+| `synthetic_terms` (optional) | One to eight **invented**, unique lowercase ASCII alphabetic tokens, each 2-32 letters. Used only in memory to exercise the bounded query-aware ranker; never a captured user query, search-history log or external-provider request. |
 
 The evaluator emits only aggregate counts, source IDs and fixed failure codes:
 
@@ -73,6 +76,11 @@ The evaluator emits only aggregate counts, source IDs and fixed failure codes:
   `insufficient_first_relevant_rank_at_10`; a high recall@10 cannot hide all
   useful results at the bottom of the first page. This is an offline position
   check, **not** evidence of real-provider result relevance.
+- `query_aware_ranking` is a boolean confirming that the optional synthetic
+  relevance tokens were applied. The pinned two-source Orchid example must
+  pass the first-relevant-rank threshold of 100% when tokens are supplied and
+  fail that same gate when tokens are removed. This checks that the query
+  signal is actually exercised; it does not measure semantic quality.
 
 For Videos, judged result matching now uses the same conservative canonical
 identity as the owned fusion engine: proven-identical YouTube watch, Shorts,
@@ -82,10 +90,11 @@ assumes two different video URLs are equivalent without a validated identity.
 
 An executable gate requires positive minimum relevance, diversity, results and
 recall thresholds; zero-threshold "success" cannot bypass the quality checks.
-No user query, URL, title, page, media data, file path or provider response
-body is included in the CLI output. Unexpected fixture keys (including raw
-queries), malformed source identities, unsafe URLs, contradictory source
-statuses, duplicate judgments and oversized fixtures are rejected.
+No user query, synthetic token, URL, title, page, media data, file path or
+provider response body is included in the CLI output. Unexpected fixture keys
+(including raw queries), malformed or oversized synthetic token lists,
+malformed source identities, unsafe URLs, contradictory source statuses,
+duplicate judgments and oversized fixtures are rejected.
 
 CLI exit codes: `0` = all offline fixture gates passed; `1` = legitimate but
 poor quality; `2` = malformed/untrusted fixture; `64` = no fixture supplied.
