@@ -4,6 +4,7 @@
 import asyncio
 from dataclasses import asdict
 import unittest
+from unittest.mock import patch
 
 from native_search.dispatch import (
     ProviderBinding, ProviderRights, dispatch_fusion as real_dispatch_fusion,
@@ -142,22 +143,46 @@ class DispatchTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(started), 1)
 
     async def test_queued_fast_adapters_receive_full_deadline_after_start(self):
+        # Assert the *placement* of per-provider wait_for, not near-expired
+        # wall-clock sleeps. Heavy parallel CI can starve even healthy adapters
+        # beyond a 60-ms timer, causing a false failure unrelated to whether
+        # queued providers received their own full deadline after admission.
         started = []
+        first_wave_started = asyncio.Event()
+        release_first_wave = asyncio.Event()
+        deadlines_started = []
+        native_wait_for = asyncio.wait_for
 
-        async def source(query, category, limit):
-            import asyncio as aio
-            task_id = aio.current_task().get_name()
-            started.append(task_id)
-            # Each adapter stays within its personal 60-ms deadline, while
-            # the total two-wave request lasts over that limit.
-            await aio.sleep(0.045)
-            return []
+        async def observed_wait_for(awaitable, *, timeout):
+            deadlines_started.append(timeout)
+            return await native_wait_for(awaitable, timeout=timeout)
 
-        response = await dispatch_fusion('fixture', category='web',
-                                         providers=[binding('p%d' % i, source)
-                                                    for i in range(4)],
-                                         timeout_seconds=0.06, max_concurrency=2)
+        def adapter(number):
+            async def source(_query, _category, _limit):
+                started.append(number)
+                if number < 2:
+                    if len(started) == 2:
+                        first_wave_started.set()
+                    await release_first_wave.wait()
+                return []
+            return source
+
+        with patch('native_search.dispatch.asyncio.wait_for', observed_wait_for):
+            task = asyncio.create_task(dispatch_fusion(
+                'fixture', category='web',
+                providers=[binding('p%d' % i, adapter(i)) for i in range(4)],
+                timeout_seconds=3, max_concurrency=2))
+            try:
+                await first_wave_started.wait()
+                # The queued p2/p3 adapters may not acquire a slot yet; no
+                # provider deadline can start while both slots are held.
+                await asyncio.sleep(0)
+                self.assertEqual(2, len(deadlines_started))
+            finally:
+                release_first_wave.set()
+            response = await task
         self.assertEqual(len(started), 4)
+        self.assertEqual(4, len(deadlines_started))
         self.assertEqual([p.status for p in response.providers], ['empty'] * 4)
         self.assertEqual(response.status, 'empty')
 

@@ -29,6 +29,8 @@ def main() -> None:
     serve = commands.add_parser('serve', help='Serve the native index on 127.0.0.1 only')
     serve.add_argument('--db', required=True)
     serve.add_argument('--port', type=int, default=8789)
+    serve.add_argument('--fusion-fixture', type=Path,
+                       help='Explicit offline synthetic fusion preview (never live provider results)')
     crawl = commands.add_parser('crawl', help='Explicitly enable bounded, policy-respecting HTTPS crawling')
     crawl.add_argument('--db', required=True)
     crawl.add_argument('--allow-network', action='store_true', required=True)
@@ -64,8 +66,12 @@ def main() -> None:
                 index.add(url=doc['url'], title=doc['title'], body=doc['body'])
             print(json.dumps({'indexed': index.count()}))
     elif args.command == 'serve':
+        from .fixture_provider import load_synthetic_fixture
+
+        providers = load_synthetic_fixture(args.fusion_fixture) if args.fusion_fixture else ()
         with SearchIndex(args.db) as index:
-            run_loopback(index, port=args.port)
+            run_loopback(index, port=args.port, fusion_providers=providers,
+                         allow_synthetic_fixtures=bool(args.fusion_fixture))
 
 
 if __name__ == '__main__':

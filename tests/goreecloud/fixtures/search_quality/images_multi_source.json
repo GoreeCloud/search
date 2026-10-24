@@ -29,6 +29,7 @@
   "gates": {
     "min_distinct": 4,
     "min_contributing_sources": 2,
+    "min_sources_with_unique_at_10": 2,
     "min_relevant_at_10": 3,
     "min_recall_percent_at_10": 100,
     "max_missing_image_media": 0,

@@ -28,6 +28,8 @@ class SearchQualityBenchmarkTests(unittest.TestCase):
         self.assertEqual(4, result['distinct_results'])
         self.assertEqual(2, result['collapsed_duplicates'])
         self.assertEqual(2, result['contributing_sources'])
+        self.assertEqual(2, result['sources_with_unique_at_10'])
+        self.assertEqual(2, result['unique_results_at_10'])
         self.assertEqual(3, result['relevant_at_10'])
         self.assertEqual(100, result['recall_percent_at_10'])
         self.assertEqual(30, result['precision_percent_at_10'])
@@ -44,6 +46,71 @@ class SearchQualityBenchmarkTests(unittest.TestCase):
         self.assertIn('insufficient_contributing_sources', result['failed_gates'])
         self.assertIn('source_degraded', result['failed_gates'])
         self.assertNotIn('synthetic_b.jpg', str(result))
+
+    def test_two_mirrored_sources_do_not_count_as_independent_discovery(self):
+        fixture = images()
+        fixture['sources'][1]['results'] = [dict(row) for row in
+                                          fixture['sources'][0]['results']]
+        fixture['relevant'] = [
+            'https://assets.example.test/a.jpg',
+            'https://assets.example.test/b.jpg',
+            'https://assets.example.test/c.jpg',
+        ]
+        fixture['gates']['min_distinct'] = 3
+        fixture['gates']['min_sources_with_unique_at_10'] = 1
+        outcome = quality.evaluate_fixture(fixture)
+        self.assertEqual(2, outcome['contributing_sources'])
+        self.assertEqual(0, outcome['sources_with_unique_at_10'])
+        self.assertEqual(0, outcome['unique_results_at_10'])
+        self.assertFalse(outcome['passed'])
+        self.assertEqual(['insufficient_unique_source_discovery_at_10'],
+                         outcome['failed_gates'])
+
+    def test_images_with_distinct_discoveries_from_both_sources_pass_gate(self):
+        fixture = images()
+        fixture['gates']['min_sources_with_unique_at_10'] = 2
+        outcome = quality.evaluate_fixture(fixture)
+        self.assertTrue(outcome['passed'])
+        self.assertEqual(2, outcome['sources_with_unique_at_10'])
+
+    def test_video_relevance_judgments_merge_canonical_video_variants(self):
+        clip = 'aBc_123-XyZ'
+        fixture = {
+            'development_only': True, 'category': 'videos',
+            'sources': [
+                {'source': 'synthetic_alpha', 'state': 'ok', 'results': [
+                    {'rank': 1, 'url': 'https://www.youtube.com/watch?v=' + clip,
+                     'title': 'Synthetic clip'},
+                    {'rank': 2, 'url': 'https://videos.example.test/clip-one',
+                     'title': 'Independent video one'},
+                ]},
+                {'source': 'synthetic_beta', 'state': 'ok', 'results': [
+                    {'rank': 1, 'url': 'https://youtu.be/' + clip,
+                     'title': 'Same synthetic clip'},
+                    {'rank': 2, 'url': 'https://videos.example.test/clip-two',
+                     'title': 'Independent video two'},
+                ]},
+            ],
+            'relevant': [
+                'https://youtube.com/shorts/' + clip,
+                'https://videos.example.test/clip-two',
+            ],
+            'gates': {
+                'min_distinct': 3, 'min_contributing_sources': 2,
+                'min_relevant_at_10': 2, 'min_recall_percent_at_10': 100,
+                'max_missing_image_media': 0,
+                'min_sources_with_unique_at_10': 2,
+                'require_all_sources_healthy': True,
+            },
+        }
+        outcome = quality.evaluate_fixture(fixture)
+        self.assertTrue(outcome['passed'])
+        self.assertEqual(4, outcome['candidate_count'])
+        self.assertEqual(3, outcome['distinct_results'])
+        self.assertEqual(1, outcome['collapsed_duplicates'])
+        self.assertEqual(2, outcome['relevant_at_10'])
+        self.assertEqual(100, outcome['recall_percent_at_10'])
+        self.assertEqual(2, outcome['sources_with_unique_at_10'])
 
     def test_explicit_empty_is_not_upstream_failure_but_lowers_coverage(self):
         fixture = images()
@@ -156,6 +223,12 @@ class SearchQualityBenchmarkTests(unittest.TestCase):
         variants.append(bad)
         bad = deepcopy(fixture)
         bad['gates']['require_all_sources_healthy'] = 1
+        variants.append(bad)
+        bad = deepcopy(fixture)
+        bad['gates']['min_sources_with_unique_at_10'] = 13
+        variants.append(bad)
+        bad = deepcopy(fixture)
+        bad['gates']['min_sources_with_unique_at_10'] = 3
         variants.append(bad)
         for index, doc in enumerate(variants):
             with self.subTest(index=index), self.assertRaises(

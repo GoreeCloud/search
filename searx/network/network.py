@@ -411,6 +411,15 @@ class Network:
                 raise ProxyError('Search provider egress blocked: per-request transport override')
             if not safe_external_media_url(url):
                 raise ProxyError('Search provider egress blocked: unsafe HTTPS destination')
+            # curl's IDNA mapping can differ from Python's ``idna`` codec
+            # (for example, ß can map to either ``ss`` or ``xn--...``).
+            # A mismatched hostname could miss CURLOPT_RESOLVE's vetted DNS
+            # pin and trigger a fresh resolution. Provider endpoints use
+            # ASCII DNS names; reject Unicode authorities before either the
+            # resolver or the client sees them. Unicode paths/queries remain
+            # valid, so multilingual search terms still work.
+            if not urlsplit(url).netloc.isascii():
+                raise ProxyError('Search provider egress blocked: non-ASCII authority')
             # Never follow provider redirects to an unvalidated host, even on
             # the direct-HTTPS free-first profile.
             kwargs['allow_redirects'] = False
