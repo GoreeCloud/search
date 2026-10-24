@@ -1,8 +1,8 @@
 # GoreeCloud Search Fusion Engine - Development integration contract
 
 **Document type:** Engineering contract | **Owner:** GoreeCloud |
-**Status:** Active Development, not release-qualified | **Revision:** 0.2 |
-**Verified source:** GoreeCloud Search Development candidate, October 23, 2026 |
+**Status:** Active Development, not release-qualified | **Revision:** 0.3 |
+**Verified source:** GoreeCloud Search Development candidate, October 24, 2026 |
 **Canonical source:** `docs/goreecloud/FUSION-ENGINE-CONTRACT.md`
 
 **Stage:** Development-only experimental source on the GoreeCloud Search
@@ -25,12 +25,16 @@ query-free per-provider health states (`blocked`, `ok`, `empty`, `timeout`,
 `failed`). It neither ships provider adapters nor authorizes provider use.
 
 `native_search/api.py` exposes `POST /v1/fusion` on the Linux-native service's
-existing `127.0.0.1` listener. A normal service has **no configured external
-providers** and returns HTTP 503 from this route. A developer must explicitly
-start the service with `--fusion-fixture /absolute/path/to/synthetic.json` to
-admit strictly bounded, local synthetic cards for an offline preview. The
-response combines source cards in a single category and reports only bounded,
-query-free result cards and provider states; it is not live metasearch.
+existing `127.0.0.1` listener. The default **Web** category now automatically
+fuses results from GoreeCloud's own local SQLite FTS5 index through a sealed,
+built-in `goreecloud_index` adapter. Its indexed documents remain local and
+no external provider is configured or contacted by default. Other categories
+(`images`, `videos`, `news`) still return HTTP 503 from this route when they
+have no configured providers. A developer must explicitly start the service
+with `--fusion-fixture /absolute/path/to/synthetic.json` to admit strictly
+bounded, local synthetic cards for an offline preview. The response combines
+source cards in one category and reports only bounded, query-free result
+cards and provider states; it is not live metasearch.
 
 ## v1 offline dispatcher boundaries
 
@@ -44,6 +48,13 @@ query-free result cards and provider states; it is not live metasearch.
   assertion. A code flag is not independent legal permission, nor is a
   synthetic fixture rights grant permission for Google, Bing, Brave, or any
   other real upstream.
+- First-party Web index admission is separate from the external-rights gate:
+  source identity `goreecloud_index`, evidence marker
+  `goreecloud-local-sqlite-fts5`, the exact built-in `OwnedIndexAdapter` type,
+  and `owned_index` rights must all match. No caller may register an external
+  adapter with that reserved identity. The local adapter performs no outbound
+  fetch and is limited to the Web category; a token that merely claims
+  `owned_index` cannot authorize a network source.
 - Up to eight named providers may be registered; each can return at most 40
   `SourceResult` cards, with at most four concurrent calls **within one
   invocation**. The current Linux-native HTTPServer has one synchronous
@@ -73,7 +84,8 @@ query-free result cards and provider states; it is not live metasearch.
   produced no publishable results. Only the isolated native loopback adapter
   exposes this as Development JSON. This is **not** a public route or a
   promise of user-facing production behavior.
-- Inputs and test fixtures are synthetic and offline. The currently deployed
+- The native fusion service may read the owner's local FTS5 index for Web;
+  synthetic provider fixtures remain offline and opt-in. The currently deployed
   SearXNG-derived Development site, Caddy ingress, public host and source
   provider configuration are unchanged; a new unshipped `.pyz` candidate
   contains the native offline fusion route.
@@ -127,8 +139,9 @@ query-free result cards and provider states; it is not live metasearch.
    and (separately authorized) real relevance corpus. Add query relevance,
    recency, quality/spam, domain diversity, language and visual/media
    similarity signals only after correctness and benchmark evidence.
-5. **Runtime:** A real loopback-owned `POST /v1/fusion` exists for synthetic
-   Development data. It is not the deployed public Search service. Provide
+5. **Runtime:** A real loopback-owned `POST /v1/fusion` exists for local-index
+   Web results and optional synthetic Development data. It is not the deployed
+   public Search service. Provide
    load, stalled-client, recovery, rate limiting, security, authentication,
    privacy, observability and rollback acceptance on the exact candidate
    before any public or supported-native-OS release claim.
@@ -136,6 +149,6 @@ query-free result cards and provider states; it is not live metasearch.
 Offline tests: `python3 -m unittest discover -s tests/native -p test_fusion.py -v`.
 Dispatch tests: `python3 -m unittest discover -s tests/native -p test_dispatch.py -v`.
 The candidate native Linux `.pyz` allowlist now includes the owned fusion,
-dispatch and synthetic-fixture modules. Local package tests and source-revision
+dispatch, sealed index-provider and synthetic-fixture modules. Local package tests and source-revision
 checks do not substitute for install, systemd lifecycle, signed-distribution,
 upgrade, real-provider, or live ingress acceptance.

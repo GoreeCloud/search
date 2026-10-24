@@ -6,19 +6,23 @@ query to an actual upstream provider. Screenshot fixtures contain no user data.
 from __future__ import annotations
 
 import os
+import json
+from collections import Counter
 from pathlib import Path
 import secrets
 import sys
-from threading import Thread
+from threading import Lock, Thread
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from werkzeug.serving import make_server
-from flask import request
+from flask import Response, abort, request
+
+from browser_image_fixtures import (IMAGE_GALLERY_COUNT, IMAGE_FIXTURE_ORIGIN,
+                                    image_fixture_index, synthetic_image_png)
 
 ROOT = Path(__file__).resolve().parents[2]
-IMAGE_GALLERY_COUNT = 16  # Must exceed the image-preview control's >12 render threshold.
 sys.path.insert(0, str(ROOT))  # direct-script CI launch from nested tests directory
 os.environ["SEARXNG_SETTINGS_PATH"] = str(ROOT / "configs/goreecloud/settings.yml")
 os.environ["SEARXNG_SECRET"] = secrets.token_hex(32)
@@ -96,33 +100,16 @@ class SyntheticBrowserResultsCollection(SyntheticBrowserSearch):
 
 
 class SyntheticBrowserImageResultsCollection(SyntheticBrowserSearch):
-    """Real image-result templates backed only by inline PNG fixture bytes."""
+    """Image cards with signed same-origin proxy URLs, NEVER external fetches."""
 
     def search(self):
-        import base64
-        import struct
-        import zlib
-
         response = super().search()
-
-        def sample_png(index: int) -> str:
-            # A locally generated 4x3 RGB PNG; never fetches a remote asset.
-            color = ((index * 39) % 205 + 35, (index * 71) % 205 + 35, (index * 101) % 205 + 35)
-            scanline = b"\x00" + bytes(color) * 4
-            pixels = scanline * 3
-
-            def chunk(kind: bytes, payload: bytes) -> bytes:
-                return (struct.pack(">I", len(payload)) + kind + payload +
-                        struct.pack(">I", zlib.crc32(kind + payload) & 0xffffffff))
-
-            png = (b"\x89PNG\r\n\x1a\n" +
-                   chunk(b"IHDR", struct.pack(">IIBBBBB", 4, 3, 8, 2, 0, 0, 0)) +
-                   chunk(b"IDAT", zlib.compress(pixels)) + chunk(b"IEND", b""))
-            return "data:image/png;base64," + base64.b64encode(png).decode("ascii")
 
         images = []
         for i in range(1, IMAGE_GALLERY_COUNT + 1):
-            img = sample_png(i)
+            # The browser receives only signed /image_proxy URLs; a temporary
+            # Flask view below returns the local pixels, without outbound I/O.
+            img = f'{IMAGE_FIXTURE_ORIGIN}{i:02d}.png'
             result = LegacyResult(
                 title=f"Synthetic gallery image {i}",
                 url=f"https://example.org/offline-image-{i}",
@@ -282,6 +269,12 @@ def main() -> None:
     driver = None
     try:
         driver = webdriver.Chrome(options=options)
+        # Fail closed if a gallery regression bypasses /image_proxy: synthetic
+        # remote-looking fixture origins are blocked at the browser boundary.
+        driver.execute_cdp_cmd('Network.enable', {})
+        driver.execute_cdp_cmd('Network.setBlockedURLs', {
+            'urls': [f'{IMAGE_FIXTURE_ORIGIN}*'],
+        })
         url = f"http://127.0.0.1:{server.server_port}/"
         artifacts = ROOT / "artifacts" / "search-browser"
         artifacts.mkdir(parents=True, exist_ok=True)
@@ -667,10 +660,29 @@ def main() -> None:
         print('PASS desktop 2-column results and mobile stacked cards, 8 synthetic results, no provider traffic')
 
 
-        # Render actual image-result cards (not generic search results), checking
-        # the responsive thumbnail grid and upstream detail viewer without
-        # real search or image network traffic.
-        with patch('searx.search.SearchWithPlugins', SyntheticBrowserImageResultsCollection):
+        # Accept the actual browser-rendered Images route and its same-origin
+        # signed /image_proxy flow. This temporary view serves synthetic PNGs;
+        # neither Chrome nor SearXNG contacts a live search/image provider.
+        proxy_seen = Counter()
+        proxy_lock = Lock()
+
+        def synthetic_image_proxy():
+            raw = request.args.get('url', '')
+            index = image_fixture_index(raw)
+            if index is None or not request.args.get('h'):
+                abort(404)
+            with proxy_lock:
+                proxy_seen[index] += 1
+            return Response(synthetic_image_png(index), mimetype='image/png', headers={
+                'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+            })
+
+        image_measurements = []
+        image_report = {'scope': 'synthetic-loopback-only',
+                        'owner_mockup_fidelity_accepted': False,
+                        'measurements': image_measurements}
+        with (patch('searx.search.SearchWithPlugins', SyntheticBrowserImageResultsCollection),
+              patch.dict(app.view_functions, {'image_proxy': synthetic_image_proxy})):
             for width, height, label in ((1440, 900, 'desktop'), (390, 844, 'phone'), (320, 760, 'phone-small')):
                 driver.set_window_size(width, height)
                 driver.get(url)
@@ -701,7 +713,11 @@ def main() -> None:
                         distinctX:widths.size, viewport:document.documentElement.clientWidth,
                         scroll:document.documentElement.scrollWidth,
                         cardWidth:cr[0].width, imageWidth:image.getBoundingClientRect().width,
-                        inlineImages:cards.every(c=>c.querySelector('img.image_thumbnail').src.startsWith('data:image/png;base64,')),
+                        proxiedImages:cards.every(c=>{
+                            const image=c.querySelector('img.image_thumbnail');
+                            const src=new URL(image.currentSrc || image.src, location.href);
+                            return src.origin===location.origin && src.pathname==='/image_proxy';
+                        }),
                         tileTitles:cards.every(c=>!!c.querySelector('span.title')?.textContent?.trim()),
                         captionsBelow:cards.every(c=>{
                             let i=c.querySelector('img.image_thumbnail').getBoundingClientRect();
@@ -728,12 +744,7 @@ def main() -> None:
                 assert geometry['gcConsumer'] == 'goreecloud-search', (label, geometry)
                 assert geometry['imageLoadButton'] and geometry['imageLoadTarget'] >= 44, (label, geometry)
                 assert geometry['targetToken'] == '44px', (label, geometry)
-                assert geometry['inlineImages'], (label, geometry)
-                WebDriverWait(driver, 5).until(
-                    lambda page: page.execute_script(
-                        "return [...document.querySelectorAll('#urls article.result-images img.image_thumbnail')].slice(0,2).every(img => img.complete && img.naturalWidth > 0)"
-                    )
-                )
+                assert geometry['proxiedImages'], (label, geometry)
                 assert geometry['tileTitles'], (label, geometry)
                 assert geometry['captionsBelow'] and geometry['badgesCompact'], (label, geometry)
                 if label != 'desktop':
@@ -744,7 +755,95 @@ def main() -> None:
                     assert geometry['distinctX'] >= 4, (label, geometry)
                 else:
                     assert geometry['distinctX'] == 2, (label, geometry)
+                # Real pointer activation must request any remaining lazy
+                # thumbnails. It is valid for Chrome to have already loaded
+                # some or all thumbnails while filling the first viewport.
+                load_all = driver.find_element(By.ID, 'goreecloud-image-load-all')
+                driver.execute_script(
+                    "arguments[0].scrollIntoView({block:'center',behavior:'instant'})", load_all
+                )
+                load_all.click()
+                WebDriverWait(driver, 12).until(
+                    lambda page: page.find_element(By.ID, 'goreecloud-image-load-all').get_attribute('disabled')
+                    and page.find_element(By.ID, 'goreecloud-image-load-all').text == 'Previews requested'
+                )
+                WebDriverWait(driver, 12).until(
+                    lambda page: page.execute_script("""
+                        const imgs=[...document.querySelectorAll('#urls article.result-images img.image_thumbnail')];
+                        return imgs.length === arguments[0] && imgs.every(img => img.complete);
+                    """, IMAGE_GALLERY_COUNT)
+                )
+                # naturalWidth alone is metadata, not proof that Chrome can
+                # decode an image. Real decode() must resolve on every image.
+                decoded = driver.execute_async_script("""
+                    const done=arguments[arguments.length-1];
+                    const imgs=[...document.querySelectorAll('#urls article.result-images img.image_thumbnail')];
+                    Promise.all(imgs.map(img => img.decode().then(() => true, () => false)))
+                        .then(done, () => done([]));
+                """)
+                rendering = driver.execute_script("""
+                    const imgs=[...document.querySelectorAll('#urls article.result-images img.image_thumbnail')];
+                    const cards=[...document.querySelectorAll('#urls article.result-images')];
+                    const root=document.documentElement;
+                    const rects=cards.map(card => card.getBoundingClientRect());
+                    const imageRects=imgs.map(img => img.getBoundingClientRect());
+                    const seenColumns=new Set(rects.map(rect => Math.round(rect.left)));
+                    const externalImages=performance.getEntriesByType('resource').filter(entry => {
+                        if (entry.initiatorType !== 'img') return false;
+                        try { return new URL(entry.name).origin !== location.origin; }
+                        catch { return true; }
+                    });
+                    const status=document.getElementById('goreecloud-image-load-status');
+                    return {
+                        viewport_width:root.clientWidth,
+                        viewport_height:innerHeight,
+                        page_scroll_width:root.scrollWidth,
+                        card_count:cards.length,
+                        image_count:imgs.length,
+                        loaded_count:imgs.filter(img => img.complete && img.naturalWidth===4 && img.naturalHeight===3).length,
+                        unavailable_count:cards.filter(card => card.classList.contains('goreecloud-thumbnail-unavailable')).length,
+                        // On a 320px device two 4:3 image columns have ~126px
+                        // previews with ~95px heights. Check responsive
+                        // dimensions/aspect ratio, not a desktop height floor.
+                        visible_image_count:imageRects.filter(rect => rect.width>=100 &&
+                            rect.height>=70 && rect.height/rect.width>=0.70 &&
+                            rect.height/rect.width<=0.85).length,
+                        grid_columns:seenColumns.size,
+                        minimum_card_width:Math.round(Math.min(...rects.map(rect => rect.width))),
+                        minimum_image_width:Math.round(Math.min(...imageRects.map(rect => rect.width))),
+                        minimum_image_height:Math.round(Math.min(...imageRects.map(rect => rect.height))),
+                        external_image_requests:externalImages.length,
+                        previews_action_finished:!!status && /of \\d+ additional previews checked \\(\\d+ loaded, \\d+ unavailable\\)\\./.test(status.textContent),
+                        previews_action_disabled:document.getElementById('goreecloud-image-load-all').disabled
+                    };
+                """)
+                with proxy_lock:
+                    unique_proxy_fixtures = len(proxy_seen)
+                image_measurements.append({'viewport': label, **rendering,
+                                           'decoded_count': sum(bool(ok) for ok in decoded),
+                                           'unique_local_proxy_fixtures': unique_proxy_fixtures})
+                # Preserve observations and screenshot even if a subsequent
+                # acceptance assertion fails, to make CI failures actionable.
+                (artifacts / 'image-acceptance-layout.json').write_text(
+                    json.dumps(image_report, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+                )
+                driver.execute_script('window.scrollTo(0, 0)')
                 driver.save_screenshot(str(artifacts / f'{label}-image-gallery.png'))
+                assert len(decoded) == IMAGE_GALLERY_COUNT and all(decoded), (label, 'PNG decode failed')
+                assert rendering['image_count'] == IMAGE_GALLERY_COUNT, (label, rendering)
+                assert rendering['loaded_count'] == IMAGE_GALLERY_COUNT, (label, rendering)
+                assert rendering['unavailable_count'] == 0, (label, rendering)
+                assert rendering['visible_image_count'] == IMAGE_GALLERY_COUNT, (label, rendering)
+                assert rendering['external_image_requests'] == 0, (label, rendering)
+                assert rendering['previews_action_finished'] and rendering['previews_action_disabled'], (label, rendering)
+                assert rendering['page_scroll_width'] <= rendering['viewport_width'] + 1, (label, rendering)
+                assert rendering['minimum_card_width'] >= 120 and rendering['minimum_image_width'] >= 100, (label, rendering)
+                assert rendering['minimum_image_height'] >= 70, (label, rendering)
+                if label == 'desktop':
+                    assert rendering['grid_columns'] >= 4, (label, rendering)
+                else:
+                    assert rendering['grid_columns'] == 2, (label, rendering)
+                assert unique_proxy_fixtures == IMAGE_GALLERY_COUNT, (label, unique_proxy_fixtures)
                 first = driver.find_element(By.CSS_SELECTOR, '#urls article.result-images')
                 first.find_element(By.CSS_SELECTOR, 'a').click()
                 WebDriverWait(driver, 5).until(
@@ -752,11 +851,43 @@ def main() -> None:
                 )
                 assert driver.current_url.endswith('#image-viewer'), 'Image viewer should open in page'
                 assert not driver.execute_script('return location.search'), 'Image viewer leaked search query'
+                WebDriverWait(driver, 5).until(lambda page: page.execute_script("""
+                    const img=document.querySelector('.result-images[data-vim-selected] .result-images-source img');
+                    return !!img && img.complete && img.naturalWidth===4 && img.naturalHeight===3;
+                """))
+                driver.find_element(By.CSS_SELECTOR,
+                                    '.result-images[data-vim-selected] .result-detail-next').click()
+                WebDriverWait(driver, 5).until(lambda page: page.execute_script("""
+                    const cards=[...document.querySelectorAll('#urls article.result-images')];
+                    return cards[1]?.hasAttribute('data-vim-selected')===true;
+                """))
                 driver.find_element(By.CSS_SELECTOR, '.result-images[data-vim-selected] .result-detail-close').click()
                 WebDriverWait(driver, 5).until(
                     lambda page: 'image-detail-open' not in page.find_element(By.ID, 'results').get_attribute('class')
                 )
-        print(f'PASS desktop and phone image grid, {IMAGE_GALLERY_COUNT} loaded offline PNGs, image details and POST privacy')
+        # Only aggregate fixture counts/layout numbers are exported; neither
+        # user queries nor source/proxy URLs belong in CI screenshots/reports.
+        print('IMAGE ACCEPTANCE', json.dumps(image_report, sort_keys=True), flush=True)
+        step_summary = os.environ.get('GITHUB_STEP_SUMMARY')
+        if step_summary:
+            lines = [
+                '### GoreeCloud Search — synthetic Chrome Images gate',
+                '',
+                '| Viewport | Decoded PNGs | Grid columns | Horizontal overflow | External image requests |',
+                '| --- | ---: | ---: | ---: | ---: |',
+            ]
+            for item in image_measurements:
+                lines.append(
+                    f"| {item['viewport']} | {item['decoded_count']}/{IMAGE_GALLERY_COUNT} | "
+                    f"{item['grid_columns']} | "
+                    f"{item['page_scroll_width'] - item['viewport_width']}px | "
+                    f"{item['external_image_requests']} |"
+                )
+            lines += ['', 'Screenshots and numeric measurements are retained as short-lived CI artifacts.',
+                      'Owner mockup visual fidelity remains unaccepted; synthetic runtime checks only.', '']
+            with Path(step_summary).open('a', encoding='utf-8') as summary:
+                summary.write('\n'.join(lines) + '\n')
+        print(f'PASS desktop and phone image grid, all {IMAGE_GALLERY_COUNT} decoded local proxy PNGs per viewport, image details and POST privacy')
 
         # Category tabs must really submit POST, preserve the original query,
         # and never send it through the browser URL.

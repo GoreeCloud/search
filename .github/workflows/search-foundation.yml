@@ -208,17 +208,22 @@ jobs:
         run: |
           python -m pip install -r requirements.txt
           python -m pip install selenium==4.50.0
-      - name: Verify local homepage at desktop and phone widths
+      - name: Verify deterministic, bounded, strictly offline Images proxy fixtures
+        run: python -m unittest discover -s tests/goreecloud -p test_browser_image_fixtures.py -v
+      - name: Gate real Chrome home, Images proxy/decoding, responsive layout and image viewer
         run: python tests/goreecloud/browser_home_smoke.py
+        timeout-minutes: 15
       - name: Verify private preview native POST, keyboard, responsive and forced-color behavior in Chrome
         run: python tests/goreecloud/browser_preview_smoke.py
         timeout-minutes: 10
-      - name: Retain synthetic UI screenshots for review
+      - name: Retain synthetic Chrome screenshots and numeric-only Images acceptance measurements
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: search-legacy-ui-browser-smoke
-          path: artifacts/search-browser/*.png
+          name: search-synthetic-browser-acceptance
+          path: |
+            artifacts/search-browser/*.png
+            artifacts/search-browser/image-acceptance-layout.json
           retention-days: 7
           if-no-files-found: warn
 

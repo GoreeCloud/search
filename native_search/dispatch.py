@@ -36,9 +36,10 @@ class ProviderRights:
     allow_fusion: bool = False
     allow_display: bool = False
     evidence_reference: str = ''
-    rights_basis: str = 'unverified'  # unverified | synthetic_fixture | contract_reviewed
+    rights_basis: str = 'unverified'  # unverified | synthetic_fixture | owned_index | contract_reviewed
 
-    def admits(self, category: str, *, allow_synthetic_fixtures: bool = False) -> bool:
+    def admits(self, category: str, *, allow_synthetic_fixtures: bool = False,
+               allow_owned_index: bool = False) -> bool:
         return (isinstance(self.categories, frozenset)
                 and self.categories.issubset(SUPPORTED_CATEGORIES)
                 and category in self.categories and type(self.allow_request) is bool
@@ -47,7 +48,8 @@ class ProviderRights:
                 and isinstance(self.evidence_reference, str)
                 and 0 < len(self.evidence_reference.strip()) <= 256
                 and (self.rights_basis == 'contract_reviewed'
-                     or (self.rights_basis == 'synthetic_fixture' and allow_synthetic_fixtures)))
+                     or (self.rights_basis == 'synthetic_fixture' and allow_synthetic_fixtures)
+                     or (self.rights_basis == 'owned_index' and allow_owned_index)))
 
 
 # Each adapter must implement cooperative cancellation, its own bounded HTTPS
@@ -118,6 +120,12 @@ async def dispatch_fusion(
     seen: set[str] = set()
     admitted: list[ProviderBinding] = []
     blocked: dict[str, ProviderOutcome] = {}
+    # Admission for the owned index is tied to an exact built-in, local-only
+    # adapter *type*, identity and evidence marker. An arbitrary network
+    # adapter cannot receive first-party rights by setting a string flag.
+    from .owned_index_provider import (OWNED_INDEX_EVIDENCE, OWNED_INDEX_SOURCE,
+                                       OwnedIndexAdapter)
+
     for binding in providers:
         if (not isinstance(binding, ProviderBinding) or not isinstance(binding.source, str)
                 or not _SOURCE_ID.fullmatch(binding.source)
@@ -125,7 +133,14 @@ async def dispatch_fusion(
                 or not isinstance(binding.rights, ProviderRights)):
             raise ValueError('Invalid or duplicated provider binding')
         seen.add(binding.source)
-        if binding.rights.admits(category, allow_synthetic_fixtures=allow_synthetic_fixtures):
+        verified_owned = (binding.source == OWNED_INDEX_SOURCE
+                          and type(binding.search) is OwnedIndexAdapter
+                          and binding.rights.evidence_reference == OWNED_INDEX_EVIDENCE
+                          and binding.rights.rights_basis == 'owned_index'
+                          and binding.rights.categories == frozenset({'web'}))
+        if (binding.source != OWNED_INDEX_SOURCE or verified_owned) and binding.rights.admits(
+                category, allow_synthetic_fixtures=allow_synthetic_fixtures,
+                allow_owned_index=verified_owned):
             admitted.append(binding)
         else:
             blocked[binding.source] = ProviderOutcome(binding.source, 'blocked')

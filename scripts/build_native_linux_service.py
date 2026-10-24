@@ -33,11 +33,12 @@ SERVICE_FILES = (
     "native_search/fixture_provider.py",
     "native_search/fusion.py",
     "native_search/index.py",
+    "native_search/owned_index_provider.py",
 )
 MAX_SOURCE_BYTES = 500_000
 MANIFEST_NAME = "goreecloud-native-search-build.json"
 ENTRYPOINT = '''# SPDX-License-Identifier: AGPL-3.0-or-later
-"""Loopback native index with optional explicit OFFLINE fusion preview."""
+"""Loopback native index and first-party fusion with optional OFFLINE fixtures."""
 import argparse
 from pathlib import Path
 
@@ -114,6 +115,7 @@ def build_bundle(repo: Path, expected_sha: str) -> bytes:
         "mode": "development_loopback_service_only",
         "included_capabilities": [
             "sqlite_fts5_index", "loopback_http_post_search",
+            "owned_sqlite_fts5_fusion_web",
             "explicit_offline_synthetic_fusion_preview",
         ],
         "excluded_capabilities": [

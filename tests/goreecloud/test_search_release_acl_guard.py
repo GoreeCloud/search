@@ -37,6 +37,8 @@ class SearchReleaseAclGuardTests(unittest.TestCase):
         # because the future public Search hostname exists in the same file.
         separate = SITE.decode() + '\nSEARCH.GOREECLOUD.COM {\n    reverse_proxy goreecloud-search-public-gateway:8080\n}\n'
         self.assertTrue(private_search_ingress_is_safe(separate, OLD))
+        self.assertEqual('admitted_for_manual_cutover_review',
+                         evaluate(source=separate.encode(), snapshot=separate.encode())['status'])
         bad = SITE.decode() + '\n' + PUBLIC + ' {\n    reverse_proxy ' + OLD + '\n}\n'
         self.assertFalse(private_search_ingress_is_safe(bad, OLD))
 
@@ -69,14 +71,24 @@ class SearchReleaseAclGuardTests(unittest.TestCase):
     def test_public_upstream_must_be_statically_separate_not_rewritten(self):
         for public_body in (
             'reverse_proxy goreecloud-search-free-working-gateway:8080',
+            'reverse_proxy goreecloud-search-private-ingress:8080',
+            'reverse_proxy goreecloud-search-dev-app:8080',
+            'reverse_proxy goreecloud-search-staging-frontend:8080',
+            'reverse_proxy goreecloud-search-preview-web:8080',
+            'reverse_proxy goreecloud-search-free-working-ingress-1:8080',
+            'reverse_proxy goreecloud-search-standalone:8080',
+            'reverse_proxy localhost:8080',
             'reverse_proxy {env.DEV_UPSTREAM}',
             'map {host} {target} {\n        default goreecloud-search-free-working-gateway:8080\n    }\n    reverse_proxy {target}',
             'rewrite * /private\n    reverse_proxy goreecloud-search-public-gateway:8080',
             'vars backend goreecloud-search-free-working-gateway:8080\n    reverse_proxy {vars.backend}',
+            'route {\n    reverse_proxy goreecloud-search-public-gateway:8080\n}',
         ):
             with self.subTest(public_body=public_body):
                 candidate = SITE.decode() + '\n' + PUBLIC + ' {\n    ' + public_body + '\n}\n'
                 self.assertFalse(private_search_ingress_is_safe(candidate, OLD))
+                self.assertEqual('blocked_do_not_cutover',
+                                 evaluate(source=candidate.encode(), snapshot=candidate.encode())['status'])
 
     def test_another_site_cannot_reuse_private_gateway_even_with_case_rewrite(self):
         candidate = SITE.decode() + '\nother.example {\n    map {host} {target} {\n        default ' + OLD.upper() + '\n    }\n}\n'
@@ -84,6 +96,39 @@ class SearchReleaseAclGuardTests(unittest.TestCase):
         different_private_gateway = SITE.decode() + (
             '\nother.example {\n    reverse_proxy goreecloud-search-free-working-gateway:8080\n}\n')
         self.assertFalse(private_search_ingress_is_safe(different_private_gateway, OLD))
+
+    def test_other_hosts_cannot_reference_private_non_gateway_backends(self):
+        for upstream in (
+            'goreecloud-search-dev-app:8080',
+            'goreecloud-search-private-ingress:8080',
+            'goreecloud-search-private-ingress:80',
+            'goreecloud-search-private-ingress',
+            'goreecloud-search-staging-worker-1:8080',
+            'goreecloud-search-free-working-ingress-1:8080',
+        ):
+            with self.subTest(upstream=upstream):
+                config = SITE.decode() + '\nother.example {\n    reverse_proxy ' + upstream + '\n}\n'
+                self.assertFalse(private_search_ingress_is_safe(config, OLD))
+                self.assertEqual('blocked_do_not_cutover',
+                                 evaluate(source=config.encode(), snapshot=config.encode())['status'])
+
+    def test_purported_private_site_nested_in_another_vhost_fails_closed(self):
+        nested = 'other.example {\n    ' + SITE.decode().strip() + '\n}\n'
+        self.assertFalse(private_search_ingress_is_safe(nested, OLD))
+        self.assertEqual('blocked_do_not_cutover',
+                         evaluate(source=nested.encode(), snapshot=nested.encode())['status'])
+
+    def test_public_site_must_be_top_level_and_braces_balanced(self):
+        nested = SITE.decode() + '\nother.example {\n    ' + PUBLIC + ' {\n'
+        nested += '        reverse_proxy goreecloud-search-public-gateway:8080\n    }\n}\n'
+        self.assertFalse(private_search_ingress_is_safe(nested, OLD))
+        unmatched = SITE.decode() + '\nother.example {\n'
+        self.assertFalse(private_search_ingress_is_safe(unmatched, OLD))
+
+    def test_expected_development_backend_cannot_be_public_identity(self):
+        private_site = SITE.decode().replace(OLD, 'goreecloud-search-public-gateway:8080')
+        self.assertFalse(private_search_ingress_is_safe(private_site,
+                                                        'goreecloud-search-public-gateway:8080'))
 
     def test_extra_dev_hostname_alias_fails(self):
         bad = SITE.decode() + '\nsearch-dev.goreecloud.com, search.goreecloud.com {\n    respond "ok"\n}\n'
