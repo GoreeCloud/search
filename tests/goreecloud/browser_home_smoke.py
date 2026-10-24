@@ -62,6 +62,17 @@ class SyntheticBrowserFailedSearch(SyntheticBrowserSearch):
         ]
         return response
 
+
+class SyntheticBrowserFailedImageSearch(SyntheticBrowserSearch):
+    """An Images provider failed; test the truthful no-image layout offline."""
+
+    def search(self):
+        response = super().search()
+        response.unresponsive_engines = [
+            SimpleNamespace(engine='startpage images', error_type='TimeoutException', suspended=False)
+        ]
+        return response
+
 class SyntheticBrowserPartialSearch(SyntheticBrowserFailedSearch):
     """Show an offline fixture result plus one synthetic provider error."""
 
@@ -888,6 +899,72 @@ def main() -> None:
             with Path(step_summary).open('a', encoding='utf-8') as summary:
                 summary.write('\n'.join(lines) + '\n')
         print(f'PASS desktop and phone image grid, all {IMAGE_GALLERY_COUNT} decoded local proxy PNGs per viewport, image details and POST privacy')
+
+        # A provider error must not force the desktop retry/source panel into
+        # a second off-screen grid column on phones or tablets. Verify actual
+        # browser geometry, not only the presence of media-query CSS text.
+        empty_image_measurements = []
+        with patch('searx.search.SearchWithPlugins', SyntheticBrowserFailedImageSearch):
+            for width, height, label in ((1440, 900, 'desktop'), (768, 900, 'tablet'),
+                                         (390, 844, 'phone'), (320, 760, 'phone-small')):
+                driver.set_window_size(width, height)
+                driver.get(url)
+                driver.find_element(By.ID, 'q').send_keys('synthetic image outage')
+                driver.find_element(By.ID, 'send_search').click()
+                WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
+                    lambda page: page.current_url.endswith('/search') and
+                    bool(page.find_elements(By.CSS_SELECTOR, '.goreecloud-category-form'))
+                )
+                driver.find_element(By.XPATH,
+                    "//nav[contains(@class,'goreecloud-category-tabs')]//button[normalize-space()='Images']").click()
+                WebDriverWait(driver, 12, ignored_exceptions=(StaleElementReferenceException,)).until(
+                    lambda page: bool(page.find_elements(By.CSS_SELECTOR,
+                        '#urls.goreecloud-image-results .goreecloud-empty-state'))
+                )
+                geometry = driver.execute_script("""
+                    const root=document.documentElement;
+                    const results=document.querySelector('#main_results #results');
+                    const empty=document.querySelector('#urls.goreecloud-image-results .goreecloud-empty-state');
+                    const sidebar=document.querySelector('#results > #sidebar');
+                    const panel=sidebar?.querySelector('.goreecloud-source-diagnostics');
+                    const r=e=>e.getBoundingClientRect();
+                    const a=r(empty), b=r(sidebar);
+                    return {
+                        viewport:root.clientWidth, scroll:root.scrollWidth,
+                        grid_track_widths:getComputedStyle(results).gridTemplateColumns
+                            .split(' ').map(track=>Number.parseFloat(track)),
+                        empty_width:Math.round(a.width), sidebar_width:Math.round(b.width),
+                        sidebar_visible:b.width>0 && b.height>0,
+                        sidebar_within_viewport:b.left>=-1 && b.right<=root.clientWidth+1,
+                        sidebar_below:b.top>=a.bottom-1,
+                        sidebar_beside:b.left>=a.right-1,
+                        details_present:!!panel, retry_method:empty.querySelector('form.goreecloud-empty-retry')?.method,
+                        external_image_requests:performance.getEntriesByType('resource').filter(e=>
+                            e.initiatorType==='img' && new URL(e.name, location.href).origin!==location.origin).length
+                    };
+                """)
+                empty_image_measurements.append({'viewport_name': label, **geometry})
+                driver.save_screenshot(str(artifacts / f'{label}-image-empty-outage.png'))
+                assert geometry['scroll']<=geometry['viewport']+1, (label, geometry)
+                assert geometry['sidebar_visible'] and geometry['sidebar_within_viewport'], (label, geometry)
+                assert geometry['details_present'] and geometry['retry_method']=='post', (label, geometry)
+                assert geometry['external_image_requests']==0, (label, geometry)
+                if label=='desktop':
+                    assert len(geometry['grid_track_widths'])>=2 and geometry['sidebar_beside'], (label, geometry)
+                else:
+                    # CSS Grid can report a *zero-width implicit track* even
+                    # when the sidebar is visibly stacked full width. Judge
+                    # actual geometry, not the number of computed track tokens.
+                    assert geometry['sidebar_below'], (label, geometry)
+                    assert geometry['empty_width']>=geometry['viewport']*.75, (label, geometry)
+                    assert geometry['sidebar_width']>=geometry['viewport']*.75, (label, geometry)
+                    assert all(width<=1 for width in geometry['grid_track_widths'][1:]), (label, geometry)
+        (artifacts / 'image-empty-layout.json').write_text(
+            json.dumps({'scope':'offline-synthetic-only', 'owner_mockup_accepted':False,
+                        'measurements':empty_image_measurements}, indent=2, sort_keys=True) + '\n',
+            encoding='utf-8')
+        print('IMAGE EMPTY LAYOUT', json.dumps(empty_image_measurements, sort_keys=True), flush=True)
+        print('PASS responsive Images outage: truthful retry/sidebar, no overflow or external images')
 
         # Category tabs must really submit POST, preserve the original query,
         # and never send it through the browser URL.

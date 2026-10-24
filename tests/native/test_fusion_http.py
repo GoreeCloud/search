@@ -164,6 +164,27 @@ class NativeFusionHttpTests(unittest.TestCase):
         self.assertEqual(200, code)
         self.assertEqual('goreecloud-native-index', local['source'])
 
+    def test_default_images_fusion_preserves_exact_then_real_sparse_matches(self):
+        page = 'https://publisher.example.org/flowers'
+        for filename, title in (
+                ('a.png', 'Purple orchid flowers'),
+                ('b.png', 'Orchid garden photography'),
+                ('c.png', 'Purple mountain panorama')):
+            self.index.add_image(page_url=page, media_url='https://cdn.example.org/'+filename,
+                                 title=title, rights_evidence='owner-reviewed/'+filename)
+        port = self.start()
+        code, _, result = self.post(port, {'query': 'purple orchid', 'category': 'images',
+                                          'limit': 10})
+        self.assertEqual(200, code)
+        self.assertEqual('owned_index_only', result['mode'])
+        self.assertEqual('ok', result['status'])
+        self.assertEqual(3, result['total_displayed'])
+        self.assertEqual('https://cdn.example.org/a.png', result['results'][0]['media_url'])
+        self.assertEqual({'b.png', 'c.png'}, {
+            card['media_url'].rsplit('/', 1)[-1] for card in result['results'][1:]})
+        self.assertEqual([['goreecloud_images', rank] for rank in range(1, 4)],
+                         [card['source_ranks'][0] for card in result['results']])
+
     def test_synthetic_rights_fail_closed_without_fixture_switch(self):
         port = self.start(providers=load_synthetic_fixture(self.fixture))
         code, _, body = self.post(port, {'query': 'private'})

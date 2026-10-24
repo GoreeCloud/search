@@ -31,6 +31,7 @@ MAX_CANDIDATES = 100
 MAX_SOURCES = 12
 MAX_RELEVANT = 100
 SOURCE_ID = re.compile(r'[a-z][a-z0-9_-]{0,47}\Z')
+SYNTHETIC_TERM = re.compile(r'[a-z]{2,32}\Z')
 STATES = frozenset({'ok', 'empty', 'timeout', 'rate_limited', 'access_denied', 'error'})
 REQUIRED_GATES = frozenset({
     'min_distinct', 'min_contributing_sources', 'min_relevant_at_10',
@@ -58,14 +59,26 @@ def _identity(value: object, *, category: str = 'web') -> str:
     return identity
 
 
-def _parse_fixture(fixture: object) -> tuple[str, list[dict], list[SourceResult], set[str], dict, int]:
-    if not isinstance(fixture, dict) or set(fixture) != {
-            'development_only', 'category', 'sources', 'relevant', 'gates'}:
+def _parse_fixture(fixture: object) -> tuple[str, list[dict], list[SourceResult], set[str], dict, int, str | None]:
+    required = {'development_only', 'category', 'sources', 'relevant', 'gates'}
+    if (not isinstance(fixture, dict) or not required.issubset(fixture)
+            or not set(fixture).issubset(required | {'synthetic_terms'})):
         raise InvalidBenchmark('fixture_contract')
     category = fixture['category']
     if (fixture['development_only'] is not True or not isinstance(category, str)
             or category not in SUPPORTED_CATEGORIES):
         raise InvalidBenchmark('development_category_required')
+    query = None
+    if 'synthetic_terms' in fixture:
+        terms = fixture['synthetic_terms']
+        if (not isinstance(terms, list) or not 1 <= len(terms) <= 8
+                or any(not isinstance(term, str) or SYNTHETIC_TERM.fullmatch(term) is None
+                       for term in terms)
+                or len(set(terms)) != len(terms)):
+            raise InvalidBenchmark('synthetic_terms_contract')
+        # This fixture-only signal is consumed in memory. Never echo tokens,
+        # reconstruct a query URL, or persist user-supplied search text.
+        query = ' '.join(terms)
     providers = fixture['sources']
     if not isinstance(providers, list) or not 1 <= len(providers) <= MAX_SOURCES:
         raise InvalidBenchmark('source_budget')
@@ -143,13 +156,13 @@ def _parse_fixture(fixture: object) -> tuple[str, list[dict], list[SourceResult]
                                       description=description, media_url=media))
             if len(cards) > MAX_CANDIDATES:
                 raise InvalidBenchmark('candidate_budget')
-    return category, providers, cards, set(identities), gates, missing_media
+    return category, providers, cards, set(identities), gates, missing_media, query
 
 
 def evaluate_fixture(fixture: object) -> dict:
     """Return sanitized aggregate metrics and exact gate failures only."""
-    category, providers, cards, relevant, gates, missing_media = _parse_fixture(fixture)
-    fused = fuse_results(cards, category=category, limit=100)
+    category, providers, cards, relevant, gates, missing_media, query = _parse_fixture(fixture)
+    fused = fuse_results(cards, category=category, limit=100, query=query)
     top = fused[:10]
     def result_identity(item: object) -> str:
         if category == 'images':
@@ -187,6 +200,7 @@ def evaluate_fixture(fixture: object) -> dict:
     return {
         'scope': 'synthetic_fusion_quality_only', 'development_only': True,
         'release_qualified': False, 'category': category,
+        'query_aware_ranking': query is not None,
         'candidate_count': len(cards), 'distinct_results': len(fused),
         'collapsed_duplicates': len(cards) - len(fused),
         'configured_sources': len(providers),

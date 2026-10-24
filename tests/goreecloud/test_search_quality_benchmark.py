@@ -14,6 +14,8 @@ from scripts import search_quality_benchmark as quality
 
 FIXTURE = (Path(__file__).parent / 'fixtures' / 'search_quality'
            / 'images_multi_source.json')
+QUERY_FIXTURE = (Path(__file__).parent / 'fixtures' / 'search_quality'
+                 / 'query_relevance_synthetic.json')
 
 
 def images():
@@ -21,6 +23,31 @@ def images():
 
 
 class SearchQualityBenchmarkTests(unittest.TestCase):
+    def test_synthetic_query_terms_prove_bounded_rank_signal(self):
+        fixture = json.loads(QUERY_FIXTURE.read_text(encoding='utf-8'))
+        outcome = quality.evaluate_fixture(fixture)
+        self.assertTrue(outcome['passed'])
+        self.assertTrue(outcome['query_aware_ranking'])
+        self.assertEqual(100, outcome['reciprocal_rank_percent_at_10'])
+        self.assertEqual(2, outcome['relevant_at_10'])
+        self.assertNotIn('orchid', str(outcome))
+        fixture.pop('synthetic_terms')
+        without_signal = quality.evaluate_fixture(fixture)
+        self.assertFalse(without_signal['passed'])
+        self.assertFalse(without_signal['query_aware_ranking'])
+        self.assertIn('insufficient_first_relevant_rank_at_10',
+                      without_signal['failed_gates'])
+
+    def test_query_fixture_terms_reject_unbounded_or_sensitive_shapes(self):
+        for bad_terms in ([], ['orchid'] * 2, ['Orchid'], ['orchid care'],
+                          ['a'], ['orchid1'], ['a' * 33], ['orchid'] * 9,
+                          'orchid', None, True, [1]):
+            fixture = images()
+            fixture['synthetic_terms'] = bad_terms
+            with self.subTest(value=repr(bad_terms)[:60]), self.assertRaises(
+                    quality.InvalidBenchmark):
+                quality.evaluate_fixture(fixture)
+
     def test_multi_source_images_are_deduplicated_by_media_not_page(self):
         result = quality.evaluate_fixture(images())
         self.assertTrue(result['passed'])

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import ipaddress
 import re
 import sqlite3
+import unicodedata
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -277,14 +278,52 @@ class SearchIndex:
         terms = clean_query(query)
         if type(limit) is not int or not 1 <= limit <= 20:
             raise ValueError('Image result limit must be from 1 to 20')
-        match = ' AND '.join('"' + term.replace('"', '""') + '"' for term in terms)
-        rows = self.connection.execute('''
+        # The first pass preserves exact all-term FTS5 semantics. In a small
+        # owner-approved image corpus a perfectly reasonable extra query term
+        # can otherwise make the *entire* image category appear empty. Only
+        # after exact results are exhausted may bounded, deterministic
+        # partial-term matches fill unused slots. Never invent cards or fetch
+        # a remote source to make a result count look healthier.
+        distinct_terms = tuple(dict.fromkeys(terms))
+
+        def find(query_text: str, max_rows: int) -> list[sqlite3.Row]:
+            return self.connection.execute('''
           SELECT i.page_url,i.media_url,i.title,i.description,
                  i.rights_evidence,i.indexed_at,
                  bm25(images_fts,5.0,1.0) AS relevance
           FROM images_fts JOIN images AS i ON i.id=images_fts.rowid
           WHERE images_fts MATCH ? ORDER BY relevance ASC,i.media_url ASC LIMIT ?
-        ''', (match, limit)).fetchall()
+            ''', (query_text, max_rows)).fetchall()
+
+        exact = ' AND '.join('"' + term.replace('"', '""') + '"' for term in terms)
+        rows = find(exact, limit)
+        if len(rows) < limit and len(distinct_terms) > 1:
+            # Match whole indexed terms under the same Unicode/diacritic
+            # expectations as unicode61, not substring/title-spam counts.
+            def folded(words: str) -> set[str]:
+                return {
+                    ''.join(c for c in unicodedata.normalize('NFD', token.casefold())
+                            if not unicodedata.combining(c))
+                    for token in re.findall(r'[^\W_]+', words, re.UNICODE)
+                }
+
+            target = folded(' '.join(distinct_terms))
+            min_overlap = (len(target) + 1) // 2
+            broad = ' OR '.join('"' + term.replace('"', '""') + '"'
+                                for term in distinct_terms)
+            seen = {row['media_url'] for row in rows}
+            supplements = []
+            # A fixed upper bound protects local CPU and memory even when a
+            # common term appears in a very large owner-controlled index.
+            for row in find(broad, 200):
+                if row['media_url'] in seen:
+                    continue
+                coverage = len(target & folded(row['title'] + ' ' + row['description']))
+                if coverage < min_overlap:
+                    continue
+                supplements.append((-coverage, row['relevance'], row['media_url'], row))
+            supplements.sort(key=lambda entry: entry[:3])
+            rows.extend(entry[3] for entry in supplements[:limit - len(rows)])
         return [ImageHit(
             page_url=r['page_url'], media_url=r['media_url'], title=r['title'],
             description=r['description'], rights_evidence=r['rights_evidence'],
