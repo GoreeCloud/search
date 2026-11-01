@@ -25,7 +25,7 @@ REQUIRED = (
     "tests/test_request_budget.py",
     "tests/test_native_archive.py",
 )
-MIN_TESTS = 57  # Existing 51 + 6 deterministic, non-installing native archive tests.
+MIN_TESTS = 58  # 51 existing + 6 archive tests + 1 native accessible-label test.
 
 
 def main() -> int:
