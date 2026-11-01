@@ -48,6 +48,18 @@ See [native archive validation](docs/NATIVE_ARCHIVE_VALIDATION.md) for contents,
 
 For the permanent catalog, omit `--db` to use the current user's private state folder. Use a file with one JSON object per line, containing `title`, `description`, `url` (public HTTPS), and optionally `source`. Imports replace the previous catalog atomically; back it up beforehand if needed.
 
+### Private local backup and recovery
+
+The original standard-library recovery helpers make **non-destructive SQLite snapshots** and verify their integrity. The destination must not already exist and must be inside an owner-private directory. No command overwrites the active index.
+
+```bash
+python3 -m goreecloud_search --db /absolute/private/catalog.sqlite3 backup --output /absolute/private/backups/snapshot.sqlite3
+python3 -m goreecloud_search verify-backup --input /absolute/private/backups/snapshot.sqlite3
+python3 -m goreecloud_search restore-copy --input /absolute/private/backups/snapshot.sqlite3 --output /absolute/private/recovered.sqlite3
+```
+
+These are private local development copies, **not** scheduled/offsite encrypted backups or a production recovery guarantee. See [catalog recovery and safety](docs/CATALOG_BACKUP_RECOVERY.md).
+
 ```bash
 python3 scripts/verify_greenfield.py
 ```
