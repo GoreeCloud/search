@@ -19,12 +19,12 @@ The foundation has **two independently developed optional adapters**, not a comp
 
 ## Provider contract and next qualification gates
 
-Implemented source contracts select a bounded set of provider IDs, validate fixed transport destinations, apply short timeouts, normalize public HTTPS results and attribute partial failures without raw provider details. Concurrent aggregation deduplicates URLs in source order. This code does not guarantee full provider functionality or billed-use enforcement; the current in-process Brave rate gate is not a durable quota.
+Implemented source contracts select a bounded set of provider IDs, validate fixed transport destinations, apply short timeouts, normalize public HTTPS results and attribute partial failures without raw provider details. Concurrent aggregation deduplicates URLs in source order. A persistent owner-private SQLite ledger now enforces a per-UTC-day **Brave request-count ceiling** before network egress, in addition to short-term pacing, and requires explicit configuration. It serializes cooperating processes using the same file, but is **not** a monetary, provider-account or multi-installation billing cap; this code does not guarantee real provider functionality. See [paid usage controls](PAID_USAGE_CONTROLS.md).
 
 Before permitted live use, verify each provider's published terms, request formats, output settings, key ownership, cost/quotas and privacy disclosures with an owner-approved staging environment. Do not deploy or allow public access without an authenticated edge, audited network policy, and operational controls.
 
 ## Security and validation status
 
-Offline tests cover local indexing, atomic import, URL rejection, query bounds, loopback binding, request origin and JSON handling, and basic security headers. The interface still needs real-browser visual/a11y verification, GC UI package integration, native operating-system acceptance, structured threat modeling, dependency/license checks and release criteria.
+Offline tests cover local indexing, atomic import, URL rejection, query bounds, loopback binding, request origin and JSON handling, and basic security headers. The original GTK4 local-only client passed an isolated Linux Xvfb launch/search/result smoke; real-browser and visible native visual/a11y verification, GC UI package integration, broader native operating-system acceptance, structured threat modeling, dependency/license checks and release criteria.
 
 Historical recovery PR #1 is closed without merge. It has no implementation dependency. Its historical secret alert is tracked as a **separate** legacy public-repository hygiene item and is not a finding in this new code.
