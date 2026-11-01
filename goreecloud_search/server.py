@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from .store import search
+from .providers import ProviderConfig, choose_providers
+from .federation import search as federated_search
 
 WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
 CSP = (
@@ -25,6 +27,7 @@ class SearchServer(ThreadingHTTPServer):
             raise ValueError("Only explicit IPv4 loopback is supported without authentication")
         super().__init__(address, SearchHandler)
         self.db_path = db_path
+        self.provider_config = ProviderConfig.from_environment()
 
 
 class SearchHandler(BaseHTTPRequestHandler):
@@ -54,7 +57,26 @@ class SearchHandler(BaseHTTPRequestHandler):
     def _json(self, status: int, body: dict[str, Any]) -> None:
         self._send(status, json.dumps(body, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
 
+    def _trusted_host(self) -> bool:
+        hosts = self.headers.get_all("Host", [])
+        return len(hosts) == 1 and hosts[0] == f"127.0.0.1:{self.server.server_port}"
+
+    def _reject(self, code: int, explanation: str) -> None:
+        # Refuse to parse unread request bodies on a reused HTTP/1.1 connection.
+        self.close_connection = True
+        self._json(code, {"error": explanation})
+
     def do_GET(self) -> None:
+        if not self._trusted_host():
+            self._reject(421, "Invalid request host")
+            return
+        if self.path == "/api/providers":
+            self._json(200, {
+                "available": self.server.provider_config.availability(),
+                "default": ["local"],
+                "external_requires_consent": True,
+            })
+            return
         if self.path == "/healthz":
             self._json(200, {"status": "ok", "scope": "loopback"})
             return
@@ -74,31 +96,34 @@ class SearchHandler(BaseHTTPRequestHandler):
             self._json(503, {"error": "Interface unavailable"})
 
     def do_POST(self) -> None:
-        if self.path != "/api/search":
-            self._json(404, {"error": "Not found"})
+        if not self._trusted_host():
+            self._reject(421, "Invalid request host")
             return
-        origin = self.headers.get("Origin")
+        if self.path != "/api/search":
+            self._reject(404, "Not found")
+            return
+        origins = self.headers.get_all("Origin", [])
         expected_origin = f"http://127.0.0.1:{self.server.server_port}"
-        if origin and origin != expected_origin:
-            self._json(403, {"error": "Cross-origin searches disabled"})
+        if len(origins) > 1 or (origins and origins[0] != expected_origin):
+            self._reject(403, "Cross-origin searches disabled")
+            return
+        sites = self.headers.get_all("Sec-Fetch-Site", [])
+        if len(sites) > 1 or (sites and sites[0] not in ("none", "same-origin")):
+            self._reject(403, "Cross-site searches disabled")
             return
         if self.headers.get("Transfer-Encoding"):
-            self.close_connection = True
-            self._json(400, {"error": "Streaming bodies unsupported"})
+            self._reject(400, "Streaming bodies unsupported")
             return
         values = self.headers.get_all("Content-Length", [])
-        if len(values) != 1 or not values[0].isdigit():
-            self.close_connection = True
-            self._json(411, {"error": "Content-Length required"})
+        if len(values) != 1 or not values[0].isascii() or not values[0].isdigit():
+            self._reject(411, "Content-Length required")
             return
         size = int(values[0])
         if size < 2 or size > MAX_BODY:
-            self.close_connection = True
-            self._json(413, {"error": "Request too large or empty"})
+            self._reject(413, "Request too large or empty")
             return
         if self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower() != "application/json":
-            self.close_connection = True
-            self._json(415, {"error": "JSON content required"})
+            self._reject(415, "JSON content required")
             return
         try:
             payload = json.loads(self.rfile.read(size).decode("utf-8"))
@@ -110,23 +135,48 @@ class SearchHandler(BaseHTTPRequestHandler):
             return
         query = payload.get("query")
         limit = payload.get("limit", 12)
-        try:
-            results = search(self.server.db_path, query, limit)
-        except (TypeError, ValueError):
+        if (not isinstance(query, str) or not 1 <= len(query.strip()) <= 160
+                or type(limit) is not int or not 1 <= limit <= 20):
             self._json(400, {"error": "Invalid query or limit"})
             return
-        except Exception:
-            # No internal exception details or provider data cross this boundary.
-            self._json(503, {"error": "Local index unavailable"})
+        try:
+            sources = choose_providers(
+                payload.get("providers"), payload.get("share_query"),
+                self.server.provider_config,
+            )
+        except ValueError:
+            self._json(400, {"error": "Invalid provider choice or external consent"})
             return
-        self._json(200, {"results": results, "count": len(results), "scope": "local-only"})
+        try:
+            if sources == ["local"]:
+                results = search(self.server.db_path, query, limit)
+                warnings = []
+            else:
+                outcome = federated_search(
+                    query, limit, sources, self.server.provider_config,
+                    lambda q, count: search(self.server.db_path, q, count),
+                )
+                results, warnings = outcome.results, outcome.warnings
+        except Exception:
+            # Do not disclose internal errors, queries, or provider credentials.
+            self._json(503, {"error": "Search unavailable"})
+            return
+        self._json(200, {
+            "results": results,
+            "count": len(results),
+            "scope": "federated" if sources != ["local"] else "local-only",
+            "providers": sources,
+            "warnings": warnings,
+        })
 
     def do_OPTIONS(self) -> None:
-        self._json(405, {"error": "Unsupported method"})
+        self._reject(405 if self._trusted_host() else 421, "Unsupported method")
 
     def do_HEAD(self) -> None:
-        self.send_response(405)
+        self.close_connection = True
+        self.send_response(405 if self._trusted_host() else 421)
         self.send_header("Content-Length", "0")
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
 
 
