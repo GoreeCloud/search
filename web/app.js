@@ -6,6 +6,29 @@ const resultList = document.getElementById("result-list");
 const status = document.getElementById("status");
 const counter = document.getElementById("counter");
 const themeButton = document.getElementById("theme");
+const sourceSelect = document.getElementById("source-select");
+const shareQuery = document.getElementById("share-query");
+
+async function discoverProviders() {
+  try {
+    const response = await fetch("/api/providers", {cache: "no-store", credentials: "omit"});
+    if (!response.ok) return;
+    const data = await response.json();
+    for (const option of sourceSelect.options) {
+      if (option.value === "local") continue;
+      option.disabled = data.available?.[option.value] !== true;
+      option.textContent = option.value === "brave"
+        ? (option.disabled ? "Brave Search API — not configured" : "Brave Search API")
+        : (option.disabled ? "Self-hosted SearXNG — not configured" : "Self-hosted SearXNG");
+    }
+  } catch (_) {
+    // Failure never enables an external provider.
+  }
+}
+void discoverProviders();
+sourceSelect.addEventListener("change", () => {
+  shareQuery.checked = false;
+});
 
 function setTheme(mode) {
   const safe = mode === "dark" ? "dark" : "light";
@@ -44,15 +67,29 @@ form.addEventListener("submit", async event => {
   event.preventDefault();
   const query = queryInput.value.trim();
   if (!query) return;
+  const chosen = sourceSelect.value;
+  const external = chosen !== "local";
+  if (external && !shareQuery.checked) {
+    status.textContent = "Consent is required before sending a query to an external provider.";
+    shareQuery.focus();
+    return;
+  }
+  const request = {
+    query,
+    providers: external ? ["local", chosen] : ["local"],
+    share_query: external && shareQuery.checked,
+  };
   resultList.replaceChildren();
-  status.textContent = "Searching your local collection…";
+  status.textContent = external ? "Searching selected sources…" : "Searching your local collection…";
   counter.textContent = "";
   submit.disabled = true;
+  sourceSelect.disabled = true;
+  shareQuery.disabled = true;
   try {
     const response = await fetch("/api/search", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({query}),
+      body: JSON.stringify(request),
       credentials: "omit",
       cache: "no-store",
     });
@@ -60,10 +97,16 @@ form.addEventListener("submit", async event => {
     const data = await response.json();
     data.results.forEach(renderResult);
     counter.textContent = data.count + (data.count === 1 ? " result" : " results");
-    status.textContent = data.count ? "" : "No matches in your local collection. Try different keywords.";
+    const failed = (data.warnings || []).map(w => w.provider).join(", ");
+    status.textContent = failed ? "Some selected sources were unavailable: " + failed + "." :
+      (data.count ? "" : "No matches found. Try a different query or source.");
   } catch (_err) {
-    status.textContent = "The local search index is unavailable. Check its setup and try again.";
+    status.textContent = "Search is unavailable. Check the local service and source configuration.";
   } finally {
+    shareQuery.checked = false;
+    sourceSelect.value = "local";
+    sourceSelect.disabled = false;
+    shareQuery.disabled = false;
     submit.disabled = false;
   }
 });
