@@ -23,7 +23,7 @@ REQUIRED = (
     "tests/test_native.py",
     "tests/test_request_budget.py",
 )
-MIN_TESTS = 49  # 37 original + 12 durable budget/concurrency/transport tests.
+MIN_TESTS = 51  # Existing 49 + 2 accessible result-rendering contracts.
 
 
 def main() -> int:
