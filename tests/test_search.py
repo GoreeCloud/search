@@ -110,7 +110,9 @@ class ServerTests(unittest.TestCase):
         code, _, html = self.request("GET", "/")
         self.assertEqual(code, 200)
         self.assertIn(b"GoreeCloud Search", html)
-        self.assertNotIn(b"searx", html.lower())
+        # Optional SearXNG may be named in the UI but must be disabled by default.
+        self.assertIn(b'value="searxng" disabled', html.lower())
+        self.assertNotIn(b'src="https://', html.lower())
 
     def test_post_search_and_no_get_api(self):
         data = json.dumps({"query": "original local"}).encode()
