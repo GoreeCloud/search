@@ -19,7 +19,7 @@ REQUIRED = (
     "tests/test_http_integration.py",
     "tests/test_ui_contract.py",
 )
-MIN_TESTS = 31  # 9 local + 8 providers + 10 HTTP + 4 UI contracts.
+MIN_TESTS = 32  # 10 local + 8 providers + 10 HTTP + 4 UI contracts.
 
 
 def main() -> int:
