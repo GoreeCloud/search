@@ -35,6 +35,17 @@ python3 -m goreecloud_search.native --db /tmp/gc-search-demo.sqlite3
 
 The native client reads the private index **directly**; it does not start a web server or use Brave/SearXNG. The UI follows GC UI hierarchy and spacing principles using system GTK4 widgets; visual parity, keyboard/assistive-technology and packaging acceptance are still pending. The Python service and test suite do not require GTK.
 
+### Non-installing native development archive
+
+The first-party `scripts/package_native.py` builds a **reproducible, source-only** GTK4 development `.tar.gz` archive with a portable launcher and desktop-entry template. It does not run installers, update PATH, change desktop settings, deploy, sign, or activate external sources. From a trusted checkout:
+
+```bash
+python3 scripts/package_native.py --output /tmp/goreecloud-search-native-dev.tar.gz
+```
+
+See [native archive validation](docs/NATIVE_ARCHIVE_VALIDATION.md) for contents, safe inspection and remaining release requirements. This is **not** a released Linux installer.
+
+
 For the permanent catalog, omit `--db` to use the current user's private state folder. Use a file with one JSON object per line, containing `title`, `description`, `url` (public HTTPS), and optionally `source`. Imports replace the previous catalog atomically; back it up beforehand if needed.
 
 ```bash
