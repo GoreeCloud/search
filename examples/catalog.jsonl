@@ -1,0 +1,2 @@
+{"title":"GoreeCloud Search architecture","description":"The new GoreeCloud Search application uses an original localhost-only service and private SQLite index in the Development foundation.","url":"https://github.com/GoreeCloud/search","source":"GoreeCloud"}
+{"title":"GoreeCloud UI","description":"The permanent GoreeCloud design system authority, including semantic tokens, accessible interactions, and light and dark themes.","url":"https://github.com/GoreeCloud/gc-ui","source":"GoreeCloud"}
