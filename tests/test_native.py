@@ -61,6 +61,11 @@ class NativeDesktopFoundationTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "GTK4 desktop libraries unavailable"):
                 native.launch(self.db)
 
+    def test_native_widgets_have_explicit_accessible_names(self):
+        source = Path(native.__file__).read_text(encoding="utf-8")
+        self.assertIn('[Gtk.AccessibleProperty.LABEL], ["Search local documents"]', source)
+        self.assertIn('[Gtk.AccessibleProperty.LABEL], ["Search results"]', source)
+
     def test_ui_avoids_markup_rendering_and_remote_search(self):
         source = Path(native.__file__).read_text(encoding="utf-8")
         self.assertIn("Gtk.ApplicationWindow", source)
