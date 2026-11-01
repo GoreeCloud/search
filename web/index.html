@@ -28,8 +28,19 @@
             <input id="query" name="query" type="search" placeholder="Try a topic or document title" maxlength="160" autocomplete="off" spellcheck="false" required>
             <button type="submit" id="submit">Search</button>
           </div>
+          <fieldset class="provider-fields">
+            <legend>Search source</legend>
+            <label for="source-select">Include an external search provider</label>
+            <select id="source-select" aria-describedby="provider-notice">
+              <option value="local">Local collection only</option>
+              <option value="brave" disabled>Brave Search API — not configured</option>
+              <option value="searxng" disabled>Self-hosted SearXNG — not configured</option>
+            </select>
+            <p id="provider-notice">Local search stays private. Brave sends the query to Brave and may incur API charges. SearXNG sends it to your separately operated local instance, which may contact external search engines. No external connection is made unless you explicitly approve that query.</p>
+            <label class="consent" for="share-query"><input type="checkbox" id="share-query" aria-describedby="provider-notice"> I consent to sending this search query to the selected external provider.</label>
+          </fieldset>
         </form>
-        <p class="privacy"><span aria-hidden="true">●</span> Local-only index · No outbound providers · No query history</p>
+        <p class="privacy"><span aria-hidden="true">●</span> Local by default · No query history · External sources require opt-in</p>
       </section>
       <section class="results-section" id="results" aria-labelledby="results-heading" tabindex="-1">
         <div class="results-header"><h2 id="results-heading">Results</h2><span id="counter" class="count">Local collection</span></div>
