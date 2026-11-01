@@ -66,6 +66,12 @@ class NativeDesktopFoundationTests(unittest.TestCase):
         self.assertIn('[Gtk.AccessibleProperty.LABEL], ["Search local documents"]', source)
         self.assertIn('[Gtk.AccessibleProperty.LABEL], ["Search results"]', source)
 
+    def test_async_search_preserves_keyboard_focus(self):
+        source = Path(native.__file__).read_text(encoding="utf-8")
+        self.assertIn("self.entry.set_editable(False)", source)
+        self.assertIn("self.entry.set_editable(True)", source)
+        self.assertNotIn("self.entry.set_sensitive(False)", source)
+
     def test_ui_avoids_markup_rendering_and_remote_search(self):
         source = Path(native.__file__).read_text(encoding="utf-8")
         self.assertIn("Gtk.ApplicationWindow", source)
