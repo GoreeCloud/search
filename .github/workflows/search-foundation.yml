@@ -37,6 +37,7 @@ jobs:
         run: |
           python3 -m unittest discover -s tests/goreecloud -p 'test_pexels_public_credential_safety.py' -v
           python3 -m unittest discover -s tests/goreecloud -p 'test_youtube_embedded_key_guard.py' -v
+          python3 -m unittest discover -s tests/goreecloud -p 'test_public_credential_patterns.py' -v
       - name: Retain source-only baseline evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
