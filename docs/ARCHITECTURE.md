@@ -4,22 +4,24 @@
 
 ## Intentional first scope
 
-User browser → local HTTP boundary → SQLite FTS5 index of explicitly approved JSONL documents.
+User browser → **strict localhost HTTP boundary** → local SQLite FTS5 index (default), or explicit-consent provider routing → optional Brave HTTPS API / separately managed loopback SearXNG instance (disabled by default).
 
 - **Web:** A self-contained first-party HTML/CSS/JavaScript client using verified GC UI semantic names and base theme values. No remote UI framework or CDN. No persisted search terms.
-- **API:** Python 3 standard-library `ThreadingHTTPServer`, bind hard-limited to 127.0.0.1, POST `/api/search` with `{"query": "...", "limit": 12}`, GET `/healthz`. No external calls or implicit cross-origin access.
+- **API:** Python 3 standard-library `ThreadingHTTPServer` bound to 127.0.0.1. POST `/api/search` accepts query, limit, optional provider selection and explicit per-query query-sharing consent; GET `/api/providers` shows configured availability and GET `/healthz` reports loopback status. Default search never makes outbound requests. Host, Origin and Sec-Fetch-Site guards prevent cross-site or DNS-rebinding access; early request rejections close keep-alive connections.
 - **Index:** SQLite FTS5, documents supplied by the user explicitly; no crawler, network fetch, telemetry, personalization or analytics. Each import atomically replaces the catalog.
 - **Result contract:** title, description, public HTTPS URL, source. URL input validation and DOM text rendering constrain XSS and local address disclosure.
-- **Security:** bounded requests and queries, origin check, restrictive CSP, no user-query logs, no third-party dependencies, optional curator-approved result links. No browser or service remote authentication yet; therefore cannot bind beyond localhost.
+- **Security:** bounded queries and bodies, exact Host checks, Origin/Sec-Fetch-Site protection, restrictive CSP, no query logs, server-only provider secrets, fixed allowed destinations, provider timeouts/response limits and no redirect following. External providers additionally require a global opt-in configuration and per-query user consent. No remote authentication exists; cannot bind beyond localhost.
 - **Deployment:** none. No production, containers, system services, ports beyond ephemeral test loopback or approved local dev server.
 
 ## Why this is a foundation, not complete Search
 
-The primary product roadmap includes web, images, videos, news and multi-provider federation, but this foundation has **zero** external adapters. The initial local index validates API, UI, accessibility and privacy contracts without silently exposing search queries.
+The foundation has **two independently developed optional adapters**, not a complete web crawler, search index or production federation service. Brave Search is an external paid/plan-based API; SearXNG is a separate locally operated service that may forward queries. The native SQLite catalog and UI remain functional with external egress off. No provider has passed authorized live qualification.
 
-## Planned provider contract (not implemented)
+## Provider contract and next qualification gates
 
-Each future provider will explicitly declare result category, whether it receives query text, transport, redaction, safe query parameterization, timeout, rate limit, error classifications and allowed hosts. Provider results will pass a validation/normalization boundary and carry source attribution. No provider is enabled before independently reviewed test fixtures and outbound egress authorization.
+Implemented source contracts select a bounded set of provider IDs, validate fixed transport destinations, apply short timeouts, normalize public HTTPS results and attribute partial failures without raw provider details. Concurrent aggregation deduplicates URLs in source order. This code does not guarantee full provider functionality or billed-use enforcement; the current in-process Brave rate gate is not a durable quota.
+
+Before permitted live use, verify each provider's published terms, request formats, output settings, key ownership, cost/quotas and privacy disclosures with an owner-approved staging environment. Do not deploy or allow public access without an authenticated edge, audited network policy, and operational controls.
 
 ## Security and validation status
 
