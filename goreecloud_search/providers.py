@@ -10,12 +10,15 @@ import http.client
 import ipaddress
 import json
 import os
+from pathlib import Path
 import threading
 import time
 from collections import deque
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from urllib.parse import urlencode, urlsplit
+
+from .request_budget import BudgetUnavailable, reserve_request
 
 MAX_REPLY = 256_000
 MAX_RESULTS = 20
@@ -38,6 +41,8 @@ class ProviderConfig:
     global_enabled: bool = False
     brave_key: str = ""
     searxng_port: int | None = None
+    brave_daily_cap: int = 0
+    brave_budget_db: Path | None = None
 
     @classmethod
     def from_environment(cls) -> "ProviderConfig":
@@ -53,12 +58,29 @@ class ProviderConfig:
                 raise ProviderConfigError("SearXNG port out of range")
         if key and (len(key) > 256 or any(ord(ch) < 33 or ord(ch) > 126 for ch in key)):
             raise ProviderConfigError("Invalid provider credential configuration")
-        return cls(enabled, key, port)
+        raw_cap = os.getenv("GC_SEARCH_BRAVE_DAILY_CAP", "")
+        cap = 0
+        state_path = None
+        if raw_cap:
+            if not raw_cap.isascii() or not raw_cap.isdecimal():
+                raise ProviderConfigError("Brave daily request cap must be a decimal integer")
+            cap = int(raw_cap)
+            if not 1 <= cap <= 10_000:
+                raise ProviderConfigError("Brave daily request cap out of range")
+            raw_path = os.getenv("GC_SEARCH_BRAVE_BUDGET_DB", "")
+            state_path = (Path(raw_path) if raw_path
+                          else Path.home() / ".local/state/goreecloud/search-brave-budget.sqlite3")
+            if not state_path.is_absolute():
+                raise ProviderConfigError("Brave budget state path must be absolute")
+        return cls(enabled, key, port, cap, state_path)
 
     def availability(self) -> dict[str, bool]:
         return {
             "local": True,
-            "brave": bool(self.global_enabled and self.brave_key),
+            "brave": bool(
+                self.global_enabled and self.brave_key
+                and self.brave_daily_cap > 0 and self.brave_budget_db is not None
+            ),
             "searxng": bool(self.global_enabled and self.searxng_port),
         }
 
@@ -199,6 +221,10 @@ def fetch(provider: str, query: str, limit: int, config: ProviderConfig) -> list
 
     if provider == "brave":
         BRAVE_RATE_GATE.reserve()
+        try:
+            reserve_request(config.brave_budget_db, config.brave_daily_cap)
+        except BudgetUnavailable as exc:
+            raise ProviderUnavailable("Brave paid-request ceiling unavailable") from exc
         conn = http.client.HTTPSConnection(BRAVE_HOST, 443, timeout=TIMEOUT_SECONDS)
         target = BRAVE_PATH + "?" + urlencode({
             "q": query, "count": limit, "safesearch": "moderate",
