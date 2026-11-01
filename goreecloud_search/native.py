@@ -68,6 +68,9 @@ def launch(db_path: Path, argv: list[str] | None = None) -> int:
             self.entry = Gtk.SearchEntry()
             self.entry.set_placeholder_text("Search local documents")
             self.entry.set_tooltip_text("Search only the private local catalog")
+            self.entry.update_property(
+                [Gtk.AccessibleProperty.LABEL], ["Search local documents"]
+            )
             self.entry.connect("activate", self._search)
             layout.append(self.entry)
 
@@ -78,6 +81,9 @@ def launch(db_path: Path, argv: list[str] | None = None) -> int:
 
             self.results = Gtk.ListBox()
             self.results.set_selection_mode(Gtk.SelectionMode.NONE)
+            self.results.update_property(
+                [Gtk.AccessibleProperty.LABEL], ["Search results"]
+            )
             self.results.add_css_class("boxed-list")
             scrolled = Gtk.ScrolledWindow()
             scrolled.set_vexpand(True)
