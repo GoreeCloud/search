@@ -42,13 +42,20 @@ themeButton.addEventListener("click", () => {
 });
 
 function renderResult(entry) {
-  const url = new URL(entry.url);
-  if (url.protocol !== "https:" || url.username || url.password) return;
+  if (!entry || typeof entry !== "object") return false;
+  if (typeof entry.url !== "string" || typeof entry.title !== "string") return false;
+  let url;
+  try {
+    url = new URL(entry.url);
+  } catch (_) {
+    return false;
+  }
+  if (url.protocol !== "https:" || url.username || url.password) return false;
   const article = document.createElement("article");
   article.className = "result-card";
   const label = document.createElement("p");
   label.className = "source";
-  label.textContent = entry.source;
+  label.textContent = typeof entry.source === "string" ? entry.source : "Local";
   const title = document.createElement("h3");
   const link = document.createElement("a");
   link.href = url.href;
@@ -58,9 +65,10 @@ function renderResult(entry) {
   title.append(link);
   const text = document.createElement("p");
   text.className = "snippet";
-  text.textContent = entry.description;
+  text.textContent = typeof entry.description === "string" ? entry.description : "";
   article.append(label, title, text);
   resultList.append(article);
+  return true;
 }
 
 form.addEventListener("submit", async event => {
@@ -81,6 +89,7 @@ form.addEventListener("submit", async event => {
   };
   resultList.replaceChildren();
   status.textContent = external ? "Searching selected sources…" : "Searching your local collection…";
+  resultList.setAttribute("aria-busy", "true");
   counter.textContent = "";
   submit.disabled = true;
   sourceSelect.disabled = true;
@@ -95,14 +104,22 @@ form.addEventListener("submit", async event => {
     });
     if (!response.ok) throw new Error("Search unavailable");
     const data = await response.json();
-    data.results.forEach(renderResult);
-    counter.textContent = data.count + (data.count === 1 ? " result" : " results");
-    const failed = (data.warnings || []).map(w => w.provider).join(", ");
-    status.textContent = failed ? "Some selected sources were unavailable: " + failed + "." :
-      (data.count ? "" : "No matches found. Try a different query or source.");
+    if (!Array.isArray(data.results)) throw new Error("Invalid search result format");
+    const displayed = data.results.reduce((total, item) => total + Number(renderResult(item)), 0);
+    counter.textContent = displayed + (displayed === 1 ? " result" : " results");
+    const knownProviders = new Set(["brave", "searxng", "local"]);
+    const warnings = Array.isArray(data.warnings) ? data.warnings : [];
+    const failed = warnings
+      .map(w => w && knownProviders.has(w.provider) ? w.provider : "")
+      .filter(Boolean).join(", ");
+    const summary = displayed
+      ? displayed + (displayed === 1 ? " result found." : " results found.")
+      : "No matches found. Try a different query or source.";
+    status.textContent = failed ? summary + " Some selected sources were unavailable: " + failed + "." : summary;
   } catch (_err) {
     status.textContent = "Search is unavailable. Check the local service and source configuration.";
   } finally {
+    resultList.setAttribute("aria-busy", "false");
     shareQuery.checked = false;
     sourceSelect.value = "local";
     sourceSelect.disabled = false;
