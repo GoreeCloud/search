@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import os
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from goreecloud_search import providers
@@ -62,7 +63,7 @@ class OptionalProviderTests(unittest.TestCase):
                 providers.ProviderConfig.from_environment()
 
     def test_consent_required_for_each_external_selection(self):
-        config = providers.ProviderConfig(True, "dummy-test-only", 8888)
+        config = providers.ProviderConfig(True, "dummy-test-only", 8888, 2, Path("/tmp/gc-test-budget.sqlite3"))
         self.assertEqual(providers.choose_providers(None, False, config), ["local"])
         self.assertEqual(providers.choose_providers(["local"], False, config), ["local"])
         self.assertEqual(providers.choose_providers(["local", "brave"], True, config), ["local", "brave"])
@@ -93,10 +94,11 @@ class OptionalProviderTests(unittest.TestCase):
                                   "url": "https://example.org/x"}]}
         }).encode())
         connection = FakeConnection(reply)
-        config = providers.ProviderConfig(True, "dummy-test-only", None)
+        config = providers.ProviderConfig(True, "dummy-test-only", None, 2, Path("/tmp/gc-test-budget.sqlite3"))
         with patch.object(providers.BRAVE_RATE_GATE, "reserve"):
-            with patch.object(providers.http.client, "HTTPSConnection", return_value=connection) as factory:
-                result = providers.fetch("brave", "topic", 2, config)
+            with patch.object(providers, "reserve_request"):
+                with patch.object(providers.http.client, "HTTPSConnection", return_value=connection) as factory:
+                    result = providers.fetch("brave", "topic", 2, config)
         factory.assert_called_once_with("api.search.brave.com", 443, timeout=4)
         self.assertEqual(connection.calls[0][0], "GET")
         self.assertIn("q=topic", connection.calls[0][1])
@@ -118,7 +120,7 @@ class OptionalProviderTests(unittest.TestCase):
     def test_federation_deduplicates_by_url_with_source_order(self):
         result = federated_search(
             "query", 5, ["local", "brave"],
-            providers.ProviderConfig(True, "dummy-test-only", None),
+            providers.ProviderConfig(True, "dummy-test-only", None, 2, Path("/tmp/gc-test-budget.sqlite3")),
             lambda query, limit: [
                 {"title": "Local", "description": "D", "url": "https://example.org/a", "source": "local"},
             ],
