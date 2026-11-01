@@ -14,7 +14,7 @@
 
 ## Verified development checks
 
-1. Python 3.11 and 3.12 GitHub Actions runs of the greenfield workflow pass the mandatory 37 no-skip offline test suite, including five headless native contracts. Consult the current PR head's workflow, not a previous workflow run.
+1. Python 3.11 and 3.12 GitHub Actions run #77 of the greenfield workflow passed the mandatory 49 no-skip offline test suite (37 original + 12 request-budget tests), including five headless native contracts. Consult the current PR head's workflow, not a previous workflow run.
 2. A separate authorized Linux machine with GTK **4.14.5** and Xvfb executed the native client on an isolated virtual display.
 3. Using a disposable, explicitly populated local index, the offscreen GUI smoke validated **window = true**, **search entry = true**, **local result link = true**; process exited **0**.
 4. The independently rerunnable `scripts/smoke_gtk4.py` passed with the output `GTK4 native window, input, and result: PASS`. This was a local development test, **not** a CI claim for GTK itself.
