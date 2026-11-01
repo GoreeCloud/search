@@ -27,7 +27,7 @@ def main(argv: list[str] | None = None) -> int:
     gi.require_version("Gtk", "4.0")
     from gi.repository import Gio, GLib, Gtk
 
-    checks = {"window": False, "entry": False, "local_result": False}
+    checks = {"window": False, "entry": False, "local_result": False, "entry_editable": False}
     state = {"ticks": 0, "searched": False}
 
     def descendants(widget):
@@ -53,6 +53,7 @@ def main(argv: list[str] | None = None) -> int:
             checks["local_result"] = any(
                 isinstance(widget, Gtk.LinkButton) for widget in widgets
             )
+            checks["entry_editable"] = bool(entries and entries[0].get_editable()) if checks["local_result"] else False
         if checks["local_result"] or state["ticks"] >= 40:
             print("GTK4 isolated smoke:", checks, flush=True)
             if app is not None:
