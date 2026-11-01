@@ -53,7 +53,15 @@ class SourceProvenanceContracts(unittest.TestCase):
         )
         job = workflow['jobs']['exact-source-baseline']
         self.assertEqual('read', job['permissions']['contents'])
-        checkout, inventory, upload, base_audit, base_upload = job['steps']
+        steps = job['steps']
+        checkout, inventory = steps[:2]
+        by_name = {step.get('name'): step for step in steps if step.get('name')}
+        upload = by_name['Retain source-only baseline evidence']
+        base_audit = by_name['Record Dockerfile base image closure blockers (not a release pass)']
+        base_upload = by_name['Retain unsigned source-only base reference audit']
+        guard = by_name['Targeted offline provider regression checks']
+        self.assertIn('test_pexels_public_credential_safety.py', guard['run'])
+        self.assertIn('test_youtube_embedded_key_guard.py', guard['run'])
         expected = '${{ github.event.pull_request.head.sha || github.sha }}'
         self.assertEqual(expected, checkout['with']['ref'])
         self.assertEqual('false', checkout['with']['persist-credentials'])
