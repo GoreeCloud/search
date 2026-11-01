@@ -74,6 +74,7 @@ def main() -> int:
             if event != WebKit.LoadEvent.FINISHED or state["complete"]:
                 return
             self.eval_script("""
+                (() => {
                 const field = document.getElementById('query');
                 const provider = document.getElementById('source-select');
                 const consent = document.getElementById('share-query');
@@ -92,7 +93,8 @@ def main() -> int:
                 };
                 field.value = 'GoreeCloud';
                 document.getElementById('search-form').requestSubmit();
-                JSON.stringify(checks);
+                return JSON.stringify(checks);
+                })();
             """, self.on_precheck)
 
         def eval_script(self, script, callback):
