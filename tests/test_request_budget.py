@@ -6,7 +6,7 @@ import sqlite3
 import stat
 import tempfile
 import unittest
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -15,6 +15,38 @@ from goreecloud_search import providers
 from goreecloud_search.request_budget import (
     BudgetExhausted, BudgetUnavailable, reserve_request,
 )
+
+
+def _reserve_from_process(args):
+    ledger, cap = args
+    try:
+        reserve_request(Path(ledger), cap)
+        return True
+    except BudgetExhausted:
+        return False
+
+
+class _Response:
+    status = 200
+
+    def getheader(self, name, default=None):
+        if name == "Content-Type":
+            return "application/json"
+        return default
+
+    def read(self, limit=-1):
+        return b'{"web":{"results":[]}}'[:limit]
+
+
+class _Connection:
+    def __init__(self):
+        self.calls = 0
+    def request(self, *args, **kwargs):
+        self.calls += 1
+    def getresponse(self):
+        return _Response()
+    def close(self):
+        pass
 
 
 class DurableRequestBudgetTests(unittest.TestCase):
@@ -42,6 +74,11 @@ class DurableRequestBudgetTests(unittest.TestCase):
         with ThreadPoolExecutor(max_workers=12) as pool:
             outcomes = list(pool.map(try_reserve, range(20)))
         self.assertEqual(sum(outcomes), 4)
+
+    def test_multiple_processes_observe_one_daily_cap(self):
+        with ProcessPoolExecutor(max_workers=4) as pool:
+            outcomes = list(pool.map(_reserve_from_process, [(str(self.path), 3)] * 12))
+        self.assertEqual(sum(outcomes), 3)
 
     def test_utc_day_accounting(self):
         day = datetime(2026, 11, 1, 23, 55, tzinfo=timezone.utc)
@@ -120,6 +157,16 @@ class DurableRequestBudgetTests(unittest.TestCase):
         }, clear=True):
             with self.assertRaises(providers.ProviderConfigError):
                 providers.ProviderConfig.from_environment()
+
+    def test_successful_mocked_brave_request_reserves_before_transport(self):
+        config = providers.ProviderConfig(True, "dummy-not-a-secret", None, 1, self.path)
+        with patch.object(providers.BRAVE_RATE_GATE, "reserve"):
+            with patch.object(providers.http.client, "HTTPSConnection", return_value=_Connection()) as factory:
+                self.assertEqual(providers.fetch("brave", "example", 2, config), [])
+                self.assertEqual(factory.call_count, 1)
+                with self.assertRaises(providers.ProviderUnavailable):
+                    providers.fetch("brave", "example", 2, config)
+                self.assertEqual(factory.call_count, 1)
 
     def test_paid_transport_never_opens_without_reservation(self):
         config = providers.ProviderConfig(True, "dummy-not-a-secret", None, 1, self.path)
