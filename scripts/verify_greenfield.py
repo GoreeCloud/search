@@ -13,6 +13,7 @@ REQUIRED = (
     "goreecloud_search/federation.py",
     "goreecloud_search/native.py",
     "goreecloud_search/request_budget.py",
+    "goreecloud_search/recovery.py",
     "scripts/package_native.py",
     "web/index.html",
     "web/app.js",
@@ -24,8 +25,9 @@ REQUIRED = (
     "tests/test_native.py",
     "tests/test_request_budget.py",
     "tests/test_native_archive.py",
+    "tests/test_recovery.py",
 )
-MIN_TESTS = 58  # 51 existing + 6 archive tests + 1 native accessible-label test.
+MIN_TESTS = 67  # Existing 58 + 9 SQLite backup/recovery contracts.
 
 
 def main() -> int:
