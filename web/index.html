@@ -25,7 +25,7 @@
         <form id="search-form" role="search" class="search-form">
           <label for="query">Search your private catalog</label>
           <div class="search-field">
-            <input id="query" name="query" type="search" placeholder="Try a topic or document title" maxlength="160" autocomplete="off" spellcheck="false" required>
+            <input id="query" name="query" type="search" aria-controls="result-list" placeholder="Try a topic or document title" maxlength="160" autocomplete="off" spellcheck="false" required>
             <button type="submit" id="submit">Search</button>
           </div>
           <fieldset class="provider-fields">
@@ -44,8 +44,8 @@
       </section>
       <section class="results-section" id="results" aria-labelledby="results-heading" tabindex="-1">
         <div class="results-header"><h2 id="results-heading">Results</h2><span id="counter" class="count">Local collection</span></div>
-        <p id="status" class="status" role="status" aria-live="polite">Enter a query to search your local collection.</p>
-        <div id="result-list" class="result-list"></div>
+        <p id="status" class="status" role="status" aria-live="polite" aria-atomic="true">Enter a query to search your local collection.</p>
+        <div id="result-list" class="result-list" aria-busy="false" aria-label="Search results"></div>
       </section>
     </main>
     <footer>GoreeCloud Search · Greenfield Development · Built on GoreeCloud UI foundations</footer>
