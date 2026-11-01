@@ -11,6 +11,7 @@ REQUIRED = (
     "goreecloud_search/store.py",
     "goreecloud_search/providers.py",
     "goreecloud_search/federation.py",
+    "goreecloud_search/native.py",
     "web/index.html",
     "web/app.js",
     "web/styles.css",
@@ -18,8 +19,9 @@ REQUIRED = (
     "tests/test_optional_providers.py",
     "tests/test_http_integration.py",
     "tests/test_ui_contract.py",
+    "tests/test_native.py",
 )
-MIN_TESTS = 32  # 10 local + 8 providers + 10 HTTP + 4 UI contracts.
+MIN_TESTS = 37  # 10 local + 8 providers + 10 HTTP + 4 UI + 5 headless native tests.
 
 
 def main() -> int:
