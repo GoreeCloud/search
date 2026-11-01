@@ -1,0 +1,3 @@
+# Optional provider integration security review
+
+GoreeCloud Search remains a native, first-party greenfield implementation. Brave Search API and separately managed SearXNG are potential opt-in connectors; neither is a bundled search implementation. External egress must be disabled by default; allowlist exact destinations and request methods, keep credentials server-side, require explicit per-query consent, and return normalized, attributed results without leaking errors. No external provider is verified live. Historical recovery code remains excluded. Integration and release require no-skip CI, security review, real-browser acceptance, and approved staging.
