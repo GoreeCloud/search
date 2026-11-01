@@ -5,6 +5,7 @@ from functools import reduce
 from json import loads, dumps
 from urllib.parse import quote_plus
 
+from searx.exceptions import SearxEngineAPIException
 from searx.utils import extr
 
 # about
@@ -19,7 +20,7 @@ about = {
 
 # engine dependent config
 categories = ['videos', 'music']
-paging = True
+paging = False  # Continuation requires unavailable provider credential
 enable_http3 = True
 language_support = False
 time_range_support = True
@@ -29,7 +30,7 @@ base_url = 'https://www.youtube.com/results'
 search_url = base_url + '?search_query={query}&page={page}'
 time_range_url = '&sp=EgII{time_range}%253D%253D'
 # the key seems to be constant
-next_page_url = 'https://www.youtube.com/youtubei/v1/search?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'
+next_page_url = None  # No embedded third-party credential; paging disabled until qualified
 time_range_dict = {'day': 'Ag', 'week': 'Aw', 'month': 'BA', 'year': 'BQ'}
 
 base_youtube_url = 'https://www.youtube.com/watch?v='
@@ -43,6 +44,8 @@ def request(query, params):
         if params['time_range'] in time_range_dict:
             params['url'] += time_range_url.format(time_range=time_range_dict[params['time_range']])
     else:
+        if next_page_url is None:
+            raise SearxEngineAPIException('YouTube continuation is disabled without a qualified API')
         params['url'] = next_page_url
         params['method'] = 'POST'
         params['data'] = dumps(

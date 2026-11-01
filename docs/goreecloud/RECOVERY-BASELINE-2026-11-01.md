@@ -5,7 +5,7 @@
 - Intended public source: `GoreeCloud/search`. The authenticated GitHub API and CLI returned 404 on 2026-11-01 before recovery.
 - Recovered source: a **clean local checkout** on the authorized VPS at commit `3ec066fb8efaaa0bc92548949aa1b28ca83e0c42`, dated 2026-10-23.
 - GitHub email notifications mention work on 2026-10-27, which was **not** recovered from this checkout. Its code, review status, and merge state are unknown.
-- Recovery publication uses a **new root commit** rather than pushing unreviewed historical Git objects. The original local checkout remains unchanged for provenance/recovery.
+- Recovery PR uses a single reviewed snapshot commit on top of the newly initialized public `main`, rather than pushing unreviewed historical Git objects. The original local checkout remains unchanged for provenance/recovery.
 - Core provenance and licensing: SearXNG upstream foundation; preserve AGPL-3.0-or-later notices, `LICENSE`, `AUTHORS.rst`, `UPSTREAM.md`, and third-party notices. This is not a ground-up implementation.
 - The active GoreeCloud UI authority is `GoreeCloud/gc-ui`. Legacy Glaze references are historical evidence only, not current design authority.
 
@@ -30,3 +30,7 @@ A bundled Pexels fallback credential was removed from the recovered development 
 ## Product capability status
 
 The attached founder capability catalog is a **target specification**, not verification that each feature exists in this checkout. Track implemented/partial/planned categories separately in the product plan.
+
+## 2026-11-01 upstream embedded-key alert (release blocker)
+
+GitHub secret scanning reported a possible Google API key in historical upstream `searx/engines/youtube_noapi.py` after the recovery branch was published. The current recovery candidate removes the literal and disables unqualified continuation pagination rather than embedding an undocumented third-party credential. This may limit YouTube results to one page. Historical published commit exposure is not erased by changing current source; GitHub alert triage and credential-owner rotation/revocation where applicable remain outstanding. **Do not merge or deploy based solely on the source removal or green CI.**
