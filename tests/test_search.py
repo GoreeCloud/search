@@ -25,6 +25,20 @@ class StoreTests(unittest.TestCase):
             search(self.db, "private")
         self.db.chmod(0o600)
 
+    def test_index_init_rejects_existing_and_dangling_symlinks(self):
+        actual = Path(self.temp.name) / "target.sqlite3"
+        initialize(actual)
+        alias = Path(self.temp.name) / "alias.sqlite3"
+        alias.symlink_to(actual)
+        with self.assertRaises(PermissionError):
+            initialize(alias)
+        # A rejected alias must not alter or break the legitimate index.
+        self.assertEqual(search(actual, "nothing"), [])
+        dangling = Path(self.temp.name) / "dangling.sqlite3"
+        dangling.symlink_to(Path(self.temp.name) / "absent.sqlite3")
+        with self.assertRaises(PermissionError):
+            initialize(dangling)
+
     def test_init_and_local_search(self):
         data = Path(self.temp.name) / "items.jsonl"
         data.write_text(json.dumps({
