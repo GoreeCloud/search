@@ -10,6 +10,7 @@
 - Private, manually approved document index using SQLite FTS5, with a bounded, transactional JSONL import.
 - A POST-only JSON search endpoint, fixed request limits, strict origin handling, security headers, and minimized logging.
 - An original responsive web UI with keyboard-accessible form, loading, empty, and error states; light/dark support and semantic tokens aligned with [GoreeCloud UI](https://github.com/GoreeCloud/gc-ui).
+- An independent **optional native GTK4 desktop client** for the private SQLite index, including native search entry, result list, non-blocking searches, and safe HTTPS links. It uses no search provider, HTTP server, or browser runtime; real GTK4 desktop rendering has not yet been accepted.
 - An original optional provider layer for Brave Search API and a separately managed local SearXNG instance, with per-query user consent, result attribution, deduplication and bounded errors.
 - Isolated offline unit, API, consent and static UI tests on a disposable localhost server; no live/billable provider calls.
 
@@ -23,6 +24,16 @@ python3 -m goreecloud_search --db /tmp/gc-search-demo.sqlite3 import-jsonl --inp
 python3 -m goreecloud_search --db /tmp/gc-search-demo.sqlite3 serve --port 8787
 # Open http://127.0.0.1:8787/ on the same device.
 ```
+
+### Optional native GTK4 desktop
+
+On a Linux desktop with GTK4 and PyGObject installed from the operating system's trusted package repository (for example, packages `python3-gi` and `gir1.2-gtk-4.0` on supported Debian/Ubuntu environments), initialize/import the catalog as above, then run:
+
+```bash
+python3 -m goreecloud_search.native --db /tmp/gc-search-demo.sqlite3
+```
+
+The native client reads the private index **directly**; it does not start a web server or use Brave/SearXNG. The UI follows GC UI hierarchy and spacing principles using system GTK4 widgets; visual parity, keyboard/assistive-technology and packaging acceptance are still pending. The Python service and test suite do not require GTK.
 
 For the permanent catalog, omit `--db` to use the current user's private state folder. Use a file with one JSON object per line, containing `title`, `description`, `url` (public HTTPS), and optionally `source`. Imports replace the previous catalog atomically; back it up beforehand if needed.
 
