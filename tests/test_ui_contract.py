@@ -29,6 +29,27 @@ class UIContractTests(unittest.TestCase):
         self.assertIn("sourceSelect.value = \"local\"", js)
         self.assertIn("share_query:", js)
 
+    def test_accessible_status_announces_totals_and_activity(self):
+        html = (ROOT / "web/index.html").read_text(encoding="utf-8")
+        js = (ROOT / "web/app.js").read_text(encoding="utf-8")
+        self.assertIn('aria-live="polite" aria-atomic="true"', html)
+        self.assertIn('aria-busy="false"', html)
+        self.assertIn('aria-controls="result-list"', html)
+        self.assertIn('resultList.setAttribute("aria-busy", "true")', js)
+        self.assertIn('resultList.setAttribute("aria-busy", "false")', js)
+        self.assertIn('result found.', js)
+        self.assertIn('results found.', js)
+        self.assertNotIn('data.count ? ""', js)
+
+    def test_malformed_result_cannot_break_sibling_rendering(self):
+        js = (ROOT / "web/app.js").read_text(encoding="utf-8")
+        self.assertIn('try {\n    url = new URL(entry.url);', js)
+        self.assertIn('if (!entry || typeof entry !== "object") return false;', js)
+        self.assertIn('if (!Array.isArray(data.results))', js)
+        self.assertIn('data.results.reduce(', js)
+        self.assertIn('link.textContent = entry.title', js)
+        self.assertNotIn('innerHTML', js)
+
     def test_ui_uses_semantic_design_tokens_and_no_remote_script(self):
         css = (ROOT / "web/styles.css").read_text(encoding="utf-8")
         html = (ROOT / "web/index.html").read_text(encoding="utf-8")
