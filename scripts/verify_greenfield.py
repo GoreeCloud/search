@@ -27,7 +27,7 @@ REQUIRED = (
     "tests/test_native_archive.py",
     "tests/test_recovery.py",
 )
-MIN_TESTS = 67  # Existing 58 + 9 SQLite backup/recovery contracts.
+MIN_TESTS = 68  # Existing 58 + 9 recovery contracts + 1 native keyboard-focus test.
 
 
 def main() -> int:
