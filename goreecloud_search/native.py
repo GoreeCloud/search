@@ -115,7 +115,7 @@ def launch(db_path: Path, argv: list[str] | None = None) -> int:
             requested = self._generation
             self._clear()
             self.status.set_text("Searching local documents…")
-            self.entry.set_sensitive(False)
+            self.entry.set_editable(False)  # Keep keyboard focus during asynchronous search
 
             def worker() -> None:
                 try:
@@ -132,7 +132,7 @@ def launch(db_path: Path, argv: list[str] | None = None) -> int:
                           error: str | None) -> bool:
             if generation != self._generation:
                 return GLib.SOURCE_REMOVE
-            self.entry.set_sensitive(True)
+            self.entry.set_editable(True)
             if error:
                 self.status.set_text("The private catalog is unavailable. Initialize it first.")
             elif not rows:
