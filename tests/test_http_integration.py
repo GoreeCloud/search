@@ -73,7 +73,7 @@ class SearchHTTPIntegrationTests(unittest.TestCase):
         federation.assert_not_called()
 
     def test_consent_and_configuration_are_both_required(self):
-        self.server.provider_config = providers.ProviderConfig(True, "dummy-test-key")
+        self.server.provider_config = providers.ProviderConfig(True, "dummy-test-key", None, 3, Path(self.temp.name) / "budget.sqlite3")
         with patch("goreecloud_search.server.federated_search") as federation:
             for addition in ({}, {"share_query": False}, {"share_query": "true"}):
                 status, _, _ = self.request("POST", "/api/search", {
@@ -88,7 +88,7 @@ class SearchHTTPIntegrationTests(unittest.TestCase):
         self.assertEqual(status, 400)
 
     def test_explicit_opt_in_returns_attributed_results(self):
-        self.server.provider_config = providers.ProviderConfig(True, "dummy-test-key")
+        self.server.provider_config = providers.ProviderConfig(True, "dummy-test-key", None, 3, Path(self.temp.name) / "budget.sqlite3")
         remote = FederatedResult([{
             "title": "External", "description": "Safe text",
             "url": "https://example.org/remote", "source": "Brave Search", "provider": "brave",
@@ -117,7 +117,7 @@ class SearchHTTPIntegrationTests(unittest.TestCase):
                 self.assertNotIn(b"results", data)
 
     def test_cross_origin_and_fetch_site_rejected(self):
-        self.server.provider_config = providers.ProviderConfig(True, "dummy-test-key")
+        self.server.provider_config = providers.ProviderConfig(True, "dummy-test-key", None, 3, Path(self.temp.name) / "budget.sqlite3")
         with patch("goreecloud_search.server.federated_search") as federation:
             for headers in (
                 {"Origin": "http://attacker.example"},
@@ -131,7 +131,7 @@ class SearchHTTPIntegrationTests(unittest.TestCase):
             federation.assert_not_called()
 
     def test_invalid_query_limit_and_duplicate_provider_rejected(self):
-        self.server.provider_config = providers.ProviderConfig(True, "dummy-test-key")
+        self.server.provider_config = providers.ProviderConfig(True, "dummy-test-key", None, 3, Path(self.temp.name) / "budget.sqlite3")
         for payload in (
             {"query": "", "providers": ["brave"], "share_query": True},
             {"query": "topic", "limit": True, "providers": ["brave"], "share_query": True},
@@ -142,7 +142,7 @@ class SearchHTTPIntegrationTests(unittest.TestCase):
             self.assertEqual(status, 400)
 
     def test_partial_failure_has_bounded_nonsecret_warning(self):
-        self.server.provider_config = providers.ProviderConfig(True, "dummy-test-key")
+        self.server.provider_config = providers.ProviderConfig(True, "dummy-test-key", None, 3, Path(self.temp.name) / "budget.sqlite3")
         warning = FederatedResult([], [{"provider": "brave", "code": "unavailable"}])
         with patch("goreecloud_search.server.federated_search", return_value=warning):
             status, _, data = self.request("POST", "/api/search", {
