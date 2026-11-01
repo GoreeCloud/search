@@ -7,7 +7,7 @@ The original local SQLite FTS5 index remains the default and requires no third-p
 | Provider | Implementation | Activation and limitations |
 | --- | --- | --- |
 | Local SQLite FTS5 | First-party index and API | Enabled by default; curated records only, not broad web crawling |
-| Brave Search API | Original HTTPS adapter, normalized results | Disabled unless `GC_SEARCH_EXTERNAL_ENABLED=1` and a valid `GC_SEARCH_BRAVE_API_KEY` are configured; explicit per-query consent required; plan/billing and live integration unverified |
+| Brave Search API | Original HTTPS adapter, normalized results | Disabled unless `GC_SEARCH_EXTERNAL_ENABLED=1`, a valid `GC_SEARCH_BRAVE_API_KEY`, and an explicit positive `GC_SEARCH_BRAVE_DAILY_CAP` are configured; owner-private SQLite reservation and per-query consent required; real plan/billing and live compatibility still unverified |
 | SearXNG | Original loopback HTTP adapter to a *separately operated* service | Disabled unless `GC_SEARCH_EXTERNAL_ENABLED=1` and a validated `GC_SEARCH_SEARXNG_PORT` are configured; the instance must enable JSON responses; instance may forward queries to other engines |
 
 No historical SearXNG code, search database, credential, UI or deployment is incorporated. The new GoreeCloud Search application remains independent.
@@ -20,7 +20,7 @@ No historical SearXNG code, search database, credential, UI or deployment is inc
 - Provider IDs, configuration, result counts and response sizes are bounded; Brave destination and localhost SearXNG destination are fixed by code; provider redirects are not followed; credentials remain server-side.
 - Explicit per-query consent and global enablement are both required. The UI resets consent after each search or provider switch and disables source changes during active requests.
 - External sources receive the search terms when explicitly used; Brave may incur charges and SearXNG may forward queries upstream. Results carry provider attribution and failures are represented by bounded warnings, not raw error details.
-- The Brave in-process rate gate is a safeguard, **not** a durable paid-usage budget. Do not activate on a billable plan without explicit owner-approved quotas/usage monitoring.
+- Brave now also uses a **durable local SQLite per-UTC-day request ceiling** that fails closed before API egress. This protects a single ledger across process restarts and cooperating processes, but **does not enforce a monetary, provider-account or multi-device billing limit**. Do not activate on a paid plan without account-level provider caps, verified terms, owner-approved quotas and usage monitoring. See [paid usage controls](PAID_USAGE_CONTROLS.md).
 
 ## Verification and release gates
 
