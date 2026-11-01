@@ -84,3 +84,19 @@ footer { text-align: center; font-size: .78rem; color: var(--gc-text-soft); bord
   :root { --gc-outline-width: 4px; }
   .result-card, .search-form, .search-field input { border-width: 2px; }
 }
+
+/* GC UI semantic provider controls; no external assets. */
+.provider-fields { border: 0; margin: 20px 0 0; padding: 0; }
+.provider-fields legend { font-weight: 700; margin-bottom: 10px; }
+.provider-fields > label { display: block; font-size: .87rem; }
+.provider-fields select { width: 100%; min-height: var(--gc-control-min-height);
+  margin: 8px 0; border: 1px solid var(--gc-outline);
+  border-radius: var(--gc-radius-sm); background: var(--gc-surface);
+  color: var(--gc-text); padding: 9px 12px; }
+.provider-fields select:disabled { opacity: .65; }
+.provider-fields p { color: var(--gc-text-soft); font-size: .82rem;
+  line-height: 1.5; margin: 6px 0 12px; }
+.provider-fields label.consent { display: flex; align-items: flex-start;
+  gap: 10px; padding: 7px 0; cursor: pointer; }
+.provider-fields input[type=checkbox] { min-width: 20px; min-height: 20px;
+  flex-shrink: 0; accent-color: var(--gc-brand); }
