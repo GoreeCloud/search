@@ -74,6 +74,9 @@ def connect(db_path: Path) -> sqlite3.Connection:
 
 
 def initialize(db_path: Path) -> None:
+    # Match connect(): never initialize through an existing or dangling symlink.
+    if db_path.is_symlink():
+        raise PermissionError("Symlinked indexes are not allowed")
     db_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     if not db_path.exists():
         try:
@@ -82,6 +85,8 @@ def initialize(db_path: Path) -> None:
             pass
         else:
             os.close(fd)
+    if db_path.is_symlink() or not db_path.is_file():
+        raise PermissionError("Index must be a regular file, not a symlink")
     if stat.S_IMODE(db_path.stat().st_mode) & 0o077:
         raise PermissionError("Index permissions must restrict access to its owner")
     with closing(sqlite3.connect(str(db_path))) as conn, conn:
