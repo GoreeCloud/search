@@ -1,0 +1,180 @@
+/* GLAZE UI V1.2 Candidate — bounded geometry and curvature calibration.
+ * Numeric radii are Candidate implementation calibration derived from current repository geometry.
+ * Proposal authority remains semantic: purpose-specific curvature, coordinated nesting, and no uniform rounding.
+ * :root adds one Candidate-scope specificity level so these semantic bindings outrank inherited V1/V1.1
+ * presentation radii while the final accessibility layer remains later and platform-authoritative.
+ */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root {
+  --glz12-radius-checkbox: 7px;
+  --glz12-radius-compact: 10px;
+  --glz12-radius-control: 12px;
+  --glz12-radius-field: 14px;
+  --glz12-radius-floating-control: 16px;
+  --glz12-radius-surface: 20px;
+  --glz12-radius-panel: 24px;
+  --glz12-radius-signature: 26px;
+  --glz12-radius-sheet: 28px;
+  --glz12-radius-pill: 999px;
+}
+
+/* Small state geometry remains recognizable without requiring atmospheric color. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root
+  .glz1-choice[data-kind="checkbox"] .glz1-choice-control {
+  border-radius: var(--glz12-radius-checkbox);
+}
+
+/* Compact explanatory/action geometry. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root :is(
+  .glz1-tooltip,
+  .glz1-menu-item
+) {
+  border-radius: var(--glz12-radius-compact);
+}
+
+/* Standard controls. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root :is(
+  .glz1-button,
+  .glz1-icon-button,
+  .glz1-overlay-button,
+  .glz1-sidebar-item
+) {
+  border-radius: var(--glz12-radius-control);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root :is(
+  .glz1-button[data-size="xs"],
+  .glz1-icon-button[data-size="xs"],
+  .glz1-button[data-size="sm"],
+  .glz1-icon-button[data-size="sm"]
+) {
+  border-radius: var(--glz12-radius-compact);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root :is(
+  .glz1-button[data-size="lg"],
+  .glz1-icon-button[data-size="lg"]
+) {
+  border-radius: var(--glz12-radius-field);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root :is(
+  .glz1-button[data-size="xl"],
+  .glz1-icon-button[data-size="xl"]
+) {
+  border-radius: var(--glz12-radius-floating-control);
+}
+
+/* Fields use slightly softer geometry than ordinary action controls.
+ * V1 Optical Reachability locks field radii with !important, so V1.2 must use
+ * the same cascade tier narrowly here to establish the successor semantic role.
+ */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root :is(
+  .glz1-field-control,
+  .glz1-select
+) {
+  border-radius: var(--glz12-radius-field) !important;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root :is(
+  .glz1-field-control[data-size="sm"],
+  .glz1-select[data-size="sm"]
+) {
+  border-radius: var(--glz12-radius-control) !important;
+}
+
+/* Floating controls and compact floating containers. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root :is(
+  .glz1-toolbar,
+  .glz1-menu,
+  .glz1-dock-item,
+  .glz1-rail-item
+) {
+  border-radius: var(--glz12-radius-floating-control);
+}
+
+/* Durable and anchored surfaces. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root :is(
+  .glz1-card,
+  .glz1-list,
+  .glz1-table-wrap,
+  .glz1-sidebar,
+  .glz1-navigation-rail,
+  .glz1-popover,
+  .glz1-toast
+) {
+  border-radius: var(--glz12-radius-surface);
+}
+
+/* Elevated panels and expanded signature states. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root :is(
+  .glz1-dialog,
+  .glz1-morph-card
+) {
+  border-radius: var(--glz12-radius-panel);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root .glz1-capsule[data-expanded="true"],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root
+  .glz1-universal-search[data-open="true"] .glz1-search-entry {
+  border-radius: var(--glz12-radius-panel);
+}
+
+/* Signature curvature carries more apparent depth than ordinary panels. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root :is(
+  .glz1-smart-rail,
+  .glz1-aurora,
+  .glz1-search-panel
+) {
+  border-radius: var(--glz12-radius-signature);
+}
+
+/* High-depth sheet/dock geometry. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root :is(
+  .glz1-sheet,
+  .glz1-dock
+) {
+  border-radius: var(--glz12-radius-sheet);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root
+  .glz1-morph-card[aria-expanded="true"] {
+  border-radius: var(--glz12-radius-sheet);
+}
+
+/* Full pills are reserved for explicitly pill-like semantics. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root :is(
+  .glz1-capsule:not([data-expanded="true"]),
+  .glz1-search-entry,
+  .glz1-source-chip,
+  .glz1-switch-track
+) {
+  border-radius: var(--glz12-radius-pill);
+}
+
+/* Large-text reflow converts long capsules/search entries into panel geometry.
+ * The inherited Capsule animates border-radius; accessibility recomposition must
+ * be atomic so the surface cannot remain pill-shaped while text has already grown.
+ */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root[data-glz-text-scale="200"] :is(
+  .glz1-capsule,
+  .glz1-search-entry
+),
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root
+  [data-glz-text-scale="200"] :is(.glz1-capsule, .glz1-search-entry) {
+  border-radius: var(--glz12-radius-panel);
+  transition: none;
+}
+
+/* Geometry is structural: accessibility/material fallback modes preserve the radius hierarchy. */
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root :is(
+    .glz1-button,
+    .glz1-icon-button,
+    .glz1-field-control,
+    .glz1-select,
+    .glz1-card,
+    .glz1-popover,
+    .glz1-menu,
+    .glz1-dialog,
+    .glz1-sheet,
+    .glz1-dock,
+    .glz1-capsule,
+    .glz1-morph-card
+  ) {
+    forced-color-adjust: auto;
+  }
+}

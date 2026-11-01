@@ -1,0 +1,153 @@
+# Hardened Search/Tor + disposable ingress staging. NEVER changes the live Caddy or its proxy network.
+# Use with a verified image tag and a generated staging-only secret.
+name: goreecloud-search-hardened-staging
+
+services:
+  tor:
+    image: ${SEARCH_STAGING_TOR_IMAGE:-goreecloud/search-tor:private-v1}
+    command:
+      - tor
+      - --RunAsDaemon
+      - "0"
+      - --ClientOnly
+      - "1"
+      - --SocksPort
+      # Listen only on Tor's fixed INTERNAL address, never the egress bridge.
+      - "172.29.247.2:9050"
+      - --SocksPolicy
+      - "accept 172.29.247.3/32"
+      - --SocksPolicy
+      - "reject *"
+      - --DataDirectory
+      - /tmp/goreecloud-search-tor-staging
+      - --Log
+      - notice stdout
+    user: debian-tor
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,noexec,size=32m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    init: true
+    restart: "no"
+    pids_limit: 128
+    mem_limit: 192m
+    networks:
+      search_internal:
+        ipv4_address: 172.29.247.2
+      tor_egress: {}
+
+  search:
+    image: ${SEARCH_STAGING_IMAGE:?Use an explicitly pinned Search Development image}
+    user: "977:977"
+    # Search holds its internal namespace while the dependent relay starts.
+    # A SOCKS5H Tor attestation must pass before Granian is execd.
+    entrypoint: ["/usr/local/searxng/.venv/bin/python", "-u", "/usr/local/searxng/staging-start-search.py"]
+    environment:
+      SEARXNG_SECRET: ${SEARCH_STAGING_SECRET:?Use an isolated staging-only 32+ character secret}
+      SEARXNG_SETTINGS_PATH: /usr/local/searxng/private-settings.yml
+      # Private host allowlist is hard-coded to this hostname; no host ports are published.
+      GOREECLOUD_SEARCH_PRIVATE_HOST: search-dev.goreecloud.com
+      GRANIAN_HOST: 0.0.0.0
+      GRANIAN_PORT: "8080"
+      GRANIAN_WORKERS: "1"
+      GRANIAN_INTERFACE: wsgi
+      GRANIAN_WEBSOCKETS: "false"
+      GRANIAN_BLOCKING_THREADS: "4"
+    volumes:
+      - ../../configs/goreecloud/settings.yml:/usr/local/searxng/private-settings.yml:ro
+      - ../../scripts/staging_start_search.py:/usr/local/searxng/staging-start-search.py:ro
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,noexec,size=32m,mode=1777
+      - /var/cache/searxng:rw,nosuid,noexec,size=64m,uid=977,gid=977
+      - /etc/searxng:rw,nosuid,noexec,size=8m,uid=977,gid=977
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    init: true
+    restart: "no"
+    pids_limit: 128
+    mem_limit: 768m
+    depends_on:
+      - tor
+    networks:
+      search_internal:
+        ipv4_address: 172.29.247.3
+
+  relay:
+    image: ${SEARCH_STAGING_IMAGE:?Use an explicitly pinned Search Development image}
+    # Only this disposable process shares Search's INTERNAL network namespace.
+    # Unlike the former architecture, Tor never shares Search's namespace.
+    network_mode: "service:search"
+    user: "977:977"
+    entrypoint:
+      - /usr/local/searxng/.venv/bin/python
+      - -u
+      - /usr/local/searxng/local-socks-relay.py
+    volumes:
+      - ../../scripts/local_socks_relay.py:/usr/local/searxng/local-socks-relay.py:ro
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    init: true
+    restart: "no"
+    pids_limit: 32
+    mem_limit: 128m
+    depends_on:
+      - search
+      - tor
+
+  ingress:
+    # A private front-end forwarding ONLY to Search, never an open proxy.
+    # Use an explicitly pinned local Caddy image; no implicit pulling.
+    image: ${SEARCH_CANDIDATE_INGRESS_IMAGE:?Pin the locally inspected Caddy image}
+    user: "977:977"
+    entrypoint: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    volumes:
+      - ./Caddyfile.hardened-ingress:/etc/caddy/Caddyfile:ro
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,noexec,size=8m,uid=977,gid=977
+      - /data:rw,nosuid,noexec,size=8m,uid=977,gid=977
+      - /config:rw,nosuid,noexec,size=8m,uid=977,gid=977
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    # The pinned Caddy binary carries a bind-service file capability.
+    # Keep only this one bounding capability so execve works as uid 977.
+    cap_add: [NET_BIND_SERVICE]
+    init: true
+    restart: "no"
+    pids_limit: 48
+    mem_limit: 128m
+    depends_on:
+      - search
+    networks:
+      search_internal: {}
+      private_ingress:
+        aliases:
+          # Deliberately NOT the existing live goreecloud-search-gateway alias.
+          - goreecloud-search-hardened-gateway
+
+networks:
+  search_internal:
+    driver: bridge
+    internal: true
+    enable_ipv6: false
+    # Dedicated small staging subnet; validate against host/VPN routes first.
+    # Static addresses let Tor bind the internal NIC and reject other clients.
+    ipam:
+      config:
+        - subnet: 172.29.247.0/28
+  tor_egress:
+    driver: bridge
+    internal: false
+    enable_ipv6: false
+  private_ingress:
+    external: true
+    # For tests, create a disposable bridge with no host ports.
+    # 'proxy' requires an independently authorized later migration.
+    name: ${SEARCH_CANDIDATE_INGRESS_NETWORK:?Use an existing isolated disposable bridge}

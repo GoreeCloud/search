@@ -1,0 +1,251 @@
+/*
+ * GLAZE UI V1.2 — accessibility resolution hardening Candidate.
+ * Loaded last so governed accessibility preferences override lower-priority
+ * material/expression rules without replacing protected semantic meaning.
+ */
+
+/* Reference isolation must preserve the HTML hidden semantic even when scenes use explicit display. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-a11y-scene[hidden] {
+  display: none !important;
+}
+
+/* Canonical Reduced Motion binding. Legacy data-mode remains supported by the motion owner. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-motion="reduced"]:root :is(
+  [data-glz-motion="press"],
+  .glz1-morph-card[data-glz-connected="card-detail"],
+  [data-glaze-living]
+) {
+  transition: none !important;
+}
+/* Nonessential press/morph travel is removed, not merely made instantaneous. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-motion="reduced"]:root :is(
+  [data-glz-motion="press"],
+  .glz1-morph-card[data-glz-connected="card-detail"]
+) {
+  transform: none !important;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-motion="reduced"]:root :is(
+  [data-glaze-living][data-material-state="pressed"],
+  [data-glaze-living][data-material-state="dragged"]
+) {
+  transform: none !important;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-motion="reduced"]:root .glz12-motion-selection-indicator {
+  transition: none !important;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-motion="reduced"]:root :is(
+  [data-glz-motion-surface],
+  .glz1-universal-search[data-glz-connected="search"] .glz1-search-panel
+) {
+  transition: opacity var(--glz12-motion-instant-effective) linear !important;
+  transform: none !important;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-motion="reduced"]:root .glz1-universal-search[data-glz-connected="search"] .glz1-search-entry {
+  transition: none !important;
+}
+/* Direct manipulation remains position-tracked because removing it would break control. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-motion="reduced"]:root [data-glz-direct-manipulation="true"] {
+  transition: none !important;
+  transform: translate(var(--glz12-direct-x, 0px), var(--glz12-direct-y, 0px)) !important;
+}
+
+/* Reduced Transparency forces Solid/effects-free rendering after lower-priority material clarity. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"]:root :is(
+  .glz1-button[data-variant="glaze"],
+  .glz1-icon-button[data-variant="glaze"],
+  .glz1-field-control[data-variant="glaze"],
+  .glz1-select[data-variant="glaze"],
+  .glz1-source-chip[data-material="frosted"],
+  .glz1-sidebar[data-variant="floating"],
+  .glz1-navigation-rail[data-variant="floating"],
+  .glz1-dock,
+  .glz1-toolbar[data-variant="floating"],
+  .glz1-tooltip,
+  .glz1-popover,
+  .glz1-menu,
+  .glz1-sheet,
+  .glz1-toast,
+  .glz1-capsule,
+  .glz1-smart-rail,
+  .glz12-shell-navigation[data-variant="floating"],
+  [data-glz-shell-region="navigation"][data-variant="floating"],
+  [data-glaze-living],
+  [data-glaze-navigation-capsule]
+) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Canonical Increased Contrast + Show Boundaries compatibility binding. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-contrast="increased"][data-glz-boundaries="show"]:root :is(
+  .glz1-button,
+  .glz1-icon-button,
+  .glz1-field-control,
+  .glz1-select,
+  .glz1-choice-control,
+  .glz1-switch-track,
+  .glz1-capsule,
+  .glz1-popover,
+  .glz1-menu,
+  .glz1-sheet,
+  .glz1-toast,
+  .glz1-sidebar[data-variant="floating"],
+  .glz1-navigation-rail[data-variant="floating"],
+  .glz12-shell-navigation[data-variant="floating"],
+  .glz12-semantic-state,
+  .glz12-offline-state,
+  .glz12-recovery-state,
+  [data-glaze-living],
+  [data-glaze-navigation-capsule]
+) {
+  border-style: solid;
+  border-width: var(--glz12-state-focus-width);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-contrast="increased"][data-glz-boundaries="show"]:root :is(
+  .glz12-stateful,
+  .glz1-button,
+  .glz1-icon-button,
+  .glz1-field-control,
+  .glz1-select,
+  [data-glaze-living],
+  [data-glaze-navigation-capsule] button,
+  [data-glaze-navigation-capsule] a,
+  a,
+  button,
+  input,
+  select,
+  textarea
+):focus-visible {
+  outline-width: var(--glz12-state-focus-width-contrast) !important;
+  outline-style: solid;
+  outline-color: var(--glz1-focus);
+  outline-offset: var(--glz12-state-focus-offset);
+}
+
+/* Large Text is a reflow signal. Actual scale remains platform/browser/user authoritative. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"]:root :is(
+  .glz12-a11y-library,
+  .glz12-a11y-scene,
+  .glz12-a11y-grid,
+  .glz12-a11y-region,
+  .glz1-button,
+  .glz1-field,
+  .glz1-field-control,
+  .glz1-select,
+  [data-glaze-living],
+  [data-glaze-navigation-capsule],
+  [data-glaze-navigation-capsule] button,
+  [data-glaze-navigation-capsule] a
+) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"]:root .glz12-a11y-grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"]:root [data-glaze-navigation-capsule] {
+  flex-wrap: wrap;
+  border-radius: var(--glz12-radius-surface, 20px);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"]:root :is(.glz1-button,.glz1-field-control,.glz1-select,[data-glaze-navigation-capsule] button,[data-glaze-navigation-capsule] a) {
+  white-space: normal;
+}
+
+/* Touch Assistance raises the hit-area floor using the governed assisted target token. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-touch-assistance="true"]:root :is(
+  .glz1-button,
+  .glz1-icon-button,
+  .glz1-field-control,
+  .glz1-select,
+  .glz12-a11y-action,
+  [data-glaze-navigation-capsule] button,
+  [data-glaze-navigation-capsule] a
+) {
+  min-inline-size: var(--glz12-shell-target-assisted);
+  min-block-size: var(--glz12-shell-target-assisted);
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-navigation[data-variant="floating"],
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-shell-region="navigation"][data-variant="floating"] {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-button[aria-pressed="true"],
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-control-tile[aria-pressed="true"] {
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+  }
+
+  /* Platform roles supersede custom accent/material rendering. */
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz12-a11y-scene,
+    .glz12-a11y-region,
+    .glz1-button,
+    .glz1-icon-button,
+    .glz1-field-control,
+    .glz1-select,
+    .glz1-capsule,
+    .glz1-popover,
+    .glz1-menu,
+    .glz1-sheet,
+    .glz1-toast,
+    .glz1-sidebar[data-variant="floating"],
+    .glz1-navigation-rail[data-variant="floating"],
+    [data-glaze-living],
+    [data-glaze-navigation-capsule]
+  ) {
+    forced-color-adjust: auto;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /* Forced Colors takes effect atomically; no decorative interpolation. */
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz1-button[data-variant="glaze"],
+    .glz1-icon-button[data-variant="glaze"],
+    .glz1-field-control[data-variant="glaze"],
+    .glz1-select[data-variant="glaze"],
+    .glz1-source-chip[data-material="frosted"],
+    .glz1-sidebar[data-variant="floating"],
+    .glz1-navigation-rail[data-variant="floating"],
+    .glz1-dock,
+    .glz1-toolbar[data-variant="floating"],
+    .glz1-tooltip,
+    .glz1-popover,
+    .glz1-menu,
+    .glz1-sheet,
+    .glz1-toast,
+    .glz1-capsule,
+    .glz1-smart-rail,
+    [data-glaze-living],
+    [data-glaze-navigation-capsule]
+  ) {
+    transition: none !important;
+    animation: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-boundaries="show"]:root :is(
+    .glz1-button,
+    .glz1-icon-button,
+    .glz1-field-control,
+    .glz1-select,
+    .glz1-capsule,
+    .glz1-popover,
+    .glz12-a11y-region,
+    [data-glaze-living],
+    [data-glaze-navigation-capsule]
+  ) {
+    border-color: CanvasText;
+  }
+}

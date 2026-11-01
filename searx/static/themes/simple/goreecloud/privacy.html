@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Privacy and Sources — GoreeCloud Search</title>
+<link rel="icon" type="image/svg+xml" href="/static/themes/simple/img/favicon.svg">
+<style>
+:root{color-scheme:light dark;font:16px/1.65 system-ui,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:#f7faff;color:#1b2b46}
+a{color:#1e55ba;text-underline-offset:3px}
+a:focus-visible{outline:3px solid #1e55ba;outline-offset:3px}
+.skip-link{position:absolute;z-index:20;left:10px;top:0;padding:10px 14px;border-radius:8px;background:white;color:#1b2b46;transform:translateY(-150%)}
+.skip-link:focus{transform:translateY(6px)}
+header{background:white;border-bottom:1px solid #dae5f3}
+nav{max-width:1100px;margin:auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;padding:16px 22px}
+.brand{display:flex;align-items:center;gap:10px;color:#1b2b46;text-decoration:none;font-weight:750}
+.brand img{width:35px;height:35px}.brand strong{color:#2055b1}
+.links{display:flex;gap:18px;flex-wrap:wrap;min-width:0;font-size:14px;font-weight:600}
+main{max-width:870px;margin:45px auto 70px;padding:28px clamp(22px,4vw,42px);border:1px solid #dae5f3;border-radius:18px;background:white}
+h1{font-size:clamp(29px,4vw,40px);letter-spacing:-.04em;line-height:1.2;margin:.2em 0 .35em}
+h2{font-size:19px;margin:30px 0 8px}p{margin:0 0 15px}
+.eyebrow{font-size:12px;color:#2055b1;text-transform:uppercase;letter-spacing:.06em;font-weight:750}
+.note{color:#536780}.detail{border-top:1px solid #dae5f3;padding-top:18px;margin-top:25px;font-size:14px;color:#536780}
+footer{text-align:center;color:#536780;font-size:12px;padding:25px}
+@media(max-width:600px){nav{padding:12px 14px}.links{gap:9px;font-size:12px}main{margin:18px 12px 35px;padding:20px}}
+@media(prefers-color-scheme:dark){body{background:#0e1729;color:#e8f0ff}header,main{background:#14213a;border-color:#324767}.brand{color:#e8f0ff}a,.eyebrow{color:#87b3ff}.note,.detail,footer{color:#adc0de}}
+</style></head>
+<body><a class="skip-link" href="#privacy-content">Skip to privacy content</a><header><nav aria-label="GoreeCloud Search navigation">
+<a class="brand" href="/"><img src="/static/themes/simple/img/favicon.svg" alt=""><span>Goree<strong>Cloud</strong> · Search</span></a>
+<div class="links"><a href="/info/en/about">About</a><a aria-current="page" href="/static/themes/simple/goreecloud/privacy.html">Privacy</a><a href="/preferences">Settings</a></div>
+</nav></header>
+<main id="privacy-content" tabindex="-1"><p class="eyebrow">GoreeCloud Search</p><h1>Privacy and sources</h1>
+<p class="note">Transparency about what this private VPS Development service does and does not protect.</p>
+<h2>Which providers receive searches?</h2>
+<p>GoreeCloud Search uses publicly accessible SearXNG search interfaces with no paid search API subscription. The direct-HTTPS Development service has a tested free-source preset: DuckDuckGo, Bing and Startpage for Web; Bing Images; DuckDuckGo and Bing Videos; and DuckDuckGo News. You can choose All Sources to include all seven configured search-engine families, including Brave Search, Qwant, Ecosia and Google. A provider that blocks or fails is reported instead of silently replaced. Availability is not guaranteed.</p>
+<p>The selected external search providers can receive your search terms and see the VPS public IP address. This active free-first Development service uses ordinary direct HTTPS, not Tor or a mandatory SOCKS5H relay. Older, separate private Search/Tor recovery containers remain available but do not serve this hostname. Search providers may log, rate-limit, challenge or reject automated requests under their own policies. The experimental native document index is a separate Development-only opt-in.</p>
+<h2>What stays on your device?</h2>
+<p>The chosen search-provider preference and other preferences are stored in your browser's cookies. There is no GoreeCloud personal profile or hosted AI transmission in this Development build. An isolated native Development index can search a small, explicitly approved document corpus when separately enabled; it is not a general-web index and is not automatically combined with All Sources.</p>
+<h2>Search transport and content</h2>
+<p>Search terms are submitted by POST instead of being put in the local address-bar URL. Remote autocomplete and anonymous metrics are disabled in this Development profile, and images are proxied. Browser clicks on search results can still send you to third-party sites. Other privacy and security limitations remain.</p>
+<h2>Development limitations</h2>
+<p>This Development service is hosted at <strong>search-dev.goreecloud.com</strong> behind NetBird-only HTTPS access. The front reverse proxy denies non-NetBird clients, and its Search containers have no host-published ports. The upgraded free-search deployment sends upstream requests directly over HTTPS; selected providers can see the server IP and search terms. This service does not promise anonymity or upstream provider availability. The global in-process request budget is 12 search submissions per minute on one worker and is not a distributed public-user limiter. Security, monitoring, independent upstream reliability, and Stable release acceptance remain ongoing work; no paid API account or billing is required.</p>
+<div class="detail"><strong>Technology attribution.</strong> GoreeCloud Search builds upon SearXNG, an open-source metasearch project available under AGPL-3.0-or-later. <a href="https://github.com/GoreeCloud/search">Explore GoreeCloud Search source code</a>. The upstream contributors remain acknowledged; this is not an independent crawler or index.</div>
+</main><footer>© GoreeCloud · Free, open-source metasearch</footer></body></html>

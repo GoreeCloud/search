@@ -1,0 +1,203 @@
+/* GLAZE UI V1.2 Candidate — capability-class System Shell and Navigation behavior. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-behavior-layout {
+  display: grid;
+  gap: var(--glz12-space-section);
+  min-inline-size: 0;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-behavior-workspace,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-behavior-nav,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-behavior-side {
+  min-inline-size: 0;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-behavior-nav {
+  display: flex;
+  gap: var(--glz12-space-control);
+  align-items: stretch;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-destination {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--glz12-space-control);
+  min-inline-size: var(--glz12-target-min);
+  min-block-size: var(--glz12-target-min);
+  padding-inline: var(--glz12-space-control);
+  border: 1px solid transparent;
+  border-radius: var(--glz12-radius-control);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-destination[aria-current="page"] {
+  border-color: var(--glz12-shell-control-active-border);
+  background: var(--glz12-shell-control-active);
+  font-weight: 700;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-destination[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  inset-block: var(--glz12-space-control);
+  inset-inline-start: 0;
+  inline-size: var(--glz12-state-focus-width);
+  border-radius: var(--glz12-radius-control);
+  background: currentColor;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-destination:focus-visible,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-behavior-action:focus-visible {
+  outline: var(--glz12-state-focus-width) solid var(--glz1-focus);
+  outline-offset: var(--glz12-state-focus-offset);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-behavior-action {
+  min-inline-size: var(--glz12-target-min);
+  min-block-size: var(--glz12-target-min);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-identity {
+  display: grid;
+  gap: var(--glz12-space-compact-cluster);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-search-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--glz12-space-control);
+  min-block-size: var(--glz12-target-min);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-notification-history {
+  display: grid;
+  gap: var(--glz12-space-control);
+  padding: var(--glz12-space-content);
+  background: var(--glz1-raised);
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-panel);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-notification {
+  display: grid;
+  gap: var(--glz12-space-compact-cluster);
+  min-inline-size: 0;
+  padding-block: var(--glz12-space-control);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-notification + .glz12-shell-notification {
+  border-block-start: 1px solid var(--glz12-structural-border);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-shell-critical-source {
+  font-weight: 700;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="expanded"] .glz12-shell-behavior-layout {
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  align-items: start;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="expanded"] .glz12-shell-behavior-nav,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="medium"] .glz12-shell-behavior-nav {
+  flex-direction: column;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="medium"] .glz12-shell-behavior-layout {
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="medium"] .glz12-shell-behavior-side {
+  grid-column: 1 / -1;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="medium"] .glz12-shell-nav-label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="compact"] .glz12-shell-behavior-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="compact"] .glz12-shell-behavior-workspace { order: 1; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="compact"] .glz12-shell-behavior-side { order: 2; }
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="compact"] .glz12-shell-behavior-nav {
+  order: 3;
+  flex-direction: row;
+  justify-content: space-around;
+  position: relative;
+  padding-block-start: var(--glz12-space-control);
+  padding-block-end: max(var(--glz12-space-control), env(safe-area-inset-bottom));
+  padding-inline-start: max(var(--glz12-space-control), env(safe-area-inset-left));
+  padding-inline-end: max(var(--glz12-space-control), env(safe-area-inset-right));
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="compact"] .glz12-shell-destination {
+  flex: 1 1 0;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="compact"] .glz12-shell-destination[aria-current="page"]::before {
+  inset-block: 0 auto;
+  inset-inline: var(--glz12-space-control);
+  inline-size: auto;
+  block-size: var(--glz12-state-focus-width);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="large"] .glz12-shell-behavior-layout {
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="large"] .glz12-shell-behavior-nav {
+  flex-direction: column;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="large"] .glz12-shell-behavior-side {
+  grid-column: 1 / -1;
+  inline-size: 100%;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="large"] :is(
+  .glz12-shell-destination,
+  .glz12-shell-behavior-action,
+  .glz1-search-result,
+  .glz1-field-control,
+  .glz1-select
+) {
+  min-inline-size: var(--glz12-shell-target-assisted);
+  min-block-size: var(--glz12-shell-target-assisted);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"] :is(.glz12-shell-behavior-layout, .glz12-shell-behavior-nav, .glz12-shell-search-scope, .glz12-shell-notification-history) {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"] .glz12-shell-behavior-nav { flex-wrap: wrap; }
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] .glz12-shell-notification-history {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none;
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(.glz12-shell-destination, .glz12-shell-notification-history, .glz12-shell-notification) {
+    forced-color-adjust: auto;
+  }
+}

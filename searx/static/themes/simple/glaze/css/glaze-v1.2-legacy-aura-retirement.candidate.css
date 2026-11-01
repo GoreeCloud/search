@@ -1,0 +1,23 @@
+/*
+ * GLAZE UI V1.2 — legacy Aura retirement compatibility layer.
+ *
+ * The inherited V1.1 Frosted Neutral compatibility layer defines teal/amber Aura
+ * values again for explicit Dark/Deep Dark selectors. V1.2 Frosted Optical replaces
+ * that default atmosphere with Frost/Ice, so the legacy variables are neutralized at
+ * matching-or-higher appearance specificity until the inherited declarations can be
+ * removed from the next Stable source set.
+ */
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-appearance="light"],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-appearance="dark"],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-appearance="deep-dark"] {
+  --glz11-aura-teal-max: transparent;
+  --glz11-aura-amber-max: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:not([data-glz-appearance="light"]):not([data-glz-appearance="deep-dark"]) {
+    --glz11-aura-teal-max: transparent;
+    --glz11-aura-amber-max: transparent;
+  }
+}

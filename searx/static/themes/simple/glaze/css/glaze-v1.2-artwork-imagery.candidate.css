@@ -1,0 +1,156 @@
+/*
+ * GLAZE UI V1.2 — bounded Artwork, Illustration, and Imagery Candidate.
+ * Treatment only. This layer does not define canonical product artwork,
+ * editorial truth, system state, security/privacy state, or external asset ownership.
+ * It MUST load before the final accessibility resolution layer.
+ */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] {
+  --glz12-media-art-strength: 0.12;
+  --glz12-media-grid-gap: 16px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-media-library,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-media-library > *,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-media-grid > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-media-surface {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  padding: 18px;
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-surface, 20px);
+  background: var(--glz1-base);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-media-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--glz12-media-grid-gap);
+  min-inline-size: 0;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-concept-art {
+  position: relative;
+  min-block-size: 180px;
+  overflow: hidden;
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-surface, 20px);
+  background-color: var(--glz1-raised);
+  background-image:
+    radial-gradient(circle at 25% 35%, color-mix(in srgb, var(--glz12-personal-accent, rgb(82 151 181)) calc(var(--glz12-media-art-strength) * 100%), transparent) 0 16%, transparent 17%),
+    radial-gradient(circle at 72% 62%, color-mix(in srgb, var(--glz12-personal-accent, rgb(82 151 181)) calc(var(--glz12-media-art-strength) * 70%), transparent) 0 22%, transparent 23%),
+    linear-gradient(145deg, color-mix(in srgb, var(--glz1-raised) 84%, transparent), var(--glz1-base));
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-concept-art::after {
+  content: "";
+  position: absolute;
+  inset: 18% 15%;
+  border: 1px solid color-mix(in srgb, var(--glz12-personal-accent, rgb(82 151 181)) 38%, var(--glz12-structural-border));
+  border-radius: 42% 58% 48% 52%;
+  transform: rotate(-7deg);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-media-label {
+  display: inline-block;
+  max-inline-size: 100%;
+  margin-block: 10px 0;
+  padding: 6px 10px;
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-control, 12px);
+  background: var(--glz1-raised);
+  overflow-wrap: anywhere;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-technical-diagram {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-inline-size: 0;
+  padding: 14px;
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-surface, 20px);
+  background: var(--glz1-base);
+  filter: none;
+  backdrop-filter: none;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-technical-node {
+  min-inline-size: 0;
+  padding: 12px;
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-control, 12px);
+  background: var(--glz1-raised);
+  overflow-wrap: anywhere;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-technical-edge {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-truth-state {
+  padding: 14px;
+  border-inline-start: 4px solid var(--glz1-warning, currentColor);
+  background: var(--glz1-raised);
+}
+
+/* Accessibility and clarity always outrank decorative media treatment. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] .glz12-concept-art {
+  background-image: none !important;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] .glz12-concept-art::after {
+  display: none !important;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"] .glz12-media-grid,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"] .glz12-technical-diagram {
+  grid-template-columns: minmax(0, 1fr);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"] .glz12-technical-edge {
+  white-space: normal;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"] :is(
+  .glz12-media-library,
+  .glz12-media-library > *,
+  .glz12-media-library h1,
+  .glz12-media-library h2,
+  .glz12-media-surface,
+  .glz12-media-grid,
+  .glz12-media-grid > *,
+  .glz12-media-label,
+  .glz12-technical-diagram,
+  .glz12-technical-node,
+  .glz12-truth-state
+) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+@media (max-width: 560px) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-media-grid,
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-technical-diagram {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-technical-edge {
+    white-space: normal;
+  }
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(.glz12-concept-art,.glz12-media-label,.glz12-technical-diagram,.glz12-technical-node,.glz12-truth-state) {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    forced-color-adjust: auto;
+  }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-concept-art::after {
+    display: none;
+  }
+}

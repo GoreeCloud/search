@@ -1,0 +1,32 @@
+/* Glaze Motion 0.3 Experimental — Motion Core web primitives */
+:root {
+  --glaze-motion-core-instant: 0ms; --glaze-motion-core-micro: 90ms; --glaze-motion-core-short: 160ms; --glaze-motion-core-medium: 240ms; --glaze-motion-core-long: 360ms; --glaze-motion-core-ambient: 700ms;
+  --glaze-motion-core-ease-standard: cubic-bezier(0.2, 0, 0, 1); --glaze-motion-core-ease-enter: cubic-bezier(0, 0, 0, 1); --glaze-motion-core-ease-exit: cubic-bezier(0.3, 0, 1, 1); --glaze-motion-core-ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --glaze-motion-core-distance-micro: 2px; --glaze-motion-core-distance-short: 8px; --glaze-motion-core-distance-medium: 16px; --glaze-motion-core-distance-long: 32px; --glaze-motion-core-distance-spatial: 48px;
+  --glaze-motion-core-scale-press: 0.98; --glaze-motion-core-scale-lift: 1.015; --glaze-motion-core-scale-focus-tv: 1.04;
+  --glaze-motion-drag-x: 0px; --glaze-motion-drag-y: 0px;
+}
+.glaze-motion-core-transition { transition-property: opacity, transform, background-color, border-color, box-shadow; transition-duration: var(--glaze-motion-core-short); transition-timing-function: var(--glaze-motion-core-ease-standard); }
+.glaze-motion-core-enter { animation: glaze-motion-core-enter var(--glaze-motion-core-medium) var(--glaze-motion-core-ease-enter) both; }
+.glaze-motion-core-exit { animation: glaze-motion-core-exit var(--glaze-motion-core-short) var(--glaze-motion-core-ease-exit) both; }
+.glaze-motion-core-press:active, [data-glaze-motion-role="button"]:active { transform: scale(var(--glaze-motion-core-scale-press)); transition: transform var(--glaze-motion-core-micro) var(--glaze-motion-core-ease-standard); }
+.glaze-motion-core-lift:is(:hover, :focus-visible) { transform: translateY(calc(var(--glaze-motion-core-distance-micro) * -1)) scale(var(--glaze-motion-core-scale-lift)); transition: transform var(--glaze-motion-core-short) var(--glaze-motion-core-ease-standard); }
+.glaze-motion-core-shared { view-transition-name: var(--glaze-motion-shared-name, none); }
+.glaze-motion-core-progress { transition: inline-size var(--glaze-motion-core-short) linear; }
+.glaze-motion-core-drag-handle { touch-action: none; }
+.glaze-motion-core-drag-target { transform: translate3d(var(--glaze-motion-drag-x), var(--glaze-motion-drag-y), 0); }
+.glaze-motion-core-drag-target[data-glaze-dragging="true"] { transition: none; }
+.glaze-motion-core-drag-target[data-glaze-dragging="false"] { transition: transform var(--glaze-motion-core-short) var(--glaze-motion-core-ease-standard); }
+[data-glaze-motion-role="disclosure"], [data-glaze-motion-role="reorder"] { transition-property: opacity, transform; transition-duration: var(--glaze-motion-core-short); transition-timing-function: var(--glaze-motion-core-ease-standard); }
+[data-glaze-motion-role="dialog"] { transition-property: opacity, transform; transition-duration: var(--glaze-motion-core-medium); transition-timing-function: var(--glaze-motion-core-ease-enter); }
+[data-glaze-motion-role="navigation"], [data-glaze-motion-role="shared"] { transition-property: opacity, transform; transition-duration: var(--glaze-motion-core-medium); transition-timing-function: var(--glaze-motion-core-ease-emphasized); }
+@keyframes glaze-motion-core-enter { from { opacity: 0; transform: translateY(var(--glaze-motion-core-distance-short)); } to { opacity: 1; transform: translateY(0); } }
+@keyframes glaze-motion-core-exit { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(calc(var(--glaze-motion-core-distance-micro) * -1)); } }
+@media (prefers-reduced-motion: reduce) {
+  :root { --glaze-motion-core-micro: 0ms; --glaze-motion-core-short: 0ms; --glaze-motion-core-medium: 0ms; --glaze-motion-core-long: 0ms; --glaze-motion-core-ambient: 0ms; }
+  .glaze-motion-core-enter, .glaze-motion-core-exit { animation: none !important; }
+  .glaze-motion-core-transition, .glaze-motion-core-press, .glaze-motion-core-lift, .glaze-motion-core-progress, .glaze-motion-core-drag-target[data-glaze-dragging="false"], [data-glaze-motion-role] { transition-duration: 0ms !important; }
+  .glaze-motion-core-press:active, .glaze-motion-core-lift:is(:hover, :focus-visible), [data-glaze-motion-role="button"]:active { transform: none !important; }
+  /* Direct manipulation remains direct: only post-gesture settling travel collapses. */
+  .glaze-motion-core-drag-target[data-glaze-dragging="true"] { transition: none !important; }
+}

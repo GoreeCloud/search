@@ -1,0 +1,120 @@
+/* GLAZE UI V1.2 Candidate — bounded spatial foundation. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] {
+  --glz12-space-micro: 2px;
+  --glz12-space-hairline: 4px;
+  --glz12-space-control: 8px;
+  --glz12-space-compact-cluster: 12px;
+  --glz12-space-standard-cluster: 16px;
+  --glz12-space-content: 24px;
+  --glz12-space-section: 32px;
+  --glz12-space-region: 48px;
+  --glz12-space-major-region: 64px;
+  --glz12-space-page-hero: 96px;
+  --glz12-layout-gutter: var(--glz12-space-standard-cluster);
+  --glz12-grid-columns: 4;
+  --glz12-density-cluster: var(--glz12-space-standard-cluster);
+  --glz12-density-section: var(--glz12-space-section);
+  --glz12-quiet-zone-block: var(--glz12-space-region);
+  --glz12-target-min: 48px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glaze-density-profile="comfortable"] {
+  --glz12-density-cluster: var(--glz12-space-content);
+  --glz12-density-section: var(--glz12-space-region);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glaze-density-profile="standard"] {
+  --glz12-density-cluster: var(--glz12-space-standard-cluster);
+  --glz12-density-section: var(--glz12-space-section);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glaze-density-profile="productive"] {
+  --glz12-density-cluster: var(--glz12-space-compact-cluster);
+  --glz12-density-section: var(--glz12-space-content);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glaze-density-profile="immersive"] {
+  --glz12-density-cluster: var(--glz12-space-content);
+  --glz12-density-section: var(--glz12-space-region);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="compact"] {
+  --glz12-layout-gutter: var(--glz12-space-standard-cluster);
+  --glz12-grid-columns: 4;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="medium"] {
+  --glz12-layout-gutter: var(--glz12-space-content);
+  --glz12-grid-columns: 8;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="expanded"] {
+  --glz12-layout-gutter: var(--glz12-space-section);
+  --glz12-grid-columns: 12;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="large"] {
+  --glz12-layout-gutter: var(--glz12-space-region);
+  --glz12-grid-columns: 12;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-layout-frame {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  padding-inline: var(--glz12-layout-gutter);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-layout-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--glz12-grid-columns), minmax(0, 1fr));
+  gap: var(--glz12-density-cluster);
+  min-inline-size: 0;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-layout-grid > * { min-inline-size: 0; }
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="compact"] .glz12-span-primary,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="compact"] .glz12-span-secondary { grid-column: span 4; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="medium"] .glz12-span-primary { grid-column: span 5; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="medium"] .glz12-span-secondary { grid-column: span 3; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="expanded"] .glz12-span-primary,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="large"] .glz12-span-primary { grid-column: span 8; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="expanded"] .glz12-span-secondary,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="large"] .glz12-span-secondary { grid-column: span 4; }
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-spatial-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--glz12-density-section);
+  min-inline-size: 0;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--glz12-density-cluster);
+  min-inline-size: 0;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-quiet-zone {
+  padding-block: var(--glz12-quiet-zone-block);
+  min-inline-size: 0;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-section-zone {
+  padding-block: var(--glz12-space-section);
+  min-inline-size: 0;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-durable-reading-zone {
+  min-inline-size: 0;
+  padding: var(--glz12-space-content);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-spatial-action {
+  min-inline-size: var(--glz12-target-min);
+  min-block-size: var(--glz12-target-min);
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-layout-frame,
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-layout-grid,
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-spatial-stack,
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-cluster,
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-quiet-zone,
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-section-zone {
+    forced-color-adjust: auto;
+  }
+}

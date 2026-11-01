@@ -1,0 +1,330 @@
+/*
+ * GLAZE UI V1.2 — Frosted Neutral component expansion Candidate
+ * Activation: html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]
+ *
+ * This layer maps the V1 32-component catalog onto the V1.2 material direction.
+ * Reading and consequential-decision surfaces remain Solid/Raised by default.
+ * Frosted neutral glass is used for transient/floating chrome and explicit glaze variants.
+ */
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] {
+  --glz12-component-soft-bg: var(--glz12-glass-base);
+  --glz12-component-glaze-bg: var(--glz12-glass-overlay);
+  --glz12-component-deep-bg: var(--glz12-glass-panel);
+  --glz12-component-live-bg: color-mix(in srgb, var(--glz12-glass-base) 90%, transparent);
+  --glz12-component-border: var(--glz12-structural-border);
+  --glz12-component-focus-fill: color-mix(in srgb, var(--glz1-focus) 14%, transparent);
+  --glz12-component-active-fill: color-mix(in srgb, var(--glz1-focus) 24%, var(--glz12-glass-raised));
+}
+
+/* Soft Glaze: explicit glass variants on otherwise readability-first components. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-field-control[data-variant="glaze"],
+  .glz1-select[data-variant="glaze"],
+  .glz1-card[data-material="frosted"],
+  .glz1-morph-card[data-material="frosted"],
+  .glz1-source-chip[data-material="frosted"]
+) {
+  background-color: var(--glz12-component-soft-bg);
+  border-color: var(--glz12-component-border);
+  -webkit-backdrop-filter: blur(var(--glz12-blur-soft)) saturate(var(--glz12-saturation-soft));
+  backdrop-filter: blur(var(--glz12-blur-soft)) saturate(var(--glz12-saturation-soft));
+  box-shadow: var(--glz12-inner-highlight), 0 10px 28px rgba(0, 0, 0, 0.08);
+}
+
+/* Regular Glaze: transient, floating, command, navigation, and feedback chrome. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-button[data-variant="glaze"],
+  .glz1-icon-button[data-variant="glaze"],
+  .glz1-sidebar[data-variant="floating"],
+  .glz1-navigation-rail[data-variant="floating"],
+  .glz1-dock,
+  .glz1-toolbar[data-variant="floating"],
+  .glz1-tooltip,
+  .glz1-popover,
+  .glz1-menu,
+  .glz1-toast,
+  .glz1-capsule,
+  .glz1-smart-rail,
+  .glz1-search-entry
+) {
+  background-color: var(--glz12-component-glaze-bg);
+  border-color: var(--glz12-component-border);
+  -webkit-backdrop-filter: blur(var(--glz12-blur-standard)) saturate(var(--glz12-saturation-standard));
+  backdrop-filter: blur(var(--glz12-blur-standard)) saturate(var(--glz12-saturation-standard));
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-inner-edge), var(--glz12-shadow-soft);
+}
+
+/* Deep Glaze: bounded transient panels that need stronger separation from content. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-sheet,
+  .glz1-search-panel
+) {
+  background-color: var(--glz12-component-deep-bg);
+  border-color: var(--glz12-component-border);
+  -webkit-backdrop-filter: blur(var(--glz12-blur-heavy)) saturate(var(--glz12-saturation-standard));
+  backdrop-filter: blur(var(--glz12-blur-heavy)) saturate(var(--glz12-saturation-standard));
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-inner-edge), var(--glz12-shadow-float);
+}
+
+/* Live Glaze is opt-in for Aurora; its color comes from the environment, never the substrate. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-aurora[data-material="live-glaze"] {
+  background-color: var(--glz12-component-live-bg);
+  border-color: var(--glz12-component-border);
+  -webkit-backdrop-filter: blur(var(--glz12-blur-standard)) saturate(var(--glz12-saturation-live));
+  backdrop-filter: blur(var(--glz12-blur-standard)) saturate(var(--glz12-saturation-live));
+  box-shadow: var(--glz12-inner-highlight), var(--glz12-shadow-soft);
+}
+
+/* Consequential decisions remain high-opacity / non-backdrop-dependent by default. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-dialog {
+  background-color: var(--glz1-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-color: var(--glz12-component-border);
+  box-shadow: var(--glz12-shadow-float);
+}
+
+/* Reading surfaces remain Solid/Raised. This also prevents a global glassification regression. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-card:not([data-material="frosted"]),
+  .glz1-list,
+  .glz1-table-wrap,
+  .glz1-table,
+  .glz1-sidebar:not([data-variant="floating"]),
+  .glz1-navigation-rail:not([data-variant="floating"]),
+  .glz1-toolbar:not([data-variant="floating"]),
+  .glz1-morph-card:not([data-material="frosted"]),
+  .glz1-ai-suggestion,
+  .glz1-ai-answer,
+  .glz1-smart-summary
+) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Accent color belongs to state, not glass substrate. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-button[data-state="selected"],
+  .glz1-icon-button[data-state="selected"],
+  .glz1-list-item[data-selected="true"],
+  .glz1-sidebar-item[aria-current="page"],
+  .glz1-rail-item[aria-current="page"],
+  .glz1-dock-item[aria-current="page"],
+  .glz1-search-result[aria-selected="true"]
+) {
+  background-color: var(--glz12-component-focus-fill);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-switch input:checked + .glz1-switch-track,
+  .glz1-choice input:checked + .glz1-choice-control,
+  .glz1-choice input[data-indeterminate="true"] + .glz1-choice-control
+) {
+  background-color: var(--glz1-focus);
+  border-color: var(--glz1-focus);
+}
+
+/* A frosted component nested inside another backdrop-filtering panel must not add a second blur. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-system-overlay,
+  .glz1-system-panel,
+  .glz1-sheet,
+  .glz1-popover,
+  .glz1-menu,
+  .glz1-search-panel
+) :is(
+  .glz1-button[data-variant="glaze"],
+  .glz1-icon-button[data-variant="glaze"],
+  .glz1-field-control[data-variant="glaze"],
+  .glz1-select[data-variant="glaze"],
+  .glz1-card[data-material="frosted"],
+  .glz1-morph-card[data-material="frosted"],
+  .glz1-source-chip[data-material="frosted"],
+  .glz1-toolbar[data-variant="floating"],
+  .glz1-capsule,
+  .glz1-smart-rail,
+  .glz1-search-entry
+) {
+  background-color: var(--glz12-glass-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: var(--glz12-inner-highlight);
+}
+
+/* Explicit nested-glass opt-out marker for consumer layouts and reference harnesses. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-parent-material="glaze"] :is(
+  .glz12-soft-glaze,
+  .glz12-glaze,
+  .glz12-deep-glaze,
+  .glz12-live-glaze
+) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Reduced Transparency: solid neutral fallback, preserving geometry and state. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] :is(
+  .glz1-button[data-variant="glaze"],
+  .glz1-icon-button[data-variant="glaze"],
+  .glz1-field-control[data-variant="glaze"],
+  .glz1-select[data-variant="glaze"],
+  .glz1-card[data-material="frosted"],
+  .glz1-sidebar[data-variant="floating"],
+  .glz1-navigation-rail[data-variant="floating"],
+  .glz1-dock,
+  .glz1-toolbar[data-variant="floating"],
+  .glz1-tooltip,
+  .glz1-popover,
+  .glz1-menu,
+  .glz1-sheet,
+  .glz1-toast,
+  .glz1-capsule,
+  .glz1-morph-card[data-material="frosted"],
+  .glz1-smart-rail,
+  .glz1-aurora[data-material="live-glaze"],
+  .glz1-search-entry,
+  .glz1-search-panel,
+  .glz1-source-chip[data-material="frosted"]
+) {
+  background-color: var(--glz1-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* Explicit accessibility-class fallback mirrors the semantic preference attribute. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-reduced-transparency :is(
+  .glz1-button[data-variant="glaze"],
+  .glz1-icon-button[data-variant="glaze"],
+  .glz1-field-control[data-variant="glaze"],
+  .glz1-select[data-variant="glaze"],
+  .glz1-card[data-material="frosted"],
+  .glz1-sidebar[data-variant="floating"],
+  .glz1-navigation-rail[data-variant="floating"],
+  .glz1-dock,
+  .glz1-toolbar[data-variant="floating"],
+  .glz1-tooltip,
+  .glz1-popover,
+  .glz1-menu,
+  .glz1-sheet,
+  .glz1-toast,
+  .glz1-capsule,
+  .glz1-morph-card[data-material="frosted"],
+  .glz1-smart-rail,
+  .glz1-aurora[data-material="live-glaze"],
+  .glz1-search-entry,
+  .glz1-search-panel,
+  .glz1-source-chip[data-material="frosted"]
+) {
+  background-color: var(--glz1-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+html[data-mode="increased-contrast"][data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-button[data-variant="glaze"],
+  .glz1-icon-button[data-variant="glaze"],
+  .glz1-field-control[data-variant="glaze"],
+  .glz1-select[data-variant="glaze"],
+  .glz1-card[data-material="frosted"],
+  .glz1-sidebar[data-variant="floating"],
+  .glz1-navigation-rail[data-variant="floating"],
+  .glz1-dock,
+  .glz1-toolbar[data-variant="floating"],
+  .glz1-tooltip,
+  .glz1-popover,
+  .glz1-menu,
+  .glz1-sheet,
+  .glz1-toast,
+  .glz1-capsule,
+  .glz1-morph-card[data-material="frosted"],
+  .glz1-smart-rail,
+  .glz1-aurora[data-material="live-glaze"],
+  .glz1-search-entry,
+  .glz1-search-panel,
+  .glz1-source-chip[data-material="frosted"]
+) {
+  border-width: 2px;
+}
+
+@media (prefers-contrast: more) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz1-dock,
+    .glz1-tooltip,
+    .glz1-popover,
+    .glz1-menu,
+    .glz1-sheet,
+    .glz1-toast,
+    .glz1-capsule,
+    .glz1-smart-rail,
+    .glz1-search-entry,
+    .glz1-search-panel
+  ) {
+    border-width: 2px;
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz1-button[data-variant="glaze"],
+    .glz1-icon-button[data-variant="glaze"],
+    .glz1-field-control[data-variant="glaze"],
+    .glz1-select[data-variant="glaze"],
+    .glz1-card[data-material="frosted"],
+    .glz1-sidebar[data-variant="floating"],
+    .glz1-navigation-rail[data-variant="floating"],
+    .glz1-dock,
+    .glz1-toolbar[data-variant="floating"],
+    .glz1-tooltip,
+    .glz1-popover,
+    .glz1-menu,
+    .glz1-sheet,
+    .glz1-toast,
+    .glz1-capsule,
+    .glz1-morph-card[data-material="frosted"],
+    .glz1-smart-rail,
+    .glz1-aurora[data-material="live-glaze"],
+    .glz1-search-entry,
+    .glz1-search-panel,
+    .glz1-source-chip[data-material="frosted"]
+  ) {
+    background-color: var(--glz1-raised);
+    box-shadow: var(--glz12-shadow-soft);
+  }
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz1-button[data-variant="glaze"],
+    .glz1-icon-button[data-variant="glaze"],
+    .glz1-field-control[data-variant="glaze"],
+    .glz1-select[data-variant="glaze"],
+    .glz1-card[data-material="frosted"],
+    .glz1-sidebar[data-variant="floating"],
+    .glz1-navigation-rail[data-variant="floating"],
+    .glz1-dock,
+    .glz1-toolbar[data-variant="floating"],
+    .glz1-tooltip,
+    .glz1-popover,
+    .glz1-menu,
+    .glz1-dialog,
+    .glz1-sheet,
+    .glz1-toast,
+    .glz1-capsule,
+    .glz1-morph-card[data-material="frosted"],
+    .glz1-smart-rail,
+    .glz1-aurora[data-material="live-glaze"],
+    .glz1-search-entry,
+    .glz1-search-panel,
+    .glz1-source-chip[data-material="frosted"]
+  ) {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+}

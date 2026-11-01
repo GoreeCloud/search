@@ -1,0 +1,4 @@
+[
+  {"url":"https://example.org/native-search","title":"GoreeCloud Native Search","body":"An independent search index with privacy-respecting ranking, document discovery and transparent source attribution."},
+  {"url":"https://example.org/privacy","title":"Privacy and Indexing","body":"A native crawler respects robots.txt, noindex directives, explicit domain allowlists and finite crawl budgets."}
+]

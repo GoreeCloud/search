@@ -1,0 +1,235 @@
+/* GLAZE UI V1.2 Candidate — bounded Overlay component refinement.
+ * Reuses the inherited V1 overlay API plus the existing V1.2 chrome/depth authority.
+ * Dialog decision content remains non-backdrop-dependent; no new material calibration is introduced.
+ */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root {
+  --glz12-overlay-connector: 8px;
+  --glz12-overlay-state-mark: 3px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-overlay-trigger {
+  min-inline-size: var(--glz1-overlay-hit);
+  min-block-size: var(--glz1-overlay-hit);
+}
+
+/* Tooltip stays concise and non-interactive. It may explain a control but never owns critical workflow content. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-tooltip {
+  border: 1px solid var(--glz12-chrome-edge);
+  max-inline-size: min(280px, calc(100vw - 24px));
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+/* Anchored overlays keep a small structural connector to their source. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(.glz1-popover,.glz1-menu) {
+  transform-origin: top center;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(.glz1-popover,.glz1-menu)::before {
+  content: "";
+  position: absolute;
+  inline-size: var(--glz12-overlay-connector);
+  block-size: var(--glz12-overlay-connector);
+  inset-block-start: calc(var(--glz12-overlay-connector) / -2);
+  inset-inline-start: var(--glz12-overlay-anchor-inline, 24px);
+  transform: rotate(45deg);
+  background: inherit;
+  border-block-start: 1px solid var(--glz12-chrome-edge);
+  border-inline-start: 1px solid var(--glz12-chrome-edge);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-popover[data-open="true"],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-menu[data-open="true"] {
+  visibility: visible;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(.glz1-popover,.glz1-menu):not([data-open="true"]) {
+  visibility: hidden;
+}
+
+/* Menu selection is structural: a fixed mark column carries checkbox/radio state without relying on color. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-menu-item {
+  position: relative;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-menu-mark {
+  inline-size: 20px;
+  min-inline-size: 20px;
+  display: inline-grid;
+  place-items: center;
+  font-weight: 800;
+  line-height: 1;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-menu-item[role="menuitemcheckbox"][aria-checked="true"],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-menu-item[role="menuitemradio"][aria-checked="true"] {
+  box-shadow: inset var(--glz12-overlay-state-mark) 0 0 currentColor;
+  font-weight: 650;
+}
+html[dir="rtl"][data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-menu-item[role="menuitemcheckbox"][aria-checked="true"],
+html[dir="rtl"][data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-menu-item[role="menuitemradio"][aria-checked="true"] {
+  box-shadow: inset calc(var(--glz12-overlay-state-mark) * -1) 0 0 currentColor;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-menu-item[aria-disabled="true"] {
+  pointer-events: none;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-menu-item[data-destructive="true"] {
+  border-block-start: 1px solid currentColor;
+}
+
+/* Consequential modal decisions remain opaque/near-opaque and never require background sampling. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-dialog {
+  background: var(--glz1-raised);
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: var(--glz12-profile-shadow-float);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-dialog::backdrop {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-dialog-warning {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr);
+  gap: 10px;
+  align-items: start;
+  margin-block-start: 14px;
+  padding: 12px;
+  border: 1px solid currentColor;
+  border-radius: 12px;
+}
+
+/* Sheet keeps the existing Dense Frost authority but adds a readable inner decision plane. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-sheet-content {
+  min-inline-size: 0;
+  display: grid;
+  gap: 10px;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-sheet-reading-plane {
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--glz1-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-sheet-layer[data-open="true"] .glz1-sheet {
+  visibility: visible;
+}
+
+/* V1 used logical insets and then swapped them again for RTL, double-flipping the side. V1.2 keeps logical end ownership: right in LTR, left in RTL. */
+@media (min-width: 760px) {
+  html[dir="rtl"][data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-sheet {
+    inset-inline-start: auto;
+    inset-inline-end: 12px;
+    transform: translateX(calc(-100% - 20px));
+  }
+  html[dir="rtl"][data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-sheet-layer[data-open="true"] .glz1-sheet {
+    transform: none;
+  }
+}
+
+/* Toasts are transient supplements: routine messages are polite status; visible stack is bounded to three. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-toast-region {
+  gap: 8px;
+  align-content: end;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-toast-region > .glz1-toast:nth-of-type(n+4) {
+  display: none;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-toast[data-open="true"] {
+  min-block-size: 56px;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-toast-icon {
+  inline-size: 22px;
+  text-align: center;
+  font-weight: 800;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-persistent-failure {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 2px solid currentColor;
+  border-radius: 16px;
+  background: var(--glz1-base);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-persistent-failure[hidden] {
+  display: none;
+}
+
+/* Nested interactive content inside a frosted overlay never starts a second backdrop pass. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(.glz1-popover,.glz1-menu,.glz1-sheet,.glz1-toast) :is(
+  .glz1-button[data-variant="glaze"],
+  .glz1-icon-button[data-variant="glaze"],
+  .glz1-field-control[data-variant="glaze"],
+  .glz1-select[data-variant="glaze"]
+) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] :is(
+  .glz1-tooltip,.glz1-popover,.glz1-menu,.glz1-sheet,.glz1-toast
+) {
+  background: var(--glz1-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+html[data-mode="increased-contrast"][data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-tooltip,.glz1-popover,.glz1-menu,.glz1-dialog,.glz1-sheet,.glz1-toast,.glz12-persistent-failure
+) {
+  border-width: 2px;
+}
+
+html[data-mode="reduced-motion"][data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-tooltip,.glz1-popover,.glz1-menu,.glz1-sheet,.glz1-sheet-scrim,.glz1-toast
+) {
+  transition: none !important;
+  animation: none !important;
+}
+
+html[data-glz-text-scale="200"][data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-popover,.glz1-menu,.glz1-dialog,.glz1-sheet,.glz1-toast
+) {
+  max-inline-size: calc(100vw - 16px);
+  overflow-wrap: anywhere;
+}
+html[data-glz-text-scale="200"][data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-persistent-failure {
+  grid-template-columns: minmax(0,1fr);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz1-tooltip,.glz1-popover,.glz1-menu,.glz1-sheet,.glz1-sheet-scrim,.glz1-toast
+  ) {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+@media (max-width: 420px) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-toast-region {
+    inset-inline: 8px;
+    inset-block-end: 8px;
+  }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-toast {
+    inline-size: 100%;
+  }
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz1-tooltip,.glz1-popover,.glz1-menu,.glz1-dialog,.glz1-sheet,.glz1-toast,.glz12-persistent-failure
+  ) {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-menu-item[aria-checked="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}

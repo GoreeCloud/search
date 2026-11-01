@@ -1,0 +1,222 @@
+/* GLAZE UI V1.2 Candidate — bounded Forms and Data Entry composition over canonical Foundation controls. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-library {
+  display: grid;
+  gap: var(--glz12-space-section);
+  min-inline-size: 0;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-surface {
+  min-inline-size: 0;
+  display: grid;
+  gap: var(--glz12-space-content);
+  padding: var(--glz12-space-content);
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-surface);
+  background: var(--glz1-base);
+  color: var(--glz1-text-primary);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-section,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-fields {
+  min-inline-size: 0;
+  display: grid;
+  gap: var(--glz12-space-standard-cluster);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-pair {
+  min-inline-size: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--glz12-space-standard-cluster);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="expanded"] .glz12-form-pair,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="medium"] .glz12-form-pair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-requirement,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-model-label,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-supporting {
+  color: var(--glz1-text-secondary);
+  font-size: .875em;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-model-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--glz12-space-control);
+  font-weight: 700;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-native-target {
+  box-sizing: border-box;
+  min-block-size: var(--glz12-target-min);
+  max-inline-size: 100%;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-touch-assistance="true"] :is(
+  .glz12-form-native-target,
+  .glz12-form-action,
+  .glz12-form-actions .glz1-button,
+  .glz1-switch
+) {
+  min-block-size: var(--glz12-shell-target-assisted, 56px);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-status {
+  min-block-size: var(--glz12-target-min);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--glz12-space-control);
+  padding-inline: var(--glz12-space-standard-cluster);
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-control);
+  background: var(--glz1-raised);
+  font-weight: 650;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-status::before {
+  content: "•";
+  font-weight: 900;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-status[data-state="saved"]::before { content: "✓"; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-status[data-state="saving"]::before { content: "…"; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-status[data-state="save-failed"]::before,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-status[data-state="invalid"]::before { content: "!"; }
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-error-summary {
+  display: grid;
+  gap: var(--glz12-space-control);
+  padding: var(--glz12-space-standard-cluster);
+  border: 1px solid var(--glz1-critical);
+  border-inline-start-width: var(--glz12-state-focus-width-contrast);
+  border-radius: var(--glz12-radius-control);
+  background: var(--glz1-raised);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-error-summary[hidden] { display: none; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-error-summary:focus-visible {
+  outline: var(--glz12-state-focus-width) solid var(--glz1-focus);
+  outline-offset: var(--glz12-state-focus-offset);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-error-summary ul { margin: 0; padding-inline-start: var(--glz12-space-content); }
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--glz12-space-control);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-actions .glz1-button,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-action {
+  min-block-size: var(--glz12-target-min);
+  min-inline-size: var(--glz12-target-min);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-file-zone {
+  display: grid;
+  gap: var(--glz12-space-control);
+  padding: var(--glz12-space-standard-cluster);
+  border: 1px dashed var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-control);
+  background: var(--glz1-raised);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-sensitive-note,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-authority-note {
+  padding: var(--glz12-space-standard-cluster);
+  border-inline-start: var(--glz12-state-focus-width) solid currentColor;
+  background: var(--glz1-raised);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-destructive {
+  display: grid;
+  gap: var(--glz12-space-standard-cluster);
+  padding: var(--glz12-space-content);
+  border: 1px solid var(--glz1-critical);
+  border-radius: var(--glz12-radius-surface);
+  background: var(--glz1-base);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--glz12-space-control);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-steps li {
+  min-block-size: var(--glz12-target-min);
+  display: inline-flex;
+  align-items: center;
+  padding-inline: var(--glz12-space-standard-cluster);
+  border: 1px solid var(--glz12-structural-border);
+  border-radius: var(--glz12-radius-pill);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-steps li[aria-current="step"] {
+  box-shadow: inset 0 0 0 var(--glz12-state-focus-width) currentColor;
+  font-weight: 700;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="compact"] .glz12-form-actions {
+  align-items: stretch;
+  flex-direction: column;
+  padding-block-end: env(safe-area-inset-bottom);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="compact"] .glz12-form-actions .glz1-button { inline-size: 100%; }
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"] :is(
+  .glz12-form-library,
+  .glz12-form-surface,
+  .glz12-form-section,
+  .glz12-form-fields,
+  .glz12-form-pair,
+  .glz12-form-actions
+) {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"] .glz12-form-pair { grid-template-columns: minmax(0, 1fr); }
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] :is(.glz12-form-surface, .glz12-form-destructive, .glz12-form-file-zone) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none;
+}
+
+html[data-mode="increased-contrast"][data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz12-form-surface,
+  .glz12-form-error-summary,
+  .glz12-form-file-zone,
+  .glz12-form-destructive,
+  .glz12-form-status
+) {
+  border-width: var(--glz12-state-focus-width);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-form-library * {
+    scroll-behavior: auto;
+  }
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz12-form-surface,
+    .glz12-form-error-summary,
+    .glz12-form-file-zone,
+    .glz12-form-destructive,
+    .glz12-form-status,
+    .glz12-form-steps li
+  ) {
+    forced-color-adjust: auto;
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+  }
+}

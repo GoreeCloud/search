@@ -1,0 +1,77 @@
+/*
+ * GLAZE UI V1.1 — Stable explicit appearance adapter.
+ * Maps Light, Dark, and Deep Dark to inherited V1 structural surface/text roles.
+ * Protected semantic-state colors remain producer-authoritative and unchanged.
+ */
+
+html[data-glaze-version="1.1"][data-glz-appearance="light"] {
+  color-scheme: light;
+  --glz1-canvas: #f5f7fa;
+  --glz1-base: #ffffff;
+  --glz1-raised: #ffffff;
+  --glz1-text-primary: #151a23;
+  --glz1-text-secondary: #5d6675;
+  --glz1-text-tertiary: #7b8492;
+  --glz1-line: rgba(25, 35, 50, 0.14);
+  --glz1-overlay-bg: rgba(255, 255, 255, 0.78);
+  --glz1-panel-bg: rgba(255, 255, 255, 0.88);
+  --glz1-critical-bg: rgba(255, 255, 255, 0.98);
+  --glz1-shadow-overlay: 0 18px 52px rgba(24, 34, 50, 0.14);
+  --glz1-shadow-panel: 0 28px 80px rgba(14, 22, 36, 0.20);
+  --glz1-shadow-critical: 0 30px 90px rgba(14, 18, 28, 0.24);
+}
+
+html[data-glaze-version="1.1"][data-glz-appearance="dark"] {
+  color-scheme: dark;
+  --glz1-canvas: #0b0d11;
+  --glz1-base: #12151b;
+  --glz1-raised: #1b2028;
+  --glz1-text-primary: #f5f7fa;
+  --glz1-text-secondary: #b0b7c3;
+  --glz1-text-tertiary: #8d96a5;
+  --glz1-line: rgba(225, 232, 244, 0.14);
+  --glz1-overlay-bg: rgba(24, 29, 38, 0.76);
+  --glz1-panel-bg: rgba(24, 29, 38, 0.86);
+  --glz1-critical-bg: rgba(18, 21, 27, 0.97);
+  --glz1-shadow-overlay: 0 18px 54px rgba(0, 0, 0, 0.30);
+  --glz1-shadow-panel: 0 28px 84px rgba(0, 0, 0, 0.40);
+  --glz1-shadow-critical: 0 30px 96px rgba(0, 0, 0, 0.48);
+}
+
+html[data-glaze-version="1.1"][data-glz-appearance="deep-dark"] {
+  color-scheme: dark;
+  --glz1-canvas: #05070a;
+  --glz1-base: #0d1015;
+  --glz1-raised: #171c23;
+  --glz1-text-primary: #f5f7fa;
+  --glz1-text-secondary: #abb4c2;
+  --glz1-text-tertiary: #8d96a5;
+  --glz1-line: rgba(225, 232, 244, 0.15);
+  --glz1-overlay-bg: rgba(18, 22, 29, 0.80);
+  --glz1-panel-bg: rgba(18, 22, 29, 0.90);
+  --glz1-critical-bg: rgba(13, 16, 21, 0.98);
+  --glz1-shadow-overlay: 0 20px 58px rgba(0, 0, 0, 0.34);
+  --glz1-shadow-panel: 0 30px 92px rgba(0, 0, 0, 0.46);
+  --glz1-shadow-critical: 0 34px 104px rgba(0, 0, 0, 0.54);
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glz-appearance="light"],
+  html[data-glaze-version="1.1"][data-glz-appearance="dark"],
+  html[data-glaze-version="1.1"][data-glz-appearance="deep-dark"] {
+    color-scheme: normal;
+    --glz1-canvas: Canvas;
+    --glz1-base: Canvas;
+    --glz1-raised: Canvas;
+    --glz1-text-primary: CanvasText;
+    --glz1-text-secondary: CanvasText;
+    --glz1-text-tertiary: CanvasText;
+    --glz1-line: CanvasText;
+    --glz1-overlay-bg: Canvas;
+    --glz1-panel-bg: Canvas;
+    --glz1-critical-bg: Canvas;
+    --glz1-shadow-overlay: none;
+    --glz1-shadow-panel: none;
+    --glz1-shadow-critical: none;
+  }
+}

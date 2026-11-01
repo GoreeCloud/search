@@ -1,0 +1,189 @@
+/* GLAZE UI V1.2 Candidate — Glaze Sans Optical System, bounded web layer. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] {
+  --glz12-font-sans: system-ui, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --glz12-font-mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --glz12-type-primary: #151c22;
+  --glz12-type-secondary: #7e8d99;
+  --glz12-type-tertiary: #667783;
+  --glz12-type-icon-label-gap: 0.5rem;
+  --glz12-type-reading-measure: 70ch;
+  --glz12-type-technical-measure: 82ch;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-appearance="dark"] {
+  --glz12-type-primary: #f4f8fa;
+  --glz12-type-secondary: #b9c5cd;
+  --glz12-type-tertiary: #8f9da8;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-appearance="deep-dark"] {
+  --glz12-type-primary: #f4f8fa;
+  --glz12-type-secondary: #aebcc6;
+  --glz12-type-tertiary: #83929d;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-type] {
+  font-family: var(--glz12-font-sans);
+  color: var(--glz12-type-primary);
+  text-shadow: none;
+  filter: none;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  overflow-wrap: anywhere;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-type="display"] {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  line-height: 1.04;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-type="large-title"] {
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-type="title"] {
+  font-size: 1.75rem;
+  line-height: 1.14;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-type="heading"] {
+  font-size: 1.375rem;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-type="subheading"] {
+  font-size: 1.125rem;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-type="body"] {
+  max-inline-size: var(--glz12-type-reading-measure);
+  font-size: 1rem;
+  line-height: 1.55;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-type="ui"] {
+  font-size: 0.9375rem;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-type="label"] {
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-type="caption"] {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: var(--glz12-type-secondary);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-type="numeric"] {
+  font-size: 2rem;
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-type="monospace"] {
+  max-inline-size: var(--glz12-type-technical-measure);
+  font-family: var(--glz12-font-mono);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  font-weight: 400;
+  letter-spacing: 0;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+  overflow-wrap: anywhere;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-type-secondary {
+  color: var(--glz12-type-secondary);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-type-tertiary {
+  color: var(--glz12-type-tertiary);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-type-icon-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--glz12-type-icon-label-gap);
+  min-inline-size: 0;
+  vertical-align: middle;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-type-icon-label > svg,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-type-icon-label > .glz12-type-symbol {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  flex: 0 0 auto;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-metric {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3em;
+  min-inline-size: 0;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-metric-unit {
+  font: 500 0.5em/1 var(--glz12-font-sans);
+  letter-spacing: 0;
+  color: var(--glz12-type-secondary);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-numeric-column {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  text-align: end;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-type-control {
+  min-block-size: 3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 1rem;
+  white-space: normal;
+  text-align: start;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [dir="rtl"] .glz12-type-control,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][dir="rtl"] .glz12-type-control {
+  text-align: start;
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-type],
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-type-secondary,
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-type-tertiary,
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-metric-unit {
+    color: CanvasText;
+    text-shadow: none;
+    filter: none;
+  }
+}

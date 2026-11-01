@@ -1,0 +1,47 @@
+/*
+ * GLAZE UI V1.4.0 — official Stable web entrypoint.
+ * Optical Intelligence is additive to V1.3 Adaptive Resonance.
+ */
+@import url("./glaze-v1.3.0.css");
+
+:root {
+  --glz14-frost-strength: 0.34;
+  --glz14-blur-scale: 0.72;
+  --glz14-semantic-protection: 0.65;
+  --glz14-depth-hue-shift: 0;
+  --glz14-light-warmth: 0;
+  --glz14-memory-tint: transparent;
+  --glz14-memory-tint-influence: 0;
+}
+
+[data-glaze-optical-v14="adaptive-optical"] {
+  --glz14-optical-blur: calc(24px * var(--glz14-frost-strength) * var(--glz14-blur-scale));
+  --glz14-optical-saturation: calc(1 + (var(--glz14-frost-strength) * 0.18));
+  backdrop-filter: blur(var(--glz14-optical-blur)) saturate(var(--glz14-optical-saturation));
+  -webkit-backdrop-filter: blur(var(--glz14-optical-blur)) saturate(var(--glz14-optical-saturation));
+}
+
+[data-glaze-optical-v14="solid-accessible"] {
+  --glz14-memory-tint: transparent;
+  --glz14-memory-tint-influence: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  [data-glaze-optical-v14] {
+    --glz14-memory-tint: transparent;
+    --glz14-memory-tint-influence: 0;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (forced-colors: active) {
+  [data-glaze-optical-v14] {
+    --glz14-memory-tint: transparent;
+    --glz14-memory-tint-influence: 0;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}

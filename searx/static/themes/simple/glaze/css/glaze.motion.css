@@ -1,0 +1,109 @@
+/* GLAZE UI V1.0 Candidate — Motion and Interaction */
+
+:root {
+  --glaze-motion-instant: 0ms;
+  --glaze-motion-micro: 90ms;
+  --glaze-motion-short: 160ms;
+  --glaze-motion-medium: 240ms;
+  --glaze-motion-long: 360ms;
+  --glaze-motion-ambient: 700ms;
+
+  --glaze-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --glaze-ease-enter: cubic-bezier(0, 0, 0, 1);
+  --glaze-ease-exit: cubic-bezier(0.3, 0, 1, 1);
+  --glaze-ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --glaze-ease-linear: linear;
+
+  --glaze-motion-distance-micro: 2px;
+  --glaze-motion-distance-short: 8px;
+  --glaze-motion-distance-medium: 16px;
+  --glaze-motion-distance-long: 32px;
+
+  --glaze-motion-scale-press: 0.98;
+  --glaze-motion-scale-focus-tv: 1.04;
+  --glaze-motion-scale-enter-subtle: 0.985;
+}
+
+.glaze-motion-state {
+  transition-property: opacity, transform, background-color, border-color, box-shadow;
+  transition-duration: var(--glaze-motion-short);
+  transition-timing-function: var(--glaze-ease-standard);
+}
+
+.glaze-motion-enter {
+  animation: glaze-enter var(--glaze-motion-medium) var(--glaze-ease-enter) both;
+}
+
+.glaze-motion-exit {
+  animation: glaze-exit var(--glaze-motion-short) var(--glaze-ease-exit) both;
+}
+
+.glaze-press-feedback:active {
+  transform: scale(var(--glaze-motion-scale-press));
+  transition: transform var(--glaze-motion-micro) var(--glaze-ease-standard);
+}
+
+.glaze-focus-motion:focus-visible {
+  transition: box-shadow var(--glaze-motion-micro) var(--glaze-ease-standard),
+    outline-color var(--glaze-motion-micro) var(--glaze-ease-standard),
+    transform var(--glaze-motion-micro) var(--glaze-ease-standard);
+}
+
+.glaze-progress-linear {
+  transition: inline-size var(--glaze-motion-short) var(--glaze-ease-linear);
+}
+
+@keyframes glaze-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--glaze-motion-distance-short)) scale(var(--glaze-motion-scale-enter-subtle));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes glaze-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(calc(var(--glaze-motion-distance-micro) * -1));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --glaze-motion-micro: 0ms;
+    --glaze-motion-short: 0ms;
+    --glaze-motion-medium: 0ms;
+    --glaze-motion-long: 0ms;
+    --glaze-motion-ambient: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+
+  .glaze-motion-enter,
+  .glaze-motion-exit {
+    animation: none !important;
+  }
+
+  .glaze-motion-state,
+  .glaze-press-feedback,
+  .glaze-focus-motion,
+  .glaze-progress-linear {
+    transition-duration: 0ms !important;
+  }
+
+  .glaze-press-feedback:active,
+  .glaze-focus-motion:focus-visible {
+    transform: none !important;
+  }
+}

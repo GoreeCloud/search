@@ -1,0 +1,134 @@
+/* GLAZE UI V1.2 Candidate — Crystal Icon System, bounded web layer. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] {
+  --glz12-icon-size: 24px;
+  --glz12-icon-stroke: 2;
+  --glz12-icon-state-duration: 140ms;
+  --glz12-icon-state-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --glz12-icon-activity-duration: 900ms;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-crystal-icon {
+  inline-size: var(--glz12-icon-size);
+  block-size: var(--glz12-icon-size);
+  flex: 0 0 auto;
+  overflow: visible;
+  color: currentColor;
+  shape-rendering: geometricPrecision;
+  transform-origin: 50% 50%;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-crystal-icon[data-glz-icon-size="16"] { --glz12-icon-size: 16px; --glz12-icon-stroke: 2.4; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-crystal-icon[data-glz-icon-size="20"] { --glz12-icon-size: 20px; --glz12-icon-stroke: 2.2; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-crystal-icon[data-glz-icon-size="24"] { --glz12-icon-size: 24px; --glz12-icon-stroke: 2; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-crystal-icon[data-glz-icon-size="28"] { --glz12-icon-size: 28px; --glz12-icon-stroke: 1.85; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-crystal-icon[data-glz-icon-size="32"] { --glz12-icon-size: 32px; --glz12-icon-stroke: 1.7; }
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-crystal-icon[data-glz-icon-family="outline"] > * {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--glz12-icon-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-crystal-icon[data-glz-icon-family="filled"] > * {
+  fill: currentColor;
+  stroke: none;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-crystal-icon[data-glz-icon-family="dimensional"] > * {
+  fill: currentColor;
+  stroke: color-mix(in srgb, currentColor 76%, var(--glz12-crystal-white, #fbfdfe));
+  stroke-width: 0.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-crystal-icon[data-glz-icon-family="dimensional"] {
+  filter: drop-shadow(0 1px 1px rgba(7, 12, 17, 0.16));
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-icon-control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 3rem;
+  min-block-size: 3rem;
+  padding: 0.625rem;
+  color: var(--glz12-type-primary, var(--glz11-text-primary, #151c22));
+  border: 1px solid var(--glz11-border-subtle, rgba(95, 116, 146, 0.24));
+  border-radius: 0.875rem;
+  background: var(--glz11-surface-raised, rgba(255, 255, 255, 0.78));
+  transition: transform var(--glz12-icon-state-duration) var(--glz12-icon-state-easing), border-width var(--glz12-icon-state-duration) var(--glz12-icon-state-easing), background-color var(--glz12-icon-state-duration) var(--glz12-icon-state-easing);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-icon-control[data-state="selected"] {
+  border-width: 2px;
+  border-color: var(--glz12-glacier-blue, #8fc4e8);
+  background: color-mix(in srgb, var(--glz12-ice-blue, #dcecf6) 62%, transparent);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-icon-control[data-state="selected"]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 28%;
+  inset-block-end: 0.28rem;
+  block-size: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-icon-control:focus-visible {
+  outline: 3px solid var(--glz11-focus, #146bb7);
+  outline-offset: 2px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-crystal-icon[data-motion="activity"][data-active="true"] {
+  animation: glz12-crystal-activity-spin var(--glz12-icon-activity-duration) linear infinite;
+}
+
+@keyframes glz12-crystal-activity-spin {
+  to { transform: rotate(360deg); }
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-icon-mode="monochrome"] .glz12-icon-control[data-state="selected"] {
+  border-color: currentColor;
+  background: rgba(127, 127, 127, 0.16);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-icon-mode="monochrome"] .glz12-crystal-icon[data-glz-icon-family="dimensional"] {
+  filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-icon-control {
+    transition: none;
+  }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-crystal-icon[data-motion="activity"][data-active="true"] {
+    animation: none;
+  }
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-icon-control {
+    color: ButtonText;
+    background: ButtonFace;
+    border-color: ButtonText;
+    forced-color-adjust: auto;
+    transition: none;
+  }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-icon-control[data-state="selected"] {
+    color: HighlightText;
+    background: Highlight;
+    border-color: Highlight;
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-crystal-icon[data-glz-icon-family="dimensional"] {
+    filter: none;
+  }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-crystal-icon[data-motion="activity"][data-active="true"] {
+    animation: none;
+  }
+}

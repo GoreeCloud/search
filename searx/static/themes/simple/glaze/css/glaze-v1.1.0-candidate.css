@@ -1,0 +1,7 @@
+/*
+ * Historical GLAZE UI V1.1.0 Candidate web entrypoint — non-current.
+ * At Candidate publication, GLAZE UI V1.0 was the official target.
+ * Current Stable authority is GLAZE UI V1.1 / 1.1.0.
+ */
+@import url("./glaze-v1.1-candidate.css");
+@import url("./glaze-v1.1-appearance.candidate.css");

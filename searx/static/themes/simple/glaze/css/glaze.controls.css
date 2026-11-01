@@ -1,0 +1,231 @@
+:root {
+  --glaze-focus-ring: #244fc6;
+  --glaze-selection: rgba(54, 108, 246, .18);
+  --glaze-opacity-placeholder: .72;
+  --glaze-field-gap: 8px;
+  --glaze-group-gap: 16px;
+  --glaze-message-gap: 6px;
+}
+
+:root[data-theme="dark"] {
+  --glaze-focus-ring: #a9c2ff;
+  --glaze-selection: rgba(122, 162, 255, .24);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --glaze-focus-ring: #a9c2ff;
+    --glaze-selection: rgba(122, 162, 255, .24);
+  }
+}
+
+::selection {
+  background: var(--glaze-selection);
+}
+
+.glaze-field {
+  display: grid;
+  gap: var(--glaze-field-gap);
+}
+
+.glaze-field-label {
+  font-size: .8125rem;
+  font-weight: 700;
+}
+
+.glaze-field-help,
+.glaze-field-message {
+  margin: 0;
+  color: var(--glaze-muted);
+  font-size: .8125rem;
+  line-height: 1.45;
+}
+
+.glaze-field[data-state="error"] .glaze-input,
+.glaze-field[data-state="error"] .glaze-select,
+.glaze-field[data-state="error"] .glaze-textarea {
+  border-color: color-mix(in srgb, var(--glaze-danger) 58%, var(--glaze-line));
+}
+
+.glaze-field[data-state="error"] .glaze-field-message {
+  color: var(--glaze-danger);
+}
+
+.glaze-input::placeholder,
+.glaze-textarea::placeholder {
+  color: color-mix(in srgb, var(--glaze-muted) calc(var(--glaze-opacity-placeholder) * 100%), transparent);
+  opacity: 1;
+}
+
+.glaze-textarea {
+  min-height: 112px;
+  width: 100%;
+  resize: vertical;
+  padding: var(--glaze-space-3) var(--glaze-control-padding-comfortable);
+  border: 1px solid var(--glaze-line);
+  border-radius: var(--glaze-radius-control);
+  background: var(--glaze-surface-muted);
+  color: inherit;
+  font: inherit;
+}
+
+.glaze-fieldset {
+  display: grid;
+  gap: var(--glaze-group-gap);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.glaze-fieldset > legend {
+  margin-bottom: var(--glaze-field-gap);
+  font-weight: 700;
+}
+
+.glaze-choice {
+  display: grid;
+  grid-template-columns: var(--glaze-target-min) minmax(0, 1fr);
+  align-items: center;
+  min-height: var(--glaze-target-min);
+  gap: var(--glaze-space-2);
+  cursor: pointer;
+}
+
+.glaze-choice > input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--glaze-accent);
+}
+
+.glaze-choice:has(input:focus-visible) {
+  outline: var(--glaze-focus-width) solid var(--glaze-focus-ring);
+  outline-offset: var(--glaze-focus-offset);
+  border-radius: var(--glaze-radius-md);
+}
+
+.glaze-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--glaze-target-min);
+  gap: var(--glaze-space-3);
+  cursor: pointer;
+}
+
+.glaze-switch > input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+}
+
+.glaze-switch-track {
+  position: relative;
+  inline-size: 48px;
+  block-size: 28px;
+  flex: 0 0 auto;
+  border: 1px solid var(--glaze-line);
+  border-radius: var(--glaze-radius-pill);
+  background: var(--glaze-surface-muted);
+  transition: background var(--glaze-motion-fast) var(--glaze-ease-standard), border-color var(--glaze-motion-fast) var(--glaze-ease-standard);
+}
+
+.glaze-switch-track::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 3px;
+  inset-inline-start: 3px;
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: 50%;
+  background: var(--glaze-text);
+  box-shadow: var(--glaze-shadow-soft);
+  transition: transform var(--glaze-motion-fast) var(--glaze-ease-standard), background var(--glaze-motion-fast) var(--glaze-ease-standard);
+}
+
+.glaze-switch > input:checked + .glaze-switch-track {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--glaze-accent), var(--glaze-accent-2));
+}
+
+.glaze-switch > input:checked + .glaze-switch-track::after {
+  transform: translateX(20px);
+  background: var(--glaze-on-accent);
+}
+
+.glaze-switch > input:focus-visible + .glaze-switch-track {
+  outline: var(--glaze-focus-width) solid var(--glaze-focus-ring);
+  outline-offset: var(--glaze-focus-offset);
+}
+
+.glaze-segmented {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--glaze-line);
+  border-radius: var(--glaze-radius-pill);
+  background: var(--glaze-surface-muted);
+}
+
+.glaze-segmented > button,
+.glaze-segmented > [role="tab"] {
+  min-height: var(--glaze-target-min);
+  padding-inline: var(--glaze-space-3);
+  border: 0;
+  border-radius: var(--glaze-radius-pill);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.glaze-segmented > [aria-selected="true"],
+.glaze-segmented > [aria-pressed="true"],
+.glaze-segmented > [data-selected="true"] {
+  background: var(--glaze-surface-strong);
+  box-shadow: var(--glaze-shadow-soft);
+}
+
+.glaze-segmented > button:focus-visible,
+.glaze-segmented > [role="tab"]:focus-visible,
+.glaze-textarea:focus-visible {
+  outline: var(--glaze-focus-width) solid var(--glaze-focus-ring);
+  outline-offset: var(--glaze-focus-offset);
+}
+
+.glaze-progress {
+  overflow: hidden;
+  block-size: 8px;
+  border-radius: var(--glaze-radius-pill);
+  background: var(--glaze-surface-muted);
+}
+
+.glaze-progress > span {
+  display: block;
+  block-size: 100%;
+  inline-size: var(--glaze-progress-value, 0%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--glaze-accent), var(--glaze-accent-2));
+}
+
+.glaze-banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--glaze-space-3);
+  padding: var(--glaze-space-4);
+  border: 1px solid var(--glaze-line);
+  border-radius: var(--glaze-radius-lg);
+  background: var(--glaze-surface-strong);
+}
+
+.glaze-banner[data-state="info"] { border-color: color-mix(in srgb, var(--glaze-info) 38%, var(--glaze-line)); }
+.glaze-banner[data-state="success"] { border-color: color-mix(in srgb, var(--glaze-success) 38%, var(--glaze-line)); }
+.glaze-banner[data-state="warning"] { border-color: color-mix(in srgb, var(--glaze-warning) 42%, var(--glaze-line)); }
+.glaze-banner[data-state="error"],
+.glaze-banner[data-state="destructive"] { border-color: color-mix(in srgb, var(--glaze-danger) 42%, var(--glaze-line)); }

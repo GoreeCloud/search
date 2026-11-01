@@ -1,0 +1,52 @@
+# Keep the legacy builder default for existing workflows; staged builds use an
+# isolated revision-tagged builder image to avoid races between candidates.
+ARG BUILDER_IMAGE=localhost/searxng/searxng:builder
+# Keep the legacy Development base unless an explicitly digest-pinned override
+# is supplied; the default mutable tag is not release provenance evidence.
+ARG RUNTIME_BASE_IMAGE=docker.io/searxng/base:searxng
+FROM ${BUILDER_IMAGE} AS builder
+FROM ${RUNTIME_BASE_IMAGE} AS dist
+
+COPY --chown=977:977 --from=builder /usr/local/searxng/.venv/ ./.venv/
+COPY --chown=977:977 --from=builder /usr/local/searxng/searx/ ./searx/
+COPY --chown=977:977 ./native_search/ ./native_search/
+COPY --chown=977:977 ./container/ ./
+COPY --chown=977:977 ./searx/version_frozen.py ./searx/
+
+ARG CREATED="0001-01-01T00:00:00Z"
+ARG VERSION="unknown"
+ARG VCS_URL="unknown"
+ARG VCS_REVISION="unknown"
+ARG REQUESTED_BUILDER_BASE_REF="unverified"
+ARG REQUESTED_RUNTIME_BASE_REF="unverified"
+
+LABEL org.opencontainers.image.created="$CREATED" \
+    org.opencontainers.image.description="SearXNG is a metasearch engine. Users are neither tracked nor profiled." \
+    org.opencontainers.image.documentation="https://docs.searxng.org/admin/installation-docker" \
+    org.opencontainers.image.licenses="AGPL-3.0-or-later" \
+    org.opencontainers.image.revision="$VCS_REVISION" \
+    org.opencontainers.image.source="$VCS_URL" \
+    org.opencontainers.image.title="SearXNG" \
+    org.opencontainers.image.url="https://searxng.org" \
+    org.opencontainers.image.version="$VERSION" \
+    org.goreecloud.search.requested-builder-base-ref="$REQUESTED_BUILDER_BASE_REF" \
+    org.goreecloud.search.requested-runtime-base-ref="$REQUESTED_RUNTIME_BASE_REF"
+
+ENV __SEARXNG_VERSION="$VERSION" \
+    __SEARXNG_SETTINGS_PATH="$__SEARXNG_CONFIG_PATH/settings.yml" \
+    GRANIAN_PROCESS_NAME="searxng" \
+    GRANIAN_INTERFACE="wsgi" \
+    GRANIAN_HOST="::" \
+    GRANIAN_PORT="8080" \
+    GRANIAN_WEBSOCKETS="false" \
+    GRANIAN_BLOCKING_THREADS="4" \
+    GRANIAN_WORKERS_KILL_TIMEOUT="30s" \
+    GRANIAN_BLOCKING_THREADS_IDLE_TIMEOUT="5m"
+
+# "*_PATH" ENVs are defined in base images
+VOLUME $__SEARXNG_CONFIG_PATH
+VOLUME $__SEARXNG_DATA_PATH
+
+EXPOSE 8080
+
+ENTRYPOINT ["/usr/local/searxng/entrypoint.sh"]

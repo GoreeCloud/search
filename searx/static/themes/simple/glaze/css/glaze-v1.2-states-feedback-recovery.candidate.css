@@ -1,0 +1,34 @@
+/* GLAZE UI V1.2 Candidate — bounded truthful states/feedback/recovery composition; no producer truth or new material calibration. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-state-library { display:grid; gap:var(--glz12-space-section); min-inline-size:0; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-state-scene { min-inline-size:0; display:grid; gap:var(--glz12-space-standard-cluster); padding:var(--glz12-space-content); border:1px solid var(--glz12-structural-border); border-radius:var(--glz12-radius-surface); background:var(--glz1-base); color:var(--glz1-text-primary); -webkit-backdrop-filter:none; backdrop-filter:none; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-state-heading { display:flex; flex-wrap:wrap; align-items:center; gap:var(--glz12-space-control); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-state-mark { display:inline-grid; place-items:center; min-inline-size:1.75em; block-size:1.75em; border:2px solid currentColor; border-radius:var(--glz12-radius-pill); font-weight:800; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-state-box { min-inline-size:0; padding:var(--glz12-space-standard-cluster); border:1px solid var(--glz12-structural-border); border-inline-start-width:var(--glz12-state-focus-width-contrast); border-radius:var(--glz12-radius-control); background:var(--glz1-raised); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-state-box[data-state="success"] { border-inline-start-color:var(--glz1-success); border-inline-start-style:solid; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-state-box[data-state="warning"] { border-inline-start-color:var(--glz1-warning); border-inline-start-style:double; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-state-box[data-state="critical"] { border-inline-start-color:var(--glz1-critical); border-inline-start-style:solid; outline:1px solid currentColor; outline-offset:-1px; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-state-box[data-state="unknown"] { border-inline-start-style:dotted; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-state-box[data-state="stale"] { border-inline-start-style:dashed; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-state-actions { display:flex; flex-wrap:wrap; gap:var(--glz12-space-control); align-items:center; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-state-action { min-inline-size:var(--glz12-target-min); min-block-size:var(--glz12-target-min); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-state-action:focus-visible { outline:var(--glz12-state-focus-width) solid var(--glz1-focus); outline-offset:var(--glz12-state-focus-offset); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-progress-stack { display:grid; gap:var(--glz12-space-control); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-progress-stack progress { inline-size:100%; accent-color:var(--glz1-focus); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-indeterminate { display:inline-flex; align-items:center; gap:var(--glz12-space-control); font-weight:700; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-indeterminate::before { content:"…"; display:inline-grid; place-items:center; inline-size:1.75em; block-size:1.75em; border:1px solid currentColor; border-radius:var(--glz12-radius-pill); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-skeleton { display:grid; gap:var(--glz12-space-control); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-skeleton-line { min-block-size:1em; border-radius:var(--glz12-radius-control); background:color-mix(in srgb,currentColor 12%,transparent); animation:glz12-state-skeleton 1.4s ease-in-out infinite alternate; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-skeleton-line:nth-child(2) { inline-size:72%; }
+@keyframes glz12-state-skeleton { from { opacity:.45; } to { opacity:.8; } }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-state-detail { display:grid; gap:var(--glz12-space-control); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-layout-class="compact"] .glz12-state-scene { padding:var(--glz12-space-standard-cluster); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-touch-assistance="true"] .glz12-state-action { min-inline-size:var(--glz12-shell-target-assisted); min-block-size:var(--glz12-shell-target-assisted); }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-text-scale="200"] :is(.glz12-state-library,.glz12-state-scene,.glz12-state-heading,.glz12-state-actions,.glz12-state-box) { min-inline-size:0; overflow-wrap:anywhere; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-motion="reduced"] .glz12-skeleton-line { animation:none; opacity:.6; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] :is(.glz12-state-scene,.glz12-state-box) { -webkit-backdrop-filter:none!important; backdrop-filter:none!important; box-shadow:none; }
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-contrast="increased"] :is(.glz12-state-scene,.glz12-state-box,.glz12-state-action) { border-width:var(--glz12-state-focus-width); }
+@media (prefers-reduced-motion: reduce) { html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-skeleton-line { animation:none; opacity:.6; } }
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(.glz12-state-scene,.glz12-state-box,.glz12-state-action,.glz12-state-mark) { forced-color-adjust:auto; background:Canvas; color:CanvasText; border-color:CanvasText; box-shadow:none; }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-indeterminate::before { forced-color-adjust:auto; color:CanvasText; border-color:CanvasText; }
+}

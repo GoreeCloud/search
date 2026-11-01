@@ -1,0 +1,23 @@
+{% extends "simple/base.html" %}
+{% block title %}Native index · Development · {% endblock %}
+{% block content %}
+<section class="goreecloud-native" style="max-width:800px;margin:32px auto;padding:0 20px;">
+  <h1>Native index · Development</h1>
+  <p role="note">Only approved GoreeCloud repository documents are searched. No Brave, Qwant, Startpage or other external provider is contacted. Coverage is limited.</p>
+  <form method="post" action="{{ url_for('goreecloud_native_search') }}" role="search">
+    <label for="native-q">Search the native index</label>
+    <input id="native-q" name="q" type="search" value="{{ native_query }}" maxlength="256" required autocomplete="off">
+    <button type="submit" name="native_source" value="goreecloud-native-index">Search native index</button>
+  </form>
+  <p><a href="{{ url_for('index') }}">Back to Web search</a></p>
+  <p aria-live="polite">{{ native_results|length }} native document results.</p>
+  {% if not native_results %}<p role="status">No matching documents in this limited local index. No external source was substituted.</p>{% endif %}
+  {% for hit in native_results %}
+  <article class="goreecloud-native-hit" style="padding:16px 0;border-bottom:1px solid #8885;">
+    <h2><a href="{{ hit.url }}" rel="noopener noreferrer">{{ hit.title }}</a></h2>
+    <p>{{ hit.host }} · Native index</p>
+    <p>{{ hit.excerpt }}</p>
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,26 @@
+/* GLAZE UI V1.2 Candidate — Depth fallback atomicity.
+ * Performance/accessibility fallbacks remove optical depth immediately rather than
+ * interpolating a previous box-shadow after the fallback state becomes active.
+ */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-material-performance="minimal"]:root [data-glz-depth-change] {
+  transition: none;
+  transform: none;
+}
+
+/* Forced Colors is platform-authoritative. Match the depth-material specificity so
+ * custom frost cannot outrank the fallback merely because the role selector is more specific.
+ */
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] [data-glz-depth][data-glz-depth-material="true"] {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    transition: none !important;
+    animation: none !important;
+    transform: none;
+    forced-color-adjust: auto;
+  }
+}

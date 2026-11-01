@@ -1,0 +1,73 @@
+/*
+ * GLAZE UI V1.0 Foundation Components — adaptive input/accessibility layer
+ * Planned until exact-head rendered acceptance passes.
+ */
+@import url("./glaze-v1.components.css");
+
+/* Explicit semantic input mode allows native hosts/test harnesses to resolve
+   target floors independently of browser pointer heuristics. */
+[data-glz-input="touch"] .glz1-button,
+[data-glz-input="touch"] .glz1-icon-button {
+  min-block-size: max(var(--glz1-button-height), var(--glz1-control-hit));
+}
+[data-glz-input="touch"] .glz1-icon-button {
+  inline-size: max(var(--glz1-button-height), var(--glz1-control-hit));
+  min-inline-size: max(var(--glz1-button-height), var(--glz1-control-hit));
+}
+[data-glz-input="touch"] .glz1-field-control,
+[data-glz-input="touch"] .glz1-select {
+  min-block-size: max(var(--glz1-field-height), var(--glz1-control-hit));
+}
+[data-glz-input="touch"] .glz1-choice,
+[data-glz-input="touch"] .glz1-switch,
+[data-glz-input="touch"] .glz1-slider-row {
+  min-block-size: var(--glz1-control-hit);
+}
+
+[data-glz-touch-assistance="true"] .glz1-button,
+[data-glz-touch-assistance="true"] .glz1-icon-button,
+[data-glz-touch-assistance="true"] .glz1-field-control,
+[data-glz-touch-assistance="true"] .glz1-select,
+[data-glz-touch-assistance="true"] .glz1-choice,
+[data-glz-touch-assistance="true"] .glz1-switch,
+[data-glz-touch-assistance="true"] .glz1-slider-row {
+  min-block-size: var(--glz1-control-hit-assisted);
+}
+[data-glz-touch-assistance="true"] .glz1-icon-button {
+  min-inline-size: var(--glz1-control-hit-assisted);
+  inline-size: max(var(--glz1-button-height), var(--glz1-control-hit-assisted));
+}
+
+html[data-mode="increased-contrast"] {
+  --glz1-focus-width: 4px;
+  --glz1-control-border: color-mix(in srgb, var(--glz1-text-primary) 42%, transparent);
+}
+html[data-mode="increased-contrast"] .glz1-button,
+html[data-mode="increased-contrast"] .glz1-icon-button,
+html[data-mode="increased-contrast"] .glz1-field-control,
+html[data-mode="increased-contrast"] .glz1-select,
+html[data-mode="increased-contrast"] .glz1-choice-control,
+html[data-mode="increased-contrast"] .glz1-switch-track {
+  border-width: 2px;
+}
+html[data-mode="increased-contrast"] .glz1-field-message[data-kind="error"],
+html[data-mode="increased-contrast"] .glz1-button[data-variant="danger"],
+html[data-mode="increased-contrast"] .glz1-icon-button[data-variant="danger"] {
+  font-weight: 700;
+}
+
+html[data-mode="large-text"] .glz1-button,
+html[data-mode="large-text"] .glz1-icon-button,
+html[data-mode="large-text"] .glz1-field-control,
+html[data-mode="large-text"] .glz1-select,
+html[data-mode="large-text"] .glz1-choice,
+html[data-mode="large-text"] .glz1-switch,
+html[data-mode="large-text"] .glz1-slider-row {
+  block-size: auto;
+  min-block-size: var(--glz1-control-hit);
+}
+html[data-mode="large-text"] .glz1-button { white-space: normal; padding-block: 8px; }
+html[data-mode="large-text"] .glz1-field-control,
+html[data-mode="large-text"] .glz1-select { padding-block: 8px; }
+html[data-mode="large-text"] .glz1-choice,
+html[data-mode="large-text"] .glz1-switch { align-items: flex-start; padding-block: 6px; }

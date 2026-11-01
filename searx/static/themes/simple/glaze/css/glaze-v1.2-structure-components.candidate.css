@@ -1,0 +1,169 @@
+/* GLAZE UI V1.2 Candidate — bounded Structure component refinement.
+ * Durable information surfaces remain opaque/near-opaque. Floating Frost stays explicit.
+ * Component-local state cues do not establish a global V1.2 state-token authority.
+ */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"]:root {
+  --glz12-structure-current-fill: color-mix(in srgb, var(--glz1-focus) 10%, var(--glz1-base));
+  --glz12-structure-marker-width: 3px;
+}
+
+/* Durable reading/data planes do not gain backdrop blur from this tranche. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-card:not([data-material="frosted"]),
+  .glz1-list,
+  .glz1-table-wrap,
+  .glz1-table,
+  .glz1-tabs,
+  .glz1-sidebar:not([data-variant="floating"]),
+  .glz1-navigation-rail:not([data-variant="floating"]),
+  .glz1-toolbar:not([data-variant="floating"])
+) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Selection/current-location remains structural when atmospheric pigment is absent. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-card[data-selected="true"],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-card[aria-pressed="true"] {
+  background-color: var(--glz12-structure-current-fill);
+  border-inline-start: var(--glz12-structure-marker-width) solid currentColor;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-card[data-selected="true"] .glz1-card-selection,
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-card[aria-pressed="true"] .glz1-card-selection {
+  opacity: 1;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-list-option {
+  inline-size: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-list-option[data-selected="true"],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-list-option[aria-selected="true"] {
+  background-color: var(--glz12-structure-current-fill);
+  border-inline-start: var(--glz12-structure-marker-width) solid currentColor;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-list-option:focus-visible {
+  outline: var(--glz1-focus-width) solid var(--glz1-focus);
+  outline-offset: 1px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-table tbody tr[data-selected="true"] > :first-child {
+  border-inline-start: var(--glz12-structure-marker-width) solid currentColor;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-table-row-marker {
+  display: inline-block;
+  inline-size: 1.25em;
+  margin-inline-end: .35em;
+  font-weight: 800;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz12-numeric {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-sort-button {
+  min-inline-size: var(--glz1-structure-hit);
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-tab[aria-selected="true"] {
+  background-color: transparent;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-tab[aria-selected="true"]::after {
+  background: currentColor;
+  block-size: var(--glz12-structure-marker-width);
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-tab:focus-visible {
+  outline: var(--glz1-focus-width) solid var(--glz1-focus);
+  outline-offset: -2px;
+}
+
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-sidebar-item[aria-current="page"],
+  .glz1-rail-item[aria-current="page"],
+  .glz1-dock-item[aria-current="page"]
+) {
+  background-color: var(--glz12-structure-current-fill);
+  box-shadow: none;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-sidebar-item[aria-current="page"] {
+  border-inline-start: var(--glz12-structure-marker-width) solid currentColor;
+}
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-rail-item[aria-current="page"],
+  .glz1-dock-item[aria-current="page"]
+) {
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+
+/* Toolbar preserves priority-one access; lower priorities disappear before target floors shrink. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-toolbar [data-priority="1"],
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-toolbar-overflow {
+  min-inline-size: var(--glz1-structure-hit);
+  min-block-size: var(--glz1-structure-hit);
+}
+
+/* Explicit floating chrome retains bounded Frost; durable variants above stay blur-free. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"][data-glz-transparency="reduced"] :is(
+  .glz1-dock,
+  .glz1-sidebar[data-variant="floating"],
+  .glz1-navigation-rail[data-variant="floating"],
+  .glz1-toolbar[data-variant="floating"]
+) {
+  background-color: var(--glz1-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-mode="increased-contrast"][data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+  .glz1-card,
+  .glz1-list,
+  .glz1-table-wrap,
+  .glz1-tabs,
+  .glz1-sidebar,
+  .glz1-navigation-rail,
+  .glz1-dock,
+  .glz1-toolbar
+) {
+  border-width: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-card[data-interactive="true"] {
+    transition: none;
+    transform: none;
+  }
+}
+
+@media (forced-colors: active) {
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz1-card[data-selected="true"],
+    .glz1-card[aria-pressed="true"],
+    .glz12-list-option[data-selected="true"],
+    .glz12-list-option[aria-selected="true"],
+    .glz1-sidebar-item[aria-current="page"]
+  ) {
+    background: Canvas;
+    color: CanvasText;
+    border-inline-start-color: CanvasText;
+  }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] :is(
+    .glz1-rail-item[aria-current="page"],
+    .glz1-dock-item[aria-current="page"]
+  ) {
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: none;
+    outline: 2px solid CanvasText;
+    outline-offset: -2px;
+  }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-tab[aria-selected="true"]::after {
+    background: CanvasText;
+  }
+  html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] .glz1-table tbody tr[data-selected="true"] > :first-child {
+    border-inline-start-color: CanvasText;
+  }
+}

@@ -1,0 +1,438 @@
+/*
+ * GLAZE UI V1.0 Candidate Foundation
+ * Lifecycle: Official reset baseline; production acceptance pending
+ * Official Version: GLAZE UI V1.0
+ * Scope: bounded core + System Shell reference semantics only.
+ * This file is not evidence of a complete OS shell or Stable promotion.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  --glz1-canvas: #f5f7fa;
+  --glz1-base: #ffffff;
+  --glz1-raised: #ffffff;
+  --glz1-text-primary: #151a23;
+  --glz1-text-secondary: #5d6675;
+  --glz1-text-tertiary: #7b8492;
+  --glz1-line: rgba(25, 35, 50, 0.14);
+  --glz1-focus: #3478f6;
+  --glz1-search-purple: #7657f6;
+  --glz1-glaze-blue: #4f8dff;
+  --glz1-info: #3478f6;
+  --glz1-success: #2f9e63;
+  --glz1-warning: #b56a00;
+  --glz1-critical: #c63b32;
+
+  --glz1-space-1: 4px;
+  --glz1-space-2: 8px;
+  --glz1-space-3: 12px;
+  --glz1-space-4: 16px;
+  --glz1-space-5: 20px;
+  --glz1-space-6: 24px;
+  --glz1-space-8: 32px;
+  --glz1-space-12: 48px;
+  --glz1-space-16: 64px;
+
+  --glz1-radius-small: 12px;
+  --glz1-radius-standard: 20px;
+  --glz1-radius-soft: 28px;
+  --glz1-radius-panel: 28px;
+  --glz1-radius-pill: 999px;
+
+  --glz1-target-shell: 48px;
+  --glz1-target-assisted: 56px;
+  --glz1-focus-width: 3px;
+  --glz1-focus-offset: 2px;
+
+  --glz1-overlay-bg: rgba(255, 255, 255, 0.78);
+  --glz1-overlay-blur: 22px;
+  --glz1-panel-bg: rgba(255, 255, 255, 0.88);
+  --glz1-panel-blur: 28px;
+  --glz1-critical-bg: rgba(255, 255, 255, 0.98);
+
+  --glz1-shadow-overlay: 0 18px 52px rgba(24, 34, 50, 0.14);
+  --glz1-shadow-panel: 0 28px 80px rgba(14, 22, 36, 0.20);
+  --glz1-shadow-critical: 0 30px 90px rgba(14, 18, 28, 0.24);
+
+  --glz1-motion-popover: 180ms;
+  --glz1-motion-panel: 250ms;
+  --glz1-motion-search: 280ms;
+  --glz1-motion-workspace: 360ms;
+  --glz1-motion-unlock: 340ms;
+  --glz1-ease-snap: cubic-bezier(0.2, 0, 0, 1);
+  --glz1-ease-glide: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --glz1-state-hover: 0.045;
+  --glz1-state-pressed: 0.095;
+  --glz1-state-selected: 0.12;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --glz1-canvas: #0b0d11;
+    --glz1-base: #12151b;
+    --glz1-raised: #1b2028;
+    --glz1-text-primary: #f5f7fa;
+    --glz1-text-secondary: #b0b7c3;
+    --glz1-text-tertiary: #8d96a5;
+    --glz1-line: rgba(225, 232, 244, 0.14);
+    --glz1-focus: #8db5ff;
+    --glz1-search-purple: #a990ff;
+    --glz1-glaze-blue: #82afff;
+    --glz1-info: #82afff;
+    --glz1-success: #72d9a3;
+    --glz1-warning: #f0bc65;
+    --glz1-critical: #ff8c84;
+    --glz1-overlay-bg: rgba(24, 29, 38, 0.76);
+    --glz1-panel-bg: rgba(24, 29, 38, 0.86);
+    --glz1-critical-bg: rgba(18, 21, 27, 0.97);
+    --glz1-shadow-overlay: 0 18px 54px rgba(0, 0, 0, 0.30);
+    --glz1-shadow-panel: 0 28px 84px rgba(0, 0, 0, 0.40);
+    --glz1-shadow-critical: 0 30px 96px rgba(0, 0, 0, 0.48);
+  }
+}
+
+/* Explicit Deep Dark mode. It is never inferred from semantic status. */
+[data-glz-appearance="deep-dark"],
+.glz1-deep-dark {
+  --glz1-canvas: #05070a;
+  --glz1-base: #0d1015;
+  --glz1-raised: #171c23;
+  --glz1-text-primary: #f5f7fa;
+  --glz1-text-secondary: #abb4c2;
+  --glz1-line: rgba(225, 232, 244, 0.15);
+  --glz1-overlay-bg: rgba(18, 22, 29, 0.80);
+  --glz1-panel-bg: rgba(18, 22, 29, 0.90);
+  --glz1-critical-bg: rgba(13, 16, 21, 0.98);
+}
+
+.glz1-workspace {
+  box-sizing: border-box;
+  min-block-size: 100%;
+  background: var(--glz1-canvas);
+  color: var(--glz1-text-primary);
+}
+
+.glz1-application {
+  box-sizing: border-box;
+  background: var(--glz1-base);
+  color: var(--glz1-text-primary);
+  border: 1px solid var(--glz1-line);
+  border-radius: var(--glz1-radius-standard);
+}
+
+.glz1-raised {
+  background: var(--glz1-raised);
+  border: 1px solid var(--glz1-line);
+}
+
+.glz1-system-overlay,
+.glz1-system-panel,
+.glz1-critical-system,
+.glz1-capsule {
+  box-sizing: border-box;
+  color: var(--glz1-text-primary);
+  border: 1px solid var(--glz1-line);
+  -webkit-font-smoothing: antialiased;
+}
+
+.glz1-system-overlay {
+  background: var(--glz1-overlay-bg);
+  -webkit-backdrop-filter: blur(var(--glz1-overlay-blur)) saturate(1.18);
+  backdrop-filter: blur(var(--glz1-overlay-blur)) saturate(1.18);
+  border-radius: var(--glz1-radius-standard);
+  box-shadow: var(--glz1-shadow-overlay);
+}
+
+.glz1-system-panel {
+  background: var(--glz1-panel-bg);
+  -webkit-backdrop-filter: blur(var(--glz1-panel-blur)) saturate(1.14);
+  backdrop-filter: blur(var(--glz1-panel-blur)) saturate(1.14);
+  border-radius: var(--glz1-radius-panel);
+  box-shadow: var(--glz1-shadow-panel);
+}
+
+.glz1-critical-system {
+  background: var(--glz1-critical-bg);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-radius: var(--glz1-radius-panel);
+  box-shadow: var(--glz1-shadow-critical);
+}
+
+.glz1-capsule {
+  min-block-size: var(--glz1-target-shell);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--glz1-space-2);
+  padding-inline: var(--glz1-space-4);
+  background: var(--glz1-overlay-bg);
+  -webkit-backdrop-filter: blur(var(--glz1-overlay-blur)) saturate(1.16);
+  backdrop-filter: blur(var(--glz1-overlay-blur)) saturate(1.16);
+  border-radius: var(--glz1-radius-pill);
+  box-shadow: var(--glz1-shadow-overlay);
+}
+
+.glz1-system-bar {
+  min-block-size: 32px;
+  display: flex;
+  align-items: center;
+  gap: var(--glz1-space-3);
+  padding-inline: var(--glz1-space-3);
+  font-size: clamp(13px, 0.85rem, 15px);
+  color: var(--glz1-text-secondary);
+}
+
+.glz1-system-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--glz1-space-2);
+  min-block-size: var(--glz1-target-shell);
+  color: var(--glz1-text-secondary);
+}
+
+.glz1-system-status[data-state="active"] {
+  color: var(--glz1-text-primary);
+}
+
+.glz1-system-status[data-state="warning"] {
+  color: var(--glz1-warning);
+}
+
+.glz1-system-status[data-state="critical"] {
+  color: var(--glz1-critical);
+  font-weight: 650;
+}
+
+.glz1-system-status[data-recording="true"],
+.glz1-system-status[data-privacy-active="true"] {
+  color: var(--glz1-critical);
+  font-weight: 650;
+}
+
+.glz1-system-title {
+  margin: 0;
+  font-size: clamp(18px, 1.25rem, 22px);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.glz1-workspace-title {
+  margin: 0;
+  font-size: clamp(22px, 1.6rem, 28px);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.glz1-lock-time {
+  margin: 0;
+  font-size: clamp(56px, 9vw, 88px);
+  font-weight: 560;
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+}
+
+.glz1-shell-control {
+  box-sizing: border-box;
+  min-inline-size: var(--glz1-target-shell);
+  min-block-size: var(--glz1-target-shell);
+  border-radius: var(--glz1-radius-small);
+}
+
+.glz1-shell-control:focus-visible,
+.glz1-focusable:focus-visible,
+.glz1-system-overlay :focus-visible,
+.glz1-system-panel :focus-visible,
+.glz1-critical-system :focus-visible {
+  outline: var(--glz1-focus-width) solid var(--glz1-focus);
+  outline-offset: var(--glz1-focus-offset);
+}
+
+.glz1-state-layer {
+  position: relative;
+  isolation: isolate;
+}
+
+.glz1-state-layer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--glz1-motion-popover) var(--glz1-ease-snap);
+  z-index: -1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .glz1-state-layer:hover::after {
+    opacity: var(--glz1-state-hover);
+  }
+}
+
+.glz1-state-layer:active::after,
+.glz1-state-layer[data-state="pressed"]::after {
+  opacity: var(--glz1-state-pressed);
+}
+
+.glz1-state-layer[aria-selected="true"]::after,
+.glz1-state-layer[data-state="selected"]::after {
+  opacity: var(--glz1-state-selected);
+}
+
+.glz1-state-layer[aria-disabled="true"],
+.glz1-state-layer:disabled,
+.glz1-state-layer[data-state="disabled"] {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.glz1-search-identity {
+  --glz1-search-accent-a: var(--glz1-search-purple);
+  --glz1-search-accent-b: var(--glz1-glaze-blue);
+  border-color: color-mix(in srgb, var(--glz1-search-accent-a) 32%, var(--glz1-line));
+}
+
+.glz1-search-identity[data-active="true"] {
+  box-shadow:
+    var(--glz1-shadow-overlay),
+    inset 0 0 0 1px color-mix(in srgb, var(--glz1-search-accent-b) 24%, transparent);
+}
+
+/* Explicit user/application accessibility override class. */
+.glz1-reduced-transparency,
+[data-glz-transparency="reduced"] {
+  --glz1-overlay-bg: color-mix(in srgb, var(--glz1-raised) 97%, transparent);
+  --glz1-panel-bg: color-mix(in srgb, var(--glz1-raised) 99%, transparent);
+  --glz1-critical-bg: var(--glz1-base);
+  --glz1-overlay-blur: 0px;
+  --glz1-panel-blur: 0px;
+}
+
+.glz1-reduced-transparency .glz1-system-overlay,
+.glz1-reduced-transparency .glz1-system-panel,
+.glz1-reduced-transparency .glz1-capsule,
+[data-glz-transparency="reduced"] .glz1-system-overlay,
+[data-glz-transparency="reduced"] .glz1-system-panel,
+[data-glz-transparency="reduced"] .glz1-capsule {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-color: color-mix(in srgb, var(--glz1-text-primary) 20%, var(--glz1-line));
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glz1-overlay-bg: var(--glz1-raised);
+    --glz1-panel-bg: var(--glz1-raised);
+    --glz1-critical-bg: var(--glz1-base);
+    --glz1-overlay-blur: 0px;
+    --glz1-panel-blur: 0px;
+  }
+
+  .glz1-system-overlay,
+  .glz1-system-panel,
+  .glz1-capsule {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --glz1-motion-popover: 80ms;
+    --glz1-motion-panel: 100ms;
+    --glz1-motion-search: 100ms;
+    --glz1-motion-workspace: 120ms;
+    --glz1-motion-unlock: 120ms;
+  }
+
+  .glz1-state-layer::after {
+    transition-duration: 80ms;
+  }
+
+  .glz1-spatial-motion,
+  .glz1-depth-motion,
+  .glz1-wallpaper-motion {
+    transform: none !important;
+    animation: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --glz1-line: color-mix(in srgb, currentColor 32%, transparent);
+    --glz1-focus-width: 4px;
+    --glz1-overlay-bg: color-mix(in srgb, var(--glz1-raised) 96%, transparent);
+    --glz1-panel-bg: color-mix(in srgb, var(--glz1-raised) 98%, transparent);
+  }
+
+  .glz1-system-overlay,
+  .glz1-system-panel,
+  .glz1-critical-system,
+  .glz1-capsule {
+    border-width: 2px;
+  }
+}
+
+@media (forced-colors: active) {
+  :root {
+    --glz1-focus: Highlight;
+    --glz1-line: CanvasText;
+  }
+
+  .glz1-workspace,
+  .glz1-application,
+  .glz1-system-overlay,
+  .glz1-system-panel,
+  .glz1-critical-system,
+  .glz1-capsule {
+    color: CanvasText;
+    background: Canvas;
+    border-color: CanvasText;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .glz1-state-layer[aria-selected="true"],
+  .glz1-state-layer[data-state="selected"] {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+
+  .glz1-system-status[data-state="warning"],
+  .glz1-system-status[data-state="critical"],
+  .glz1-system-status[data-recording="true"],
+  .glz1-system-status[data-privacy-active="true"] {
+    color: CanvasText;
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+  }
+}
+
+@media (pointer: coarse) {
+  .glz1-shell-control,
+  .glz1-system-status {
+    min-inline-size: var(--glz1-target-shell);
+    min-block-size: var(--glz1-target-shell);
+  }
+}
+
+[data-glz-touch-assistance="true"] {
+  --glz1-target-shell: var(--glz1-target-assisted);
+}
+
+@media (min-width: 600px) {
+  .glz1-system-bar {
+    min-block-size: 40px;
+  }
+}
+
+@media (min-width: 1024px) and (pointer: fine) {
+  .glz1-system-bar {
+    min-block-size: 32px;
+  }
+}

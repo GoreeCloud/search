@@ -1,0 +1,82 @@
+/* GLAZE UI V1.2 Interaction-state Candidate. Values consolidate established V1 state calibration. */
+html[data-glaze-version="1.1"][data-glaze-upgrade="v1.2-frosted-neutral"] {
+  --glz12-state-hover-opacity: .045;
+  --glz12-state-pressed-opacity: .095;
+  --glz12-state-selected-opacity: .12;
+  --glz12-state-disabled-opacity: .55;
+  --glz12-state-focus-width: 3px;
+  --glz12-state-focus-offset: 2px;
+  --glz12-state-focus-width-contrast: 4px;
+  --glz1-state-hover: var(--glz12-state-hover-opacity);
+  --glz1-state-pressed: var(--glz12-state-pressed-opacity);
+  --glz1-state-selected: var(--glz12-state-selected-opacity);
+  --glz1-focus-width: var(--glz12-state-focus-width);
+  --glz1-focus-offset: var(--glz12-state-focus-offset);
+}
+
+.glz12-stateful { position: relative; isolation: isolate; }
+.glz12-stateful::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; background: currentColor; opacity: 0;
+  pointer-events: none; transition: opacity 160ms var(--glz1-ease-snap); z-index: 0;
+}
+.glz12-stateful > * { position: relative; z-index: 1; }
+@media (hover: hover) and (pointer: fine) { .glz12-stateful:hover::after { opacity: var(--glz12-state-hover-opacity); } }
+.glz12-stateful[data-demo-state="hover"]::after { opacity: var(--glz12-state-hover-opacity); }
+.glz12-stateful:active::after,
+.glz12-stateful[data-state="pressed"]::after { opacity: var(--glz12-state-pressed-opacity); }
+.glz12-stateful[aria-selected="true"]::after,
+.glz12-stateful[data-state="selected"]::after { opacity: var(--glz12-state-selected-opacity); }
+
+.glz12-stateful:focus-visible,
+.glz12-stateful[data-demo-state="focus"] {
+  outline: var(--glz12-state-focus-width) solid var(--glz1-focus);
+  outline-offset: var(--glz12-state-focus-offset);
+}
+.glz12-stateful[aria-selected="true"],
+.glz12-stateful[data-state="selected"] { box-shadow: inset 0 0 0 1px currentColor; }
+.glz12-stateful:disabled,
+.glz12-stateful[aria-disabled="true"],
+.glz12-stateful[data-state="disabled"] { opacity: var(--glz12-state-disabled-opacity); cursor: not-allowed; }
+
+.glz12-stateful[aria-busy="true"] { cursor: progress; }
+.glz12-state-busy { display: inline-flex; align-items: center; gap: .5rem; }
+.glz12-state-busy::before {
+  content: ""; inline-size: .85em; block-size: .85em; box-sizing: border-box; border: 2px solid currentColor;
+  border-inline-end-color: transparent; border-radius: 50%; animation: glz12-state-spin 360ms linear infinite;
+}
+@keyframes glz12-state-spin { to { transform: rotate(1turn); } }
+
+.glz12-semantic-state,
+.glz12-offline-state,
+.glz12-recovery-state {
+  padding: .75rem .9rem; border: 1px solid var(--glz1-line); border-inline-start-width: 4px; border-radius: 14px; background: var(--glz1-raised);
+}
+.glz12-semantic-state[data-semantic="success"] { border-inline-start-color: var(--glz1-success); }
+.glz12-semantic-state[data-semantic="information"] { border-inline-start-color: var(--glz1-info); }
+.glz12-semantic-state[data-semantic="warning"] { border-inline-start-color: var(--glz1-warning); }
+.glz12-semantic-state[data-semantic="danger"] { border-inline-start-color: var(--glz1-critical); }
+.glz12-offline-state { border-inline-start-color: var(--glz1-text-secondary); }
+.glz12-recovery-state[data-state="partial"],
+.glz12-recovery-state[data-state="awaiting-action"] { border-inline-start-color: var(--glz1-warning); }
+.glz12-recovery-state[data-state="failed"] { border-inline-start-color: var(--glz1-critical); }
+.glz12-recovery-state[data-state="complete"] { border-inline-start-color: var(--glz1-success); }
+
+[data-glz-text-scale="200"] .glz12-state-scene { grid-template-columns: 1fr; }
+html[data-mode="increased-contrast"] .glz12-stateful:focus-visible,
+html[data-mode="increased-contrast"] .glz12-stateful[data-demo-state="focus"] { outline-width: var(--glz12-state-focus-width-contrast); }
+html[data-mode="increased-contrast"] :is(.glz12-semantic-state,.glz12-offline-state,.glz12-recovery-state) { border-width: 2px; border-inline-start-width: 5px; }
+html[data-mode="reduced-motion"] .glz12-state-busy::before { animation: none; border-inline-end-color: currentColor; }
+html[data-mode="reduced-motion"] .glz12-stateful::after { transition: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .glz12-state-busy::before { animation: none; border-inline-end-color: currentColor; }
+  .glz12-stateful::after { transition: none; }
+}
+@media (max-width: 700px) { .glz12-state-scene { grid-template-columns: 1fr !important; } }
+@media (forced-colors: active) {
+  .glz12-stateful:focus-visible,
+  .glz12-stateful[data-demo-state="focus"] { outline-color: Highlight; }
+  .glz12-stateful[aria-selected="true"],
+  .glz12-stateful[data-state="selected"] { box-shadow: inset 0 0 0 2px Highlight; }
+  :is(.glz12-semantic-state,.glz12-offline-state,.glz12-recovery-state) { background: Canvas; color: CanvasText; border-color: CanvasText; }
+}

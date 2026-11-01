@@ -1,0 +1,80 @@
+/* GLAZE UI V1.0 adaptive color candidate.
+ * Semantic aliases only: product consumers should map canonical tokens to platform-native values.
+ * GLAZE UI V1.0 remains Stable until 1.5 promotion.
+ */
+
+:root {
+  --glaze-color-prominence-subtle: 0.10;
+  --glaze-color-prominence-standard: 1;
+  --glaze-color-prominence-prominent: 1;
+  --glaze-color-prominence-critical: 1;
+  --glaze-selection-glaze-opacity: 0.14;
+  --glaze-material-sample-max-influence: 0.18;
+  --glaze-color-transition-fast: 160ms;
+  --glaze-color-transition-standard: 220ms;
+}
+
+/* Consumers provide resolved semantic pigments through their platform adapter. */
+.glaze-semantic-surface {
+  background: var(--glaze-semantic-surface, Canvas);
+  color: var(--glaze-semantic-on-surface, CanvasText);
+}
+
+.glaze-selection-glaze {
+  background: color-mix(
+    in srgb,
+    var(--glaze-semantic-accent, Highlight) calc(var(--glaze-selection-glaze-opacity) * 100%),
+    var(--glaze-semantic-surface, Canvas)
+  );
+  color: var(--glaze-semantic-on-surface, CanvasText);
+  transition: background-color var(--glaze-color-transition-standard) ease;
+}
+
+.glaze-semantic-subtle {
+  --glaze-local-prominence: var(--glaze-color-prominence-subtle);
+}
+
+.glaze-semantic-standard {
+  --glaze-local-prominence: var(--glaze-color-prominence-standard);
+}
+
+.glaze-semantic-prominent {
+  --glaze-local-prominence: var(--glaze-color-prominence-prominent);
+}
+
+.glaze-semantic-critical {
+  --glaze-local-prominence: var(--glaze-color-prominence-critical);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glaze-selection-glaze {
+    transition: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .glaze-selection-glaze {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+}
+
+@media (forced-colors: active) {
+  .glaze-semantic-surface,
+  .glaze-selection-glaze {
+    background: Canvas;
+    color: CanvasText;
+    forced-color-adjust: auto;
+  }
+
+  .glaze-selection-glaze {
+    outline: 2px solid Highlight;
+  }
+}
+
+@supports not (background: color-mix(in srgb, red 10%, white)) {
+  .glaze-selection-glaze {
+    background: var(--glaze-semantic-selected-fallback, Highlight);
+    color: var(--glaze-semantic-on-selected-fallback, HighlightText);
+  }
+}

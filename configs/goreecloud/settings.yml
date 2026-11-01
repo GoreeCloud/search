@@ -1,0 +1,174 @@
+# Private/local GoreeCloud Search: approved federated provider families.
+# Brave Search is the search service (not the Brave Browser executable).
+# Startpage's upstream connector may be challenged by proof-of-work CAPTCHA.
+# Do not use this profile unchanged for an Internet-facing instance.
+use_default_settings:
+  engines:
+    keep_only:
+      - brave
+      - startpage
+      - brave.images
+      - brave.videos
+      - brave.news
+      - startpage images
+      - startpage news
+      - qwant
+      - qwant images
+      - qwant videos
+      - qwant news
+      - duckduckgo
+      - duckduckgo images
+      - duckduckgo videos
+      - duckduckgo news
+      - ecosia
+      - bing
+      - bing images
+      - bing videos
+      - bing news
+      - google
+      - google images
+      - google videos
+      - google news
+engines:
+  - name: brave
+    disabled: false
+    inactive: false
+  - name: startpage
+    disabled: false
+    inactive: false
+  - name: brave.images
+    disabled: false
+    inactive: false
+  - name: brave.videos
+    disabled: false
+    inactive: false
+  - name: brave.news
+    disabled: false
+    inactive: false
+  - name: startpage images
+    disabled: false
+    inactive: false
+  - name: startpage news
+    disabled: false
+    inactive: false
+  - name: qwant
+    disabled: false
+    inactive: false
+  - name: qwant images
+    disabled: false
+    inactive: false
+  - name: qwant videos
+    disabled: false
+    inactive: false
+  - name: qwant news
+    disabled: false
+    inactive: false
+  - name: duckduckgo
+    disabled: false
+    inactive: false
+  - name: duckduckgo images
+    disabled: false
+    inactive: false
+  - name: duckduckgo videos
+    disabled: false
+    inactive: false
+  - name: duckduckgo news
+    disabled: false
+    inactive: false
+  - name: ecosia
+    engine: goreecloud_ecosia
+    shortcut: eco
+    categories: [general]
+    disabled: false
+    inactive: false
+  - name: bing
+    disabled: false
+    inactive: false
+  - name: bing images
+    disabled: false
+    inactive: false
+  - name: bing videos
+    disabled: false
+    inactive: false
+  - name: bing news
+    disabled: false
+    inactive: false
+  - name: google
+    disabled: false
+    inactive: false
+  - name: google images
+    disabled: false
+    inactive: false
+  - name: google videos
+    disabled: false
+    inactive: false
+  - name: google news
+    disabled: false
+    inactive: false
+# Categories are restricted to the approved seven-family adapter allowlist (Web, Images, Videos, News).
+categories_as_tabs:
+  general:
+  images:
+  videos:
+  news:
+goreecloud:
+  private_search: true
+  max_query_chars: 512
+  max_provider_fanout: 7
+  # Required for every provider and image-proxy outbound request.
+  # The local SOCKS5H gateway must be independently verified as a privacy relay.
+  require_anonymous_egress: true
+outgoing:
+  # The upstream default 3s engine deadline is too short for verified Tor
+  # attestation plus provider response. Bound *all* requests to 12s, including
+  # regular HTTPS engines: extra_proxy_timeout only applies to onion adapters.
+  # A timeout stays a provider failure; never silently switch sources.
+  request_timeout: 12.0
+  max_request_timeout: 12.0
+  # Never bypass this relay or resolve provider DNS locally.
+  # With no trusted SOCKS5H service listening, searches fail closed.
+  proxies:
+    all://: socks5h://127.0.0.1:9050
+  # A SOCKS gateway alone does not attest Tor anonymity.
+  using_tor_proxy: true
+  extra_proxy_timeout: 10
+general:
+  instance_name: "GoreeCloud Search"
+  enable_metrics: false
+  open_metrics: ""
+brand:
+  docs_url: https://github.com/GoreeCloud/search
+  wiki_url: https://github.com/GoreeCloud/search
+  issue_url: https://github.com/GoreeCloud/search/issues
+  public_instances: ""
+search:
+  safe_search: 0
+  autocomplete: ""
+  favicon_resolver: ""
+  formats:
+    - html
+    - json
+server:
+  bind_address: "127.0.0.1"
+  public_instance: false
+  limiter: false
+  image_proxy: true
+  method: "POST"
+  default_http_headers:
+    X-Content-Type-Options: nosniff
+    X-Frame-Options: DENY
+    Referrer-Policy: no-referrer
+    X-Robots-Tag: noindex, nofollow
+    Permissions-Policy: "camera=(), microphone=(), geolocation=()"
+preferences:
+  lock:
+    - method
+    - query_in_title
+    - autocomplete
+    - favicon_resolver
+    - image_proxy
+ui:
+  default_theme: simple
+  query_in_title: false
+  theme_args:
+    simple_style: auto

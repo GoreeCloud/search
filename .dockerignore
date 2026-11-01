@@ -1,0 +1,7 @@
+*
+
+!container/*.template.*
+!container/entrypoint.sh
+!searx/**
+!native_search/**
+!requirements*.txt

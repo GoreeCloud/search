@@ -1,1 +1,140 @@
-# search
+# GoreeCloud Search
+
+> **Recovery note (2026-11-01):** This public source has been reconstructed from a clean 2026-10-23 VPS checkout because the original `GoreeCloud/search` repository was unavailable at verification. Later 2026-10-27 work is not included or verified. This is a **Development recovery snapshot**, not proof of production readiness. See [recovery provenance](docs/goreecloud/RECOVERY-BASELINE-2026-11-01.md) and [current roadmap](docs/goreecloud/SEARCH-PRODUCT-ROADMAP-2026-11-01.md). The active design authority is [GoreeCloud UI](https://github.com/GoreeCloud/gc-ui), superseding the legacy Glaze references retained below for historical context.
+
+Privacy-focused, configurable federated search rebuilt from the SearXNG source engine toward GoreeCloud platform standards.
+
+**Release status:** NetBird-only **Development environment**, not an accepted Seal or Anchor release. Its precise official lifecycle stage remains unqualified: Development is an environment, not one of the eight stages. The [Development cutover record](deploy/vps/FREE-WORKING-SOURCES-CUTOVER.md) identifies deployed source `40caeb47a1fd8fc15a60f54e5e383d1a9f280598`, distinct from later integrated source. **Upstream foundation:** SearXNG. **UI authority:** [GoreeCloud UI](docs/goreecloud/GC-UI-CONSUMER-MIGRATION.md); this legacy consumer is not yet compliant. [Source baseline and Anchor gaps](docs/goreecloud/SOURCE-BASELINE-QUALIFICATION.md).
+
+## Native Search foundation (isolated Development)
+
+The experimental [native Search foundation](docs/goreecloud/NATIVE-SEARCH-FOUNDATION.md)
+provides a separately testable SQLite FTS5 index, an explicitly seeded HTTPS
+crawler, and a loopback-only JSON search service. Its approved-document index
+is available only as a separately enabled Development source: it does **not**
+replace SearXNG, automatically join the seven-family All Sources federation,
+index the general web, or schedule crawling. Whether that opt-in source is
+available depends on the deployed Development configuration. Publisher
+permissions and production/privacy qualification are required before broader
+crawling or rollout.
+
+## Working implementation
+
+The **free-first, direct-HTTPS NetBird Development deployment** uses **Tested free sources** for fresh browser profiles: DuckDuckGo, Bing and Startpage for Web; Bing Images; DuckDuckGo and Bing Videos; DuckDuckGo News. Saved choices remain authoritative. Settings still permits **All Sources** and individual selection among seven configured provider families: **Brave Search, Startpage, Qwant, DuckDuckGo, Ecosia, Bing and Google**. Web supports seven, Images and News six (except Ecosia), and Videos five (except Ecosia and Startpage). Other inherited SearXNG providers, including the Brave API, remain excluded. The Development profile defaults to SafeSearch **None**, with user-controllable restrictions. Provider availability is not guaranteed; a denied source is not silently replaced. The global budget is **12 search requests per minute in one process**, not a public or per-user limiter. No paid search API or Tor relay is required by the free-first profile; **external providers can see the VPS public IP and receive submitted queries**. Local HTML search and a loopback-only JSON extension remain available; neither provider inclusion nor green CI establishes current reachability. GoreeCloud Index, AI answers, business search, and alerting are not part of this web metasearch implementation.
+
+## Owner-approved homepage design
+
+The October 11 desktop/mobile owner mockups established the Search visual direction; later owner feedback refined the responsive historical Search presentation, prominent result cards, a cleaner homepage, category tabs (Web, Images, Videos, News), improved Settings and image gallery behavior. See [Official homepage](docs/goreecloud/OFFICIAL-HOMEPAGE.md) for the historical design baseline and [Settings and category navigation](docs/goreecloud/SEARCH-CATEGORIES-SETTINGS-UX.md) for the updated category contract. Search still submits queries via POST. Privacy slogans state design aims, not a promise that external providers do not track queries. Current GC UI conformance and visual acceptance remain open.
+
+## Develop locally
+
+For the **separately retained legacy Tor-oriented local profile**, follow [upstream SearXNG development instructions](docs/dev/index.rst) to install dependencies. Set a unique 32+-character secret in a local secret store, and launch through the fail-closed wrapper:
+
+```sh
+export SEARXNG_SECRET="<unique-strong-secret-from-your-secret-store>"
+./scripts/run-private.sh
+```
+
+Never use the upstream placeholder key. The profile binds **127.0.0.1**, disables metrics and remote autocomplete, proxies images, defaults to POST, and exposes opt-in JSON on a private interface. No other upstream engine is registered as an available search option. Startpage has an upstream proof-of-work anti-bot challenge, so inclusion and enabled state do **not** establish that real Startpage searches work. It does **not** implement public rate limiting. Internet exposure requires a separate gated HTTPS/reverse-proxy, Valkey limiter, hardened secrets, security/privacy and operational acceptance.
+
+## Private search disclosure safeguards
+
+The local profile now rejects query-bearing GET requests, preserves POST even on Android/WebKit, and disables caching for private search pages. It also refuses non-loopback Host headers and browser cross-origin/cross-site form submissions before any search dispatch (a limited DNS-rebinding/CSRF defense), and caps search/preview form bodies at 64 KiB. Local non-browser clients can omit Origin headers; browser POSTs with opaque `Origin: null` are accepted only when `Sec-Fetch-Site: same-origin` explicitly confirms local origin, matching a verified Chromium form submission. This limited boundary defense is not a substitute for public authentication or abuse prevention. Query-length and distinct-provider limits are set to 512 characters and **seven provider families** respectively; searches exceeding these limits return 413/422 rather than silently expanding disclosure. Private result pages omit query-bearing RSS/share URL metadata, and the private homepage does not advertise OpenSearch GET-query registration; the private server also returns uncached 404 responses for direct OpenSearch and autocomplete endpoints until an appropriately safe browser integration is qualified. The privacy-sensitive preferences for POST transport, title disclosure, autocomplete, favicons, and image proxy are locked against cookie and request overrides. The private profile also rejects external-bang redirects and first-result (double exclamation mark) navigation before dispatch; unexpected provider/plugin redirects are refused instead of navigating the browser to a third-party site. Query length is validated on the submitted value before operator parsing. The explicitly allowlisted provider shortcuts cover Brave, Startpage, Qwant, DuckDuckGo, Ecosia, Bing and Google, plus general/web category shortcuts. Unknown or third-party bangs are rejected rather than silently falling back; unsupported providers cannot be selected or dispatched. Shared serialized-preference GET/POST imports are rejected before parsing because upstream can otherwise change selected providers by following a URL; regular local Preferences forms remain available. Primary HTML/JSON search result links are restricted to well-formed HTTP(S) addresses, rejecting malformed or zero ports and invisible Unicode control characters. These safeguards do not cover all embedded or secondary URLs, cannot prevent configured upstream providers from receiving queries, and do not establish anonymity or production security acceptance.
+
+## Legacy Tor-profile relay qualification (not the free-first deployment)
+
+The separate legacy Tor-oriented profile requires the approved local SOCKS5H proxy for
+all seven configured provider families,
+including image-proxy traffic; there is no authorized direct fallback. **A SOCKS5H
+setting alone does not prove that the relay is Tor.** This legacy profile
+sets `outgoing.using_tor_proxy: true` and requires a fresh Tor attestation before
+private provider traffic; failed attestation closes the client rather than
+silently sending a direct request. Offline tests also exercise actual
+`curl_cffi` SOCKS5H negotiation against a rejecting synthetic loopback gateway
+and confirm that a missing relay fails closed. These tests do not describe the
+active direct-HTTPS free-first route or prove VPS network isolation. Before promotion,
+qualify the real image-proxy path,
+provider behavior, relay identity, DNS/IPv6 and metadata isolation, and rollback
+in a separately isolated staging environment.
+The upstream providers can still receive the plaintext search terms over HTTPS,
+and browser clicks can reveal client details to result destinations. See
+[security boundaries](docs/goreecloud/SECURITY-BOUNDARIES.md) and
+[draft Search PR #29](https://github.com/GoreeCloud/search/pull/29).
+
+## Controlled provider diagnostic (Development only)
+
+`scripts/provider_health_probe.py` is an explicitly opt-in, HTTP loopback-only
+**Development provider/category diagnostic**, not a live availability or Tor anonymity monitor.
+Without the egress flag, every mode performs **zero requests**:
+
+```sh
+python scripts/provider_health_probe.py --provider all
+python scripts/provider_health_probe.py --provider all --category images
+```
+
+The Web `all` mode names Brave, Startpage, Qwant, DuckDuckGo, Ecosia,
+Bing and Google. Explicit `--category images|videos|news` selects category-specific
+adapters. `all` includes only supported providers: Ecosia is Web-only and
+Startpage has no Videos adapter. Unsupported individual combinations fail
+before dispatch; the tool never substitutes another source. The Web default
+`both` still limits selection to legacy Brave/Startpage/Qwant; choose
+`--provider all` or an approved individual source for Videos. Offline tests
+check that diagnostic adapters match the application allowlist.
+
+**Do not run with `--allow-provider-egress` until a trusted Development
+loopback listener and independently verified Tor exit/DNS safeguards exist.**
+With that explicit opt-in, the tool sends fixed synthetic terms by POST, refuses
+redirects, validates selected-source/error attribution, and reports only
+provider states, counts, and bounded error categories (timeout, rate limiting,
+challenge, access denial, parsing, network, or other). A response with both
+results and errors is marked `partial_results`, never as full success.
+It does not save query terms or response bodies. Running it cannot
+establish all-category availability, privacy, publisher permission, or release
+acceptance. No real-provider tests were executed for this feature.
+
+## Search preview (no provider requests)
+
+The loopback-only **POST /preview** contract inspects selected sources, categories, language and SafeSearch without dispatching a provider request. The homepage does not expose source picker or preview controls; the saved source preference is managed in Settings. Results prioritize web matches and keep provider attribution, failure details, retry and source refinement in secondary controls. Follow-up POST actions preserve validated provider selection and query context without placing terms in URLs. The preview and execution policies enforce the same 512-character input limit and seven-family fanout cap. Preview metadata is not evidence of provider contact, availability, or consent.
+
+When Startpage is among the selected sources, the HTML preview also warns about its unverified anti-bot proof-of-work behavior and confirms no substitute provider is used. Search can be focused with `/` from non-editable page content without triggering network requests or interfering with slash typed inside a search input.
+
+The same private local preflight is available through `POST /preview` with `q` and `format=json` in the **body**; its response includes only query length, selected engines/categories and explicit `network_requests_made: false`, not raw query terms. GET to this endpoint is rejected and uncached; the route is unavailable outside the local private profile. The API is not authenticated and must remain loopback-only.
+
+## Search experience
+
+Results display separate selected-source and represented-source summaries: selected engines show which upstream choices were made, while per-engine counts show source labels attached to the safe web results actually displayed. A result aggregated from multiple approved adapters can contribute to each count; neither list confirms network contact, authenticates upstream providers, or proves every engine responded. The loopback JSON extension exposes the same represented-source counts. The search header uses GoreeCloud branding and responsive Search-local styling; full compliance with the canonical `GoreeCloud/gc-ui` platform design system remains unverified. An empty search provides local preference guidance instead of sending users to another service. Privacy policy refusals now have an accessible recovery screen that never reflects query text; local JSON callers receive a structured policy error. These interfaces are source- and Flask-render validated but still need browser, screen-reader, and visual acceptance.
+
+## Local readiness diagnostics
+
+The loopback-only Development profile exposes `GET /readyz`. It returns `200 READY` only when at least one configured, enabled provider processor registered at startup; otherwise it returns `503 NOT_READY`. It reports no provider names or user data. The original `/healthz` liveness route remains unchanged. Readiness is an **in-process startup check**, not proof that any external search provider is reachable, authorized, safe or responding. It is hidden (404) when the private profile is disabled; public operations require a separately authenticated and reviewed health contract.
+
+## Development validation
+
+With SearXNG's pinned requirements installed (including the Python 3.10 compatibility backport when applicable), run the commands below. GitHub source/runtime CI now checks both Python 3.10 and 3.12, while the Chrome browser job uses Python 3.12:
+
+```sh
+python -m compileall -q searx
+python -m unittest discover -s tests/goreecloud -v
+# Independent native-index, bounded crawler and approved-corpus tests:
+python -m compileall -q native_search
+python -m unittest discover -s tests/native -p 'test_*.py' -v
+python -m pip install nose2==0.16.0 aiounittest==1.5.0 parameterized==0.9.0 mock==5.2.0
+export SEARXNG_SECRET="$(python -c 'import secrets;print(secrets.token_hex(32))')"
+python -m nose2 -s tests/unit test_query test_webadapter test_settings_loader test_webapp -v
+```
+
+At the seven-family Development source checkpoint `d75b57c8f32e2b909a78fcb831155f9eba83d49d`, two exact-head workflows passed independently: [GoreeCloud Search foundation run 39172183106](https://github.com/GoreeCloud/search/actions/runs/39172183106) with **4/4 jobs** (Python 3.10/3.12 application contract and 72 targeted upstream regressions, browser smoke and private Granian listener), and [Native Search Development run 39172183097](https://github.com/GoreeCloud/search/actions/runs/39172183097) with **2/2 jobs** (all **23 native tests** plus fixture-indexing smoke on Python 3.10 and 3.12). The native workflow now runs for all branch-push and pull-request candidates, rather than only changes to native-source paths. The application test matrix remains separate; it is not necessary to pretend those same native tests were added to its workflow.
+
+The Ecosia adapter classifies unparseable organic cards as provider errors, not legitimate empty results; its malformed-card regression fixtures are committed, but live parser compatibility remains unverified. The native index remains an opt-in Development source, not automatically part of All Sources. Both passing CI workflows verify bounded offline contracts, **not** live seven-provider availability, Tor anonymity, public authentication, abuse limits, screen-reader/GoreeCloud UI acceptance or production readiness. Python 3.10 produces SQLite threading diagnostics while Python 3.12 does not; passing tests cannot establish SQLite concurrency safety in the target deployment. The Development configuration does not include a production public rate limiter. Real source compatibility, provider challenges/429s, Tor exit/DNS leak and relay recovery, security authorization and recovery/rollback qualification remain open.
+
+Git version metadata now resolves local branches without upstream tracking (including detached-HEAD checkouts) instead of assuming an upstream `master` branch. This is a diagnostic reliability fix; it does not affect network requests or provider selection.
+
+## Source boundaries
+
+- [SearXNG provenance and AGPL obligations](UPSTREAM.md)
+- [Legacy UI integration assessment (historical, not a current design authority)](GLAZE-INTEGRATION.md)
+- [Capability roadmap](docs/goreecloud/ROADMAP.md)
+- [Local JSON source-selection extension](docs/goreecloud/LOCAL-JSON-API.md)
+- [Upstream SearXNG documentation](README.rst)
+
+Pre-reset GoreeCloud Search code persists on historic branches; this import does not automatically provide or authorize GoreeCloud Index, Identity, Privacy Shield, Wardveil Security, or Everkeep integration.
