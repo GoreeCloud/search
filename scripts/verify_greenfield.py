@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = (
     "goreecloud_search/server.py",
+    "goreecloud_search/links.py",
     "goreecloud_search/store.py",
     "goreecloud_search/providers.py",
     "goreecloud_search/federation.py",
@@ -29,8 +30,9 @@ REQUIRED = (
     "tests/test_contrast.py",
     "tests/test_http_strict_json.py",
     "tests/test_readiness.py",
+    "tests/test_links.py",
 )
-MIN_TESTS = 84  # Previous 82 plus 2 browser readiness contract checks.
+MIN_TESTS = 91  # 84 prior plus seven shared public-navigation link contracts.
 
 
 def main() -> int:
