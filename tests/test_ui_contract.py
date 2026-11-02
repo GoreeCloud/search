@@ -50,6 +50,18 @@ class UIContractTests(unittest.TestCase):
         self.assertIn('link.textContent = entry.title', js)
         self.assertNotIn('innerHTML', js)
 
+    def test_local_index_readiness_is_advisory_and_private(self):
+        js = (ROOT / "web/app.js").read_text(encoding="utf-8")
+        self.assertIn('fetch("/readyz", {cache: "no-store", credentials: "omit"})', js)
+        self.assertIn("Your private local catalog is unavailable", js)
+        self.assertIn("void checkCatalogReadiness();", js)
+
+    def test_readiness_must_not_override_active_search_status(self):
+        js = (ROOT / "web/app.js").read_text(encoding="utf-8")
+        self.assertIn('response.status === 503 && status.textContent === INITIAL_STATUS', js)
+        self.assertIn("INITIAL_STATUS", js)
+        self.assertNotIn('submit.disabled = true;\n  try {\n    const response = await fetch("/readyz"', js)
+
     def test_ui_uses_semantic_design_tokens_and_no_remote_script(self):
         css = (ROOT / "web/styles.css").read_text(encoding="utf-8")
         html = (ROOT / "web/index.html").read_text(encoding="utf-8")
