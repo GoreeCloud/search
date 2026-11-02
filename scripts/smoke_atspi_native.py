@@ -56,6 +56,7 @@ def main() -> int:
             stderr=subprocess.DEVNULL,
         )
         found = {}
+        observed_app_names = set()
         try:
             deadline = time.monotonic() + 12
             while time.monotonic() < deadline and app.poll() is None:
@@ -67,7 +68,8 @@ def main() -> int:
                             if candidate is None:
                                 continue
                             name = candidate.get_name() or ""
-                            if "GoreeCloud Search" not in name:
+                            observed_app_names.add(name)
+                            if "GoreeCloud Search" not in name and "python" not in name.lower():
                                 continue
                             stack = [(candidate, 0)]
                             while stack and len(found) < 60:
@@ -99,6 +101,8 @@ def main() -> int:
                     app.wait(timeout=3)
         expected = ("Search local documents", "Search results")
         passed = all(name in found for name in expected)
+        print("AT-SPI isolated app names:", sorted(observed_app_names)[:20])
+        print("AT-SPI found label names:", sorted(found)[:40])
         print("AT-SPI isolated GTK4 labels:", {name: found.get(name) for name in expected})
         print("AT-SPI NATIVE", "PASS" if passed else "FAIL")
         return 0 if passed else 1
