@@ -122,6 +122,14 @@ class DurableRequestBudgetTests(unittest.TestCase):
             reserve_request(ledger, 2)
         self.assertFalse((nested / "requests.sqlite3").exists())
 
+    def test_budget_state_parent_traversal_refuses_without_creating_file(self):
+        inner = Path(self.temp.name) / "inner"
+        inner.mkdir(mode=0o700)
+        disguised = inner / ".." / "private" / "paid-requests.sqlite3"
+        with self.assertRaisesRegex(BudgetUnavailable, "non-traversing"):
+            reserve_request(disguised, 2)
+        self.assertFalse(self.path.exists())
+
     def test_wide_permissions_and_corrupt_ledger_fail_closed(self):
         reserve_request(self.path, 2)
         self.path.chmod(0o644)
