@@ -33,6 +33,14 @@ GDK_BACKEND=x11 xvfb-run -a python3 scripts/smoke_gtk4.py \
 
 This is not a deployment procedure. No real provider connections or authentication are enabled by these commands.
 
+## November 2 assistive-technology diagnostic — not accepted
+
+An experimental process-isolated native accessibility test (`scripts/smoke_atspi_native.py`) was executed on the authorized Linux laptop under an ephemeral Xvfb display and `dbus-run-session`. GTK 4.14.5, Orca 46.1 and the AT-SPI registry were present. The test launched the synthetic local-only Search window successfully, but **the expected GTK client was absent from the AT-SPI registry tree**: neither the search-field accessible name nor the results-list label was discovered. The process was deliberately terminated by the test afterward; graphics warnings were nonfatal.
+
+A second isolated attempt explicitly set the temporary accessibility bus's `org.a11y.Status.IsEnabled` property to true. The registry confirmed the value, but the accessible tree was still not found. The failure is **not** a claim that Orca spoke the names, nor proof that the application lacks accessibility on an actual desktop. It may reflect a GTK4/AT-SPI registration or isolated-session integration issue. Root cause remains unconfirmed.
+
+The diagnostic source was restricted to inspecting the newly launched synthetic child process by exact process ID; it does not intentionally read other desktop apps' labels or trees. Next qualify the client under a properly authorized full desktop session with an actual screen reader, inspect the AT-SPI/GTK bridge and its configuration, and record auditable spoken/focus behavior. Do **not** declare assistive-technology acceptance or Stable/Seal until independently verified.
+
 ## Remaining acceptance gates
 
 - Actual desktop visual inspection and GC UI typography/spacing/tokens, light/dark and high-contrast themes.
