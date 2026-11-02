@@ -23,21 +23,21 @@ To use a recovered copy, **manually and deliberately** choose its pathname with 
 
 ## Safety properties
 
-- Source catalogs must be absolute paths to owned, regular, owner-private files, without a symlink at the final pathname. A read-only `PRAGMA quick_check` plus `documents` table count validates the Search schema.
+- Source catalogs must be absolute paths to owned, regular, owner-private files, without symlinks anywhere in their directory ancestry or at the final pathname; lexical `..` traversal components are refused. A read-only `PRAGMA quick_check` plus `documents` table count validates the Search schema.
 - SQLite's online backup API creates a consistent snapshot of committed data, including data in a WAL journal.
-- The destination must be an absolute new path. The immediate parent directory must be owned by the current user and inaccessible to group/others. Missing parent directories are created owner-only when possible.
+- The destination must be an absolute new path without symlinked ancestors or lexical `..` traversal. The immediate parent directory must be owned by the current user and inaccessible to group/others. Missing parent directories are created owner-only when possible.
 - Destination creation is exclusive (mode 0600); existing files or symbolic links, including dangling links, are refused without replacement. Failures attempt to remove only the newly created output inode.
 - Snapshot and recovery-copy operations compare the document count to detect a mismatched snapshot. If the live source changes between the initial inspection and snapshot, the operation may fail closed; retrying after local writes stop is safer than silently accepting an inconsistent acceptance result.
 - Verification reads only local storage, and command output contains document counts rather than titles, queries or credential values. **A snapshot contains the indexed documents and URLs** and therefore is sensitive; handle it as private data.
 
 ## Evidence
 
-The enforced offline test suite includes nine dedicated recovery contracts for private snapshot/verify, new-file restore preserving the original, corrupt/missing/non-Search inputs, existing/dangling symbolic links, unsafe parent folders, private permissions, relative path refusal, SQLite WAL commits, and an actual subprocess CLI round trip. CI runs on Python 3.11 and 3.12 with the no-skip gate.
+The enforced offline test suite includes twelve dedicated recovery contracts for private snapshot/verify, new-file restore preserving the original, corrupt/missing/non-Search inputs, existing/dangling symbolic links, unsafe parent folders, private permissions, relative path refusal, SQLite WAL commits, and an actual subprocess CLI round trip. CI runs on Python 3.11 and 3.12 with the no-skip gate.
 
 A separate authorized Linux workstation ran the CLI sequence using a temporary two-document catalog and verified the original, snapshot and recovered file, all with 0600 file permissions. This was not a production backup or restore.
 
 ## Remaining operational acceptance
 
-These commands are **not** encrypted offsite backups, routine rotation, retention policies, disaster recovery, restore-in-place, staging recovery or managed archival. The local disk, user account, symlink race surface and OS clock remain trusted. Verify behavior under power loss, permissions, multiple filesystems and supported platforms before production acceptance. Implement an owner-approved backup schedule/retention/encryption/key-recovery plan before claiming operational reliability.
+These commands are **not** encrypted offsite backups, routine rotation, retention policies, disaster recovery, restore-in-place, staging recovery or managed archival. The local disk and user account remain trusted. Lexical path and symlink-ancestor checks are fail-closed safeguards, not race-free protection against a hostile same-UID actor changing filesystem paths concurrently. Verify behavior under power loss, permissions, multiple filesystems and supported platforms before production acceptance. Implement an owner-approved backup schedule/retention/encryption/key-recovery plan before claiming operational reliability.
 
 Do not declare Stable or Seal from this development capability alone.
