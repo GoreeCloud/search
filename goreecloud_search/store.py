@@ -173,6 +173,8 @@ def import_jsonl(db_path: Path, source_path: Path) -> int:
             documents.append(normalize_document(record))
         except (json.JSONDecodeError, InvalidDocument) as exc:
             raise InvalidDocument(f"Invalid document at line {lineno}") from exc
+    if not documents:
+        raise InvalidDocument("Import contains no documents; original catalog preserved")
     with closing(connect(db_path)) as conn, conn:
         conn.execute("BEGIN IMMEDIATE")
         conn.execute("DELETE FROM documents")
