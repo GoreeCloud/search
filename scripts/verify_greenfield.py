@@ -32,7 +32,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 99  # 95 existing plus 4 deterministic SHA-256 archive verification tests.
+MIN_TESTS = 101  # Existing tests plus two browser single-flight request contracts.
 
 
 def main() -> int:
