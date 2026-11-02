@@ -74,7 +74,7 @@ class NativeArchiveTests(unittest.TestCase):
                     continue
                 path = member.name[len(PREFIX) + 1:]
                 expected = hashlib.sha256(pack.extractfile(member).read()).hexdigest()
-                self.assertIn(f"{expected}  {path}\\n", manifest)
+                self.assertIn(f"{expected}  {path}" + chr(10), manifest)
         self.assertEqual(verify_archive(archive), len(SOURCE_PATHS) + 3)
 
     def test_archive_verification_rejects_modified_content(self):
