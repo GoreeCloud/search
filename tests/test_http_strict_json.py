@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import socket
 import tempfile
 import threading
 import unittest
@@ -88,6 +89,31 @@ class StrictHTTPPayloadTests(unittest.TestCase):
             connection.endheaders()
             reply = connection.getresponse()
             return reply.status, dict(reply.getheaders()), json.loads(reply.read())
+        finally:
+            connection.close()
+
+    def test_truncated_but_valid_json_never_reaches_local_search(self):
+        # A valid JSON prefix is NOT a complete request when Content-Length
+        # claims more bytes. Half-close writing to trigger a clean short read.
+        actual = b'{"query":"private"}'
+        connection = http.client.HTTPConnection(
+            "127.0.0.1", self.server.server_port, timeout=4,
+        )
+        try:
+            connection.putrequest("POST", "/api/search")
+            connection.putheader("Content-Type", "application/json")
+            connection.putheader("Content-Length", str(len(actual) + 10))
+            with patch("goreecloud_search.server.search") as local:
+                with patch("goreecloud_search.server.federated_search") as remote:
+                    connection.endheaders(actual)
+                    connection.sock.shutdown(socket.SHUT_WR)
+                    reply = connection.getresponse()
+                    body = json.loads(reply.read())
+                    self.assertEqual((reply.status, body["error"]),
+                                     (400, "Incomplete request body"))
+                    self.assertEqual(reply.getheader("Connection"), "close")
+                    local.assert_not_called()
+                    remote.assert_not_called()
         finally:
             connection.close()
 
