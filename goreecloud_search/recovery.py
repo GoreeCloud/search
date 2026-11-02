@@ -11,7 +11,6 @@ import stat
 from contextlib import closing
 from pathlib import Path
 
-from .store import connect
 
 
 class RecoveryError(ValueError):
@@ -27,6 +26,13 @@ def _check_directory_ancestry(path: Path) -> None:
             raise RecoveryError("Catalog directory ancestry must not use symlinks")
 
 
+def _open_source_readonly(path: Path) -> sqlite3.Connection:
+    """Open an existing catalog in SQLite read-only mode from the first IO."""
+    connection = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=5)
+    connection.execute("PRAGMA query_only = ON")
+    return connection
+
+
 def inspect_catalog(path: Path) -> int:
     """Validate a private catalog, return document count; never modify it."""
     if not isinstance(path, Path) or not path.is_absolute() or path.is_symlink():
@@ -37,8 +43,7 @@ def inspect_catalog(path: Path) -> int:
         if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
                 or stat.S_IMODE(info.st_mode) & 0o077):
             raise RecoveryError("Catalog file must be owner-private and regular")
-        with closing(connect(path)) as db:
-            db.execute("PRAGMA query_only = ON")
+        with closing(_open_source_readonly(path)) as db:
             integrity = db.execute("PRAGMA quick_check").fetchone()
             if integrity is None or integrity[0] != "ok":
                 raise RecoveryError("Catalog integrity check failed")
@@ -86,7 +91,7 @@ def snapshot_catalog(source: Path, destination: Path) -> int:
     created = os.fstat(fd)
     os.close(fd)
     try:
-        with closing(connect(source)) as original:
+        with closing(_open_source_readonly(source)) as original:
             with closing(sqlite3.connect(str(destination), timeout=5)) as out:
                 original.backup(out)
         verified_count = inspect_catalog(destination)
