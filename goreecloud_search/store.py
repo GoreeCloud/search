@@ -43,35 +43,62 @@ def normalize_document(record: object) -> tuple[str, str, str, str]:
     return title.strip(), description.strip(), safe_url(record.get("url")), source.strip()
 
 
-def connect(db_path: Path) -> sqlite3.Connection:
+def _check_index_location(db_path: Path, *, check_parent: bool) -> None:
+    """Refuse unsafe index paths without resolving symlinks or changing modes.
+
+    The immediate parent protects private SQLite files and journaling.
+    Ancestor symlinks and lexical traversal are refused, including for init.
+    These checks do not defeat a hostile process with the same UID racing IO.
+    """
+    if not isinstance(db_path, Path) or not db_path.is_absolute() or ".." in db_path.parts:
+        raise PermissionError("Index must use an absolute, non-traversing path")
+    for directory in db_path.parents:
+        if directory.is_symlink():
+            raise PermissionError("Index directory ancestry may not contain symlinks")
     if db_path.is_symlink():
         raise PermissionError("Symlinked indexes are not allowed")
-    if not db_path.is_file():
-        raise FileNotFoundError("Index not initialized. Run 'init' first.")
-    if stat.S_IMODE(db_path.stat().st_mode) & 0o077:
-        raise PermissionError("Index permissions must restrict access to its owner")
-    conn = sqlite3.connect(str(db_path), timeout=5)
+    if check_parent:
+        parent = db_path.parent.stat()
+        if (not stat.S_ISDIR(parent.st_mode)
+                or parent.st_uid != os.getuid()
+                or stat.S_IMODE(parent.st_mode) & 0o077):
+            raise PermissionError("Index directory must be owner-private")
+
+
+def _check_index_file(db_path: Path) -> None:
+    try:
+        info = db_path.lstat()
+    except FileNotFoundError:
+        raise FileNotFoundError("Index not initialized. Run 'init' first.") from None
+    if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
+            or stat.S_IMODE(info.st_mode) & 0o077):
+        raise PermissionError("Index must be a regular, owner-private file")
+
+
+def connect(db_path: Path) -> sqlite3.Connection:
+    _check_index_location(db_path, check_parent=True)
+    _check_index_file(db_path)
+    # mode=rw will not silently create an index if it vanishes after checking.
+    conn = sqlite3.connect(db_path.as_uri() + "?mode=rw", timeout=5, uri=True)
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def initialize(db_path: Path) -> None:
-    # Match connect(): never initialize through an existing or dangling symlink.
-    if db_path.is_symlink():
-        raise PermissionError("Symlinked indexes are not allowed")
+    _check_index_location(db_path, check_parent=False)
     db_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    _check_index_location(db_path, check_parent=True)
     if not db_path.exists():
         try:
-            fd = os.open(db_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            fd = os.open(db_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL
+                         | getattr(os, "O_NOFOLLOW", 0), 0o600)
         except FileExistsError:
             pass
         else:
             os.close(fd)
-    if db_path.is_symlink() or not db_path.is_file():
-        raise PermissionError("Index must be a regular file, not a symlink")
-    if stat.S_IMODE(db_path.stat().st_mode) & 0o077:
-        raise PermissionError("Index permissions must restrict access to its owner")
-    with closing(sqlite3.connect(str(db_path))) as conn, conn:
+    _check_index_location(db_path, check_parent=True)
+    _check_index_file(db_path)
+    with closing(sqlite3.connect(db_path.as_uri() + "?mode=rw", uri=True)) as conn, conn:
         conn.execute(
             "CREATE VIRTUAL TABLE IF NOT EXISTS documents "
             "USING fts5(title, description, url UNINDEXED, source UNINDEXED)"
