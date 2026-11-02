@@ -33,7 +33,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 115  # 109 prior + 6 active private-index path and owner contracts.
+MIN_TESTS = 118  # 115 previous + 3 explicit SQLite read-only search and write import tests.
 
 
 def main() -> int:
