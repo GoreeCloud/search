@@ -76,6 +76,45 @@ class StrictHTTPPayloadTests(unittest.TestCase):
         self.assertEqual(headers.get("Connection"), "close")
         self.assertEqual(body["error"], "GET request bodies unsupported")
 
+    def post_without_body(self, length: str):
+        """Send only headers: a malformed length must be rejected immediately."""
+        connection = http.client.HTTPConnection(
+            "127.0.0.1", self.server.server_port, timeout=3,
+        )
+        try:
+            connection.putrequest("POST", "/api/search")
+            connection.putheader("Content-Type", "application/json")
+            connection.putheader("Content-Length", length)
+            connection.endheaders()
+            reply = connection.getresponse()
+            return reply.status, dict(reply.getheaders()), json.loads(reply.read())
+        finally:
+            connection.close()
+
+    def test_very_long_decimal_length_rejected_without_conversion_or_provider(self):
+        with patch("goreecloud_search.server.federated_search") as provider:
+            status, headers, data = self.post_without_body("9" * 5000)
+        self.assertEqual((status, data["error"]), (413, "Request too large or empty"))
+        self.assertEqual(headers.get("Connection"), "close")
+        provider.assert_not_called()
+
+    def test_leading_zero_length_refused_as_ambiguous_framing(self):
+        with patch("goreecloud_search.server.federated_search") as provider:
+            for length in ("0002", "00", "01"):
+                with self.subTest(length=length):
+                    status, headers, body = self.post_without_body(length)
+                    self.assertEqual(status, 411)
+                    self.assertEqual(headers.get("Connection"), "close")
+                    self.assertEqual(body["error"], "Canonical Content-Length required")
+            provider.assert_not_called()
+
+    def test_bounded_oversize_length_rejected_before_unread_body(self):
+        with patch("goreecloud_search.server.federated_search") as provider:
+            status, headers, data = self.post_without_body("8193")
+        self.assertEqual((status, data["error"]), (413, "Request too large or empty"))
+        self.assertEqual(headers.get("Connection"), "close")
+        provider.assert_not_called()
+
     def test_duplicate_query_fields_fail_closed(self):
         with patch("goreecloud_search.server.federated_search") as remote:
             status, _, payload = self.raw(b'{"query":"first","query":"second"}')
