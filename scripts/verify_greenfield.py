@@ -32,7 +32,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 91  # 84 prior plus seven shared public-navigation link contracts.
+MIN_TESTS = 92  # 84 prior + 7 link-policy tests + 1 native transitive-module packaging test.
 
 
 def main() -> int:
