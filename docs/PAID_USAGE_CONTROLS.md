@@ -20,7 +20,7 @@ Without an explicit cap, GET `/api/providers` reports Brave unavailable, even if
 - `GC_SEARCH_BRAVE_BUDGET_DB`: optional absolute path to a private, local SQLite ledger. Default with a valid positive cap: `~/.local/state/goreecloud/search-brave-budget.sqlite3`.
 - `GC_SEARCH_EXTERNAL_ENABLED` and `GC_SEARCH_BRAVE_API_KEY`: required alongside source selection and per-query consent.
 
-The budget directory must be owner-only (`0700`), and the SQLite file must be owner-only (`0600`). Existing symlinked files/directories, corrupt files, insecure permissions and ledger errors fail closed. State contains **only UTC dates and integer request counts**, not search terms or credentials. Attempted requests count even if the provider returns an error; ambiguous failures are not refunded.
+The budget directory must be owner-only (`0700`), and the SQLite file must be owner-only (`0600`). Existing symlinked files/directories (including non-immediate ancestor directories), corrupt files, insecure permissions and ledger errors fail closed. This uses filesystem checks before ledger access; it is not protection against an attacker with the same user privileges swapping paths concurrently. State contains **only UTC dates and integer request counts**, not search terms or credentials. Attempted requests count even if the provider returns an error; ambiguous failures are not refunded.
 
 A SQLite `BEGIN IMMEDIATE` transaction serializes requests from concurrent threads and cooperating processes **on the same ledger**. The limit is **local to that ledger**, not account-wide. Multiple machines, separate ledgers, external API usage, and rate/plan changes are not covered. A configured limit is **not a guarantee of zero charge or a monetary spending limit**.
 
