@@ -16,8 +16,10 @@ Without an explicit cap, GET `/api/providers` reports Brave unavailable, even if
 
 ## Optional configuration reference (not a deployment instruction)
 
-- `GC_SEARCH_BRAVE_DAILY_CAP`: maximum attempted Brave requests in one **UTC date** for this installation. No value means Brave unavailable.
+- `GC_SEARCH_BRAVE_DAILY_CAP`: maximum attempted Brave requests in one **UTC date** for this installation. No value means Brave unavailable. The configured value must use 1–5 ASCII decimal digits, without zero-padding, and be within 1–10,000; oversized malformed values fail closed before integer parsing.
 - `GC_SEARCH_BRAVE_BUDGET_DB`: optional absolute path to a private, local SQLite ledger. Default with a valid positive cap: `~/.local/state/goreecloud/search-brave-budget.sqlite3`.
+- `GC_SEARCH_SEARXNG_PORT`: the optional locally managed SearXNG port must be 1–5 canonical ASCII digits representing 1–65,535. Extremely long, Unicode-numeric, out-of-range and zero-padded ports are rejected as configuration errors before any outbound connection.
+
 - `GC_SEARCH_EXTERNAL_ENABLED` and `GC_SEARCH_BRAVE_API_KEY`: required alongside source selection and per-query consent.
 
 The budget directory must be owner-only (`0700`), and the SQLite file must be owner-only (`0600`). Existing symlinked files/directories (including non-immediate ancestor directories), corrupt files, insecure permissions and ledger errors fail closed. This uses filesystem checks before ledger access; it is not protection against an attacker with the same user privileges swapping paths concurrently. State contains **only UTC dates and integer request counts**, not search terms or credentials. Attempted requests count even if the provider returns an error; ambiguous failures are not refunded.
