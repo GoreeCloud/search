@@ -106,6 +106,35 @@ class OptionalProviderTests(unittest.TestCase):
         self.assertTrue(connection.closed)
         self.assertEqual(len(result), 1)
 
+    def test_provider_duplicate_top_level_results_fail_closed(self):
+        reply = FakeResponse(
+            b'{"results":[],"results":[{"title":"Injected","url":"https://example.org/"}]}'
+        )
+        connection = FakeConnection(reply)
+        with self.assertRaisesRegex(providers.ProviderUnavailable, "Malformed"):
+            providers._read_json(connection, "GET", "/test", None, {"Accept": "application/json"})
+        self.assertTrue(connection.closed)
+
+    def test_provider_duplicate_nested_fields_fail_closed(self):
+        reply = FakeResponse(
+            b'{"results":[{"title":"Good","title":"Bad","url":"https://example.org/"}]}'
+        )
+        connection = FakeConnection(reply)
+        with self.assertRaises(providers.ProviderUnavailable):
+            providers._read_json(connection, "GET", "/test", None, {"Accept": "application/json"})
+        self.assertTrue(connection.closed)
+
+    def test_provider_nan_and_infinity_reply_fail_closed(self):
+        for numeric in (b"NaN", b"Infinity", b"-Infinity"):
+            with self.subTest(value=numeric):
+                connection = FakeConnection(FakeResponse(
+                    b'{"results":[],"count":' + numeric + b'}'
+                ))
+                with self.assertRaises(providers.ProviderUnavailable):
+                    providers._read_json(connection, "GET", "/test", None,
+                                         {"Accept": "application/json"})
+                self.assertTrue(connection.closed)
+
     def test_searxng_fixed_loopback_post(self):
         reply = FakeResponse(b'{"results":[{"title":"T","content":"D","url":"https://example.org/t"}]}')
         connection = FakeConnection(reply)
