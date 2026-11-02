@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .store import search
+from .recovery import RecoveryError, inspect_catalog
 from .providers import ProviderConfig, choose_providers
 from .federation import search as federated_search
 
@@ -96,6 +97,14 @@ class SearchHandler(BaseHTTPRequestHandler):
             return
         if self.path == "/healthz":
             self._json(200, {"status": "ok", "scope": "loopback"})
+            return
+        if self.path == "/readyz":
+            try:
+                inspect_catalog(self.server.db_path)
+            except (RecoveryError, OSError, ValueError):
+                self._json(503, {"status": "unavailable", "scope": "local-catalog"})
+                return
+            self._json(200, {"status": "ready", "scope": "local-catalog"})
             return
         resources = {
             "/": ("index.html", "text/html; charset=utf-8"),
