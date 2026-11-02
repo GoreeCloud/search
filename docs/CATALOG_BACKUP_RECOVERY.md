@@ -24,7 +24,7 @@ To use a recovered copy, **manually and deliberately** choose its pathname with 
 ## Safety properties
 
 - Source catalogs must be absolute paths to owned, regular, owner-private files, without symlinks anywhere in their directory ancestry or at the final pathname; lexical `..` traversal components are refused. A read-only `PRAGMA quick_check` plus `documents` table count validates the Search schema.
-- SQLite's online backup API creates a consistent snapshot of committed data, including data in a WAL journal.
+- SQLite's online backup API creates a consistent snapshot of committed data, including data in a WAL journal. Both integrity verification and the snapshot's source connection now use SQLite URI `mode=ro` from the start, rather than opening the source read/write and changing its PRAGMA afterward. The new destination remains a separately created, owner-private writable file.
 - The destination must be an absolute new path without symlinked ancestors or lexical `..` traversal. The immediate parent directory must be owned by the current user and inaccessible to group/others. Missing parent directories are created owner-only when possible.
 - Destination creation is exclusive (mode 0600); existing files or symbolic links, including dangling links, are refused without replacement. Failures attempt to remove only the newly created output inode.
 - Snapshot and recovery-copy operations compare the document count to detect a mismatched snapshot. If the live source changes between the initial inspection and snapshot, the operation may fail closed; retrying after local writes stop is safer than silently accepting an inconsistent acceptance result.
@@ -32,7 +32,7 @@ To use a recovered copy, **manually and deliberately** choose its pathname with 
 
 ## Evidence
 
-The enforced offline test suite includes twelve dedicated recovery contracts for private snapshot/verify, new-file restore preserving the original, corrupt/missing/non-Search inputs, existing/dangling symbolic links, unsafe parent folders, private permissions, relative path refusal, SQLite WAL commits, and an actual subprocess CLI round trip. CI runs on Python 3.11 and 3.12 with the no-skip gate.
+The enforced offline test suite includes fourteen dedicated recovery contracts for private snapshot/verify, new-file restore preserving the original, corrupt/missing/non-Search inputs, existing/dangling symbolic links, unsafe parent folders, private permissions, relative path refusal, SQLite WAL commits, and an actual subprocess CLI round trip. CI runs on Python 3.11 and 3.12 with the no-skip gate.
 
 A separate authorized Linux workstation ran the CLI sequence using a temporary two-document catalog and verified the original, snapshot and recovered file, all with 0600 file permissions. This was not a production backup or restore.
 
