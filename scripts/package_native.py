@@ -17,6 +17,7 @@ PREFIX = "goreecloud-search-native-dev"
 SOURCE_PATHS = (
     "goreecloud_search/__init__.py",
     "goreecloud_search/store.py",
+    "goreecloud_search/links.py",
     "goreecloud_search/native.py",
     "LICENSE",
 )
