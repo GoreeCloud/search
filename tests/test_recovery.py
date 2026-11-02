@@ -14,6 +14,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from goreecloud_search.recovery import RecoveryError, inspect_catalog, snapshot_catalog
 from goreecloud_search.store import import_jsonl, initialize, search
@@ -171,6 +172,32 @@ class CatalogRecoveryTests(unittest.TestCase):
         backup = self.folder / "wal-backup.sqlite3"
         self.assertEqual(snapshot_catalog(self.index, backup), 2)
         self.assertEqual(len(search(backup, "snapshot")), 1)
+
+    def test_integrity_check_opens_catalog_using_readonly_sqlite_uri(self):
+        original_connect = sqlite3.connect
+        with patch("goreecloud_search.recovery.sqlite3.connect",
+                   wraps=original_connect) as spy:
+            self.assertEqual(inspect_catalog(self.index), 1)
+        self.assertEqual(spy.call_count, 1)
+        call = spy.call_args
+        self.assertTrue(call.args[0].startswith("file:"))
+        self.assertTrue(call.args[0].endswith("?mode=ro"))
+        self.assertIs(call.kwargs["uri"], True)
+
+    def test_snapshot_reads_original_using_readonly_sqlite_connection(self):
+        original_connect = sqlite3.connect
+        target = self.folder / "readonly-snapshot.sqlite3"
+        with patch("goreecloud_search.recovery.sqlite3.connect",
+                   wraps=original_connect) as spy:
+            self.assertEqual(snapshot_catalog(self.index, target), 1)
+        source_uri = self.index.as_uri() + "?mode=ro"
+        source_opens = [
+            call for call in spy.call_args_list
+            if call.args and call.args[0] == source_uri
+        ]
+        self.assertGreaterEqual(len(source_opens), 2)
+        self.assertTrue(all(call.kwargs.get("uri") is True for call in source_opens))
+        self.assertEqual(inspect_catalog(target), 1)
 
     def test_cli_backup_verify_and_restore_copy_in_fresh_paths(self):
         backup = self.folder / "cli-snapshot.sqlite3"
