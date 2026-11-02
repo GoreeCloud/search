@@ -75,7 +75,7 @@ python3 scripts/verify_greenfield.py
 
 For a consented external search, the POST JSON body uses `{"query":"example","providers":["local","brave"],"share_query":true}`; availability is discoverable at `GET /api/providers`. The browser offers the same controls and resets consent after each search. A configured provider can receive the search query, and Brave may incur charges. Keep external access disabled until consent, privacy and billing have been approved.
 
-See [architecture](docs/ARCHITECTURE.md), [connector status](docs/CONNECTOR_STATUS.md), and [development roadmap](docs/ROADMAP.md).
+See [architecture](docs/ARCHITECTURE.md), [connector status](docs/CONNECTOR_STATUS.md), [development roadmap](docs/ROADMAP.md), [XTest keyboard evidence](docs/KEYBOARD_ACCESSIBILITY_VALIDATION.md), [GC UI contrast checks](docs/ACCESSIBILITY_CONTRAST.md), and [historical secret-alert triage](docs/LEGACY_SECRET_ALERT_TRIAGE.md).
 
 ## Licensing
 
