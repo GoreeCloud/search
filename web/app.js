@@ -8,6 +8,20 @@ const counter = document.getElementById("counter");
 const themeButton = document.getElementById("theme");
 const sourceSelect = document.getElementById("source-select");
 const shareQuery = document.getElementById("share-query");
+const INITIAL_STATUS = "Enter a query to search your local collection.";
+
+async function checkCatalogReadiness() {
+  try {
+    const response = await fetch("/readyz", {cache: "no-store", credentials: "omit"});
+    // Never overwrite user input, a live search, or a later search result.
+    if (response.status === 503 && status.textContent === INITIAL_STATUS) {
+      status.textContent = "Your private local catalog is unavailable. Initialize it before searching local documents.";
+    }
+  } catch (_) {
+    // Readiness is advisory: keep existing local behavior without extra egress.
+  }
+}
+void checkCatalogReadiness();
 
 async function discoverProviders() {
   try {
