@@ -168,8 +168,16 @@ class SearchHandler(BaseHTTPRequestHandler):
             self._reject(415, "JSON content required")
             return
         try:
+            raw_body = self.rfile.read(size)
+        except (TimeoutError, OSError):
+            self._reject(408, "Request body unavailable")
+            return
+        if len(raw_body) != size:
+            self._reject(400, "Incomplete request body")
+            return
+        try:
             payload = json.loads(
-                self.rfile.read(size).decode("utf-8"),
+                raw_body.decode("utf-8"),
                 object_pairs_hook=_reject_duplicate_fields,
                 parse_constant=_reject_nonfinite_constant,
             )
