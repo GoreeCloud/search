@@ -32,7 +32,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 101  # Existing tests plus two browser single-flight request contracts.
+MIN_TESTS = 102  # 101 prior plus nested symlink budget-ledger regression.
 
 
 def main() -> int:
