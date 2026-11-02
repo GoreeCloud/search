@@ -35,7 +35,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 133  # 130 prior plus three import-source ancestry and CLI-relative path checks.
+MIN_TESTS = 136  # Existing 133 plus three unread-GET-body framing regressions.
 
 
 def main() -> int:
