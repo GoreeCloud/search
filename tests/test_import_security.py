@@ -37,6 +37,18 @@ class SafeJSONLImportTests(unittest.TestCase):
             ["Original Handbook"],
         )
 
+    def test_zero_byte_import_cannot_erase_existing_catalog(self):
+        self.source.write_bytes(b"")
+        with self.assertRaisesRegex(InvalidDocument, "no documents"):
+            import_jsonl(self.db, self.source)
+        self.assert_original()
+
+    def test_whitespace_only_import_cannot_erase_existing_catalog(self):
+        self.source.write_bytes(b"\n \t\r\n\n")
+        with self.assertRaisesRegex(InvalidDocument, "no documents"):
+            import_jsonl(self.db, self.source)
+        self.assert_original()
+
     def test_duplicate_top_level_fields_cannot_change_index(self):
         self.source.write_text(
             '{"title":"Safe","title":"Override","description":"T",'
