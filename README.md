@@ -41,9 +41,10 @@ The first-party `scripts/package_native.py` builds a **reproducible, source-only
 
 ```bash
 python3 scripts/package_native.py --output /tmp/goreecloud-search-native-dev.tar.gz
+python3 scripts/package_native.py --verify /tmp/goreecloud-search-native-dev.tar.gz
 ```
 
-See [native archive validation](docs/NATIVE_ARCHIVE_VALIDATION.md) for contents, safe inspection and remaining release requirements. This is **not** a released Linux installer.
+See [native archive validation](docs/NATIVE_ARCHIVE_VALIDATION.md) for its SHA-256 file manifest, bounded read-only verifier, contents, and remaining release requirements. Self-contained hashes detect inconsistencies but **cannot authenticate the publisher or replace a release signature**. This is **not** a released Linux installer.
 
 
 For the permanent catalog, omit `--db` to use the current user's private state folder. Use a file with one JSON object per line, containing `title`, `description`, `url` (public HTTPS), and optionally `source`. Imports replace the previous catalog atomically; back it up beforehand if needed.
