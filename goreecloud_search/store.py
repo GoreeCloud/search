@@ -1,7 +1,6 @@
 """Private SQLite full-text catalog. No crawlers or third-party outbound requests."""
 from __future__ import annotations
 
-import ipaddress
 import json
 import os
 import stat
@@ -9,7 +8,7 @@ import re
 import sqlite3
 from contextlib import closing
 from pathlib import Path
-from urllib.parse import urlsplit
+from .links import public_https_url
 
 MAX_IMPORT_BYTES = 2_000_000
 MAX_RECORDS = 1000
@@ -20,27 +19,10 @@ class InvalidDocument(ValueError):
 
 
 def safe_url(value: object) -> str:
-    if not isinstance(value, str) or len(value) > 2048:
-        raise InvalidDocument("Document URL must be an HTTPS URL")
-    try:
-        parts = urlsplit(value)
-        host = parts.hostname
-        port = parts.port
-    except ValueError as exc:
-        raise InvalidDocument("Document URL is malformed") from exc
-    if parts.scheme != "https" or not host or parts.username or parts.password:
-        raise InvalidDocument("Only uncredentialed HTTPS result URLs are supported")
-    if port not in (None, 443):
-        raise InvalidDocument("Nonstandard URL ports are not supported")
-    if host.casefold() in {"localhost", "localhost.localdomain"} or host.casefold().endswith(".local"):
-        raise InvalidDocument("Local URLs are not allowed")
-    try:
-        address = ipaddress.ip_address(host)
-    except ValueError:
-        address = None
-    if address is not None and not address.is_global:
-        raise InvalidDocument("Non-public IP URLs are not allowed")
-    return value
+    accepted = public_https_url(value)
+    if accepted is None:
+        raise InvalidDocument("Only uncredentialed public HTTPS result URLs are supported")
+    return accepted
 
 
 def normalize_document(record: object) -> tuple[str, str, str, str]:
