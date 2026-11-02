@@ -53,7 +53,7 @@ python3 scripts/package_native.py --verify /tmp/goreecloud-search-native-dev.tar
 See [native archive validation](docs/NATIVE_ARCHIVE_VALIDATION.md) for its SHA-256 file manifest, bounded read-only verifier, contents, and remaining release requirements. Self-contained hashes detect inconsistencies but **cannot authenticate the publisher or replace a release signature**. This is **not** a released Linux installer.
 
 
-For the permanent catalog, omit `--db` to use the current user's private state folder. Use a file with one JSON object per line, containing `title`, `description`, `url` (public HTTPS), and optionally `source`. Imports replace the previous catalog atomically; back it up beforehand if needed.
+For the permanent catalog, omit `--db` to use the current user's private state folder. Use a file with one JSON object per line, containing `title`, `description`, `url` (public HTTPS), and optionally `source`. A bounded UTF-8 JSONL import replaces the previous catalog atomically **only when at least one valid record is present**; malformed, oversized, symlinked, or empty inputs are rejected without erasing existing documents. Back up the catalog before any authorized replacement. See [private index access](docs/INDEX_PRIVACY.md).
 
 ### Private local backup and recovery
 
