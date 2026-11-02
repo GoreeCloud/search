@@ -22,6 +22,7 @@ REQUIRED = (
     "tests/test_search.py",
     "tests/test_store_security.py",
     "tests/test_quickstart.py",
+    "tests/test_import_security.py",
     "tests/test_optional_providers.py",
     "tests/test_http_integration.py",
     "tests/test_ui_contract.py",
@@ -34,7 +35,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 120  # 118 existing + 2 executable private quickstart documentation checks.
+MIN_TESTS = 128  # Existing 120 plus eight strict bounded JSONL import regressions.
 
 
 def main() -> int:
