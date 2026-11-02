@@ -24,7 +24,8 @@ def public_https_url(value: object) -> str | None:
     Numeric browser shorthand hosts, special-use names, and local addresses
     are refused even if urllib.parse and a browser interpret them differently.
     """
-    if not isinstance(value, str) or not 1 <= len(value) <= 2048:
+    if (not isinstance(value, str) or not 1 <= len(value) <= 2048
+            or "\\" in value or any(ord(ch) < 32 or ord(ch) == 127 for ch in value)):
         return None
     try:
         parts = urlsplit(value)
@@ -35,21 +36,30 @@ def public_https_url(value: object) -> str | None:
             or parts.password is not None or port not in (None, 443)):
         return None
     host = hostname.casefold().rstrip(".")
-    if host in SPECIAL_HOSTS or any(host.endswith(s) for s in SPECIAL_SUFFIXES):
+    # IPv6 literals are already parsed as addresses by urlsplit. Avoid
+    # applying DNS IDNA conversions to colon-bearing address syntax.
+    if ":" in host or "%" in host:
+        try:
+            address = ipaddress.ip_address(host)
+        except ValueError:
+            return None
+        return value if address.is_global else None
+    try:
+        ascii_host = host.encode("idna").decode("ascii").lower().rstrip(".")
+    except UnicodeError:
+        return None
+    # Evaluate special-use names AFTER IDNA normalization. Otherwise
+    # compatibility Unicode labels such as ｌｏｃａｌ and １２７.０.０.１
+    # can bypass raw-host checks yet normalize to private browser targets.
+    if (ascii_host in SPECIAL_HOSTS
+            or any(ascii_host.endswith(suffix) for suffix in SPECIAL_SUFFIXES)):
         return None
     try:
-        address = ipaddress.ip_address(host)
+        address = ipaddress.ip_address(ascii_host)
     except ValueError:
         address = None
     if address is not None:
         return value if address.is_global else None
-    # Do not allow malformed IPv6 literals or zone-specific host strings.
-    if ":" in host or "%" in host:
-        return None
-    try:
-        ascii_host = host.encode("idna").decode("ascii").lower()
-    except UnicodeError:
-        return None
     labels = ascii_host.split(".")
     if (len(ascii_host) > 253 or len(labels) < 2
             or any(len(label) > 63 or not HOST_LABEL.fullmatch(label)
