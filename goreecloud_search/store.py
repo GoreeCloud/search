@@ -75,11 +75,15 @@ def _check_index_file(db_path: Path) -> None:
         raise PermissionError("Index must be a regular, owner-private file")
 
 
-def connect(db_path: Path) -> sqlite3.Connection:
+def connect(db_path: Path, *, read_only: bool = False) -> sqlite3.Connection:
     _check_index_location(db_path, check_parent=True)
     _check_index_file(db_path)
-    # mode=rw will not silently create an index if it vanishes after checking.
-    conn = sqlite3.connect(db_path.as_uri() + "?mode=rw", timeout=5, uri=True)
+    # Explicit SQLite URI modes never create an index if it vanishes.
+    # Normal local searches must not obtain write access to their source.
+    mode = "ro" if read_only else "rw"
+    conn = sqlite3.connect(db_path.as_uri() + f"?mode={mode}", timeout=5, uri=True)
+    if read_only:
+        conn.execute("PRAGMA query_only = ON")
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -139,7 +143,7 @@ def search(db_path: Path, query: str, limit: int = 12) -> list[dict[str, str]]:
         return []
     # Construct a quoted FTS expression from bounded tokens, not raw user syntax.
     expression = " AND ".join('"' + term.replace('"', '""') + '"' for term in terms[:12])
-    with closing(connect(db_path)) as conn:
+    with closing(connect(db_path, read_only=True)) as conn:
         rows = conn.execute(
             "SELECT title, description, url, source FROM documents "
             "WHERE documents MATCH ? ORDER BY bm25(documents) LIMIT ?",
