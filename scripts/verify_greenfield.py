@@ -32,7 +32,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 102  # 101 prior plus nested symlink budget-ledger regression.
+MIN_TESTS = 104  # Existing 102 plus 2 non-immediate symlink recovery-path checks.
 
 
 def main() -> int:
