@@ -7,7 +7,7 @@
 ## What actually works in this foundation
 
 - An original Python standard-library HTTP application bound **only to 127.0.0.1**.
-- Private, manually approved document index using SQLite FTS5, with a bounded, transactional JSONL import.
+- Private, manually approved document index using SQLite FTS5, with a bounded, transactional JSONL import. Local and optional remote result links share one original [public HTTPS navigation policy](docs/PUBLIC_LINK_POLICY.md) to reject malformed and local-network targets before display.
 - A POST-only JSON search endpoint, fixed request limits, strict origin handling, security headers, and minimized logging.
 - An original responsive web UI with keyboard-accessible form, loading, empty, and error states; light/dark support and semantic tokens aligned with [GoreeCloud UI](https://github.com/GoreeCloud/gc-ui).
 - An independent **optional native GTK4 desktop client** for the private SQLite index, including native search entry, result list, non-blocking searches, and safe HTTPS links. It uses no search provider, HTTP server, or browser runtime; real GTK4 desktop rendering has not yet been accepted.
