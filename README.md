@@ -67,6 +67,7 @@ python3 scripts/verify_greenfield.py
 ## Boundaries and planned next phases
 
 - **No remote exposure:** localhost-only operation. An authenticated edge and independently tested security model are required before any network deployment.
+- **Local operational status:** `GET /healthz` reports server liveness; `GET /readyz` checks that the private SQLite index is usable without exposing catalog contents. The browser displays a non-blocking readiness notice if the index is unavailable. Strict POST JSON parsing refuses repeated fields, including duplicated consent. See [readiness and protocol notes](docs/LOCAL_READINESS_SECURITY.md).
 - **Optional egress is off by default:** `GC_SEARCH_EXTERNAL_ENABLED=1` permits configured connectors only. `GC_SEARCH_BRAVE_API_KEY` configures Brave but is insufficient on its own: `GC_SEARCH_BRAVE_DAILY_CAP` must also explicitly set a positive, local UTC-day request ceiling (1–10,000); optionally choose an absolute `GC_SEARCH_BRAVE_BUDGET_DB` for a private SQLite ledger (otherwise `~/.local/state/goreecloud/search-brave-budget.sqlite3` is used). `GC_SEARCH_SEARXNG_PORT` selects a separately managed loopback SearXNG instance. Only explicit per-query provider selection and `share_query: true` consent trigger calls. Treat provider credentials as secrets; do not paste them into the browser, logs or code. This ledger counts attempted requests across local restarts/processes sharing one file, but is **not** an account-wide billing or money cap. Live adapter compatibility, provider billing, and account-level usage controls are not qualified. Read [paid usage controls](docs/PAID_USAGE_CONTROLS.md) before any approved opt-in.
 - **No history reuse:** retired PR #1 is not an implementation dependency. Its public historical security alert is tracked separately.
 - **UI governance:** [GoreeCloud UI](https://github.com/GoreeCloud/gc-ui) is the sole design-system authority; current CSS semantics are aligned but full integration/visual acceptance remains pending.
@@ -75,7 +76,7 @@ python3 scripts/verify_greenfield.py
 
 For a consented external search, the POST JSON body uses `{"query":"example","providers":["local","brave"],"share_query":true}`; availability is discoverable at `GET /api/providers`. The browser offers the same controls and resets consent after each search. A configured provider can receive the search query, and Brave may incur charges. Keep external access disabled until consent, privacy and billing have been approved.
 
-See [architecture](docs/ARCHITECTURE.md), [connector status](docs/CONNECTOR_STATUS.md), [development roadmap](docs/ROADMAP.md), [XTest keyboard evidence](docs/KEYBOARD_ACCESSIBILITY_VALIDATION.md), [GC UI contrast checks](docs/ACCESSIBILITY_CONTRAST.md), and [historical secret-alert triage](docs/LEGACY_SECRET_ALERT_TRIAGE.md).
+See [architecture](docs/ARCHITECTURE.md), [connector status](docs/CONNECTOR_STATUS.md), [development roadmap](docs/ROADMAP.md), [XTest keyboard evidence](docs/KEYBOARD_ACCESSIBILITY_VALIDATION.md), [GC UI contrast checks](docs/ACCESSIBILITY_CONTRAST.md), [local readiness and HTTP security](docs/LOCAL_READINESS_SECURITY.md), and [historical secret-alert triage](docs/LEGACY_SECRET_ALERT_TRIAGE.md).
 
 ## Licensing
 
