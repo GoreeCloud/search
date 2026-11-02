@@ -110,6 +110,18 @@ class DurableRequestBudgetTests(unittest.TestCase):
         with self.assertRaises(BudgetUnavailable):
             reserve_request(via_dir / "unused.sqlite3", 3)
 
+    def test_symlinked_nonimmediate_ancestor_fails_closed(self):
+        owned = Path(self.temp.name) / "owned"
+        nested = owned / "state"
+        nested.mkdir(parents=True, mode=0o700)
+        alias = Path(self.temp.name) / "alias"
+        alias.symlink_to(owned, target_is_directory=True)
+        ledger = alias / "state" / "requests.sqlite3"
+        self.assertFalse(ledger.parent.is_symlink())
+        with self.assertRaises(BudgetUnavailable):
+            reserve_request(ledger, 2)
+        self.assertFalse((nested / "requests.sqlite3").exists())
+
     def test_wide_permissions_and_corrupt_ledger_fail_closed(self):
         reserve_request(self.path, 2)
         self.path.chmod(0o644)
