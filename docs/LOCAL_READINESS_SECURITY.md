@@ -18,6 +18,8 @@ The POST-only `/api/search` endpoint uses an 8 KiB body limit and now fails clos
 - Repeated Content-Type fields or requests with Transfer-Encoding present, including an empty header field.
 - Early request rejection with unread body, where the service returns a connection-close signal to avoid HTTP/1.1 request desynchronization.
 
+GET endpoints also **reject declared unread bodies**: nonzero or malformed `Content-Length`, repeated length fields, and any `Transfer-Encoding`. Rejections close the HTTP/1.1 connection instead of treating leftover bytes as another request. Zero-length GETs and ordinary requests without body headers continue to work. Three loopback integration regressions verify these protections without sending request bodies or invoking a provider.
+
 The handlers produce bounded generic responses and do not log search terms or provider credentials. All external providers remain disabled by default and still require explicit server setup and per-query opt-in.
 
 ## Browser single-flight query and consent guard
