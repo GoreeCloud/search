@@ -47,6 +47,12 @@ To narrow the missing-tree blocker without inspecting any user's normal desktop,
 
 This distinguishes the two launch patterns but **does not yet prove which property causes the difference**; D-Bus registration, GTK4 application lifecycle, AT-SPI bridge startup, and window accessibility should be investigated with separate controlled comparisons. No production app behavior or permissions were changed, no user desktop accessibility tree was read, and no Orca speech test passed. This remains an **open release acceptance blocker**, not a defect closure.
 
+## Further isolated application-lifecycle comparison (November 2)
+
+A separate minimal `Gtk.Application` experiment was repeated using a regular `Gtk.Window(application=self)` rather than `Gtk.ApplicationWindow`. Under the same temporary Xvfb/D-Bus/AT-SPI conditions it **also did not appear** in the application registry, whereas a standalone, non-`Gtk.Application` `Gtk.Window` had registered successfully. This makes a window-subclass-only explanation less likely; the accessible application lifecycle, process/bus registration, or test environment needs investigation. It does **not** establish the root cause or demonstrate that the actual Search app fails in a supported interactive desktop session.
+
+The next meaningful acceptance is a deliberately authorized real desktop session with an actual Orca focus/speech observation, followed by independent GTK application registration debugging. No normal desktop was inspected or changed in these isolated comparisons.
+
 ## Remaining acceptance gates
 
 - Actual desktop visual inspection and GC UI typography/spacing/tokens, light/dark and high-contrast themes.
