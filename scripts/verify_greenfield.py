@@ -32,7 +32,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 104  # Existing 102 plus 2 non-immediate symlink recovery-path checks.
+MIN_TESTS = 105  # 102 original + 2 ancestor-symlink + 1 traversal-path recovery guards.
 
 
 def main() -> int:
