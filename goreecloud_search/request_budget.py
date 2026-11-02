@@ -22,6 +22,13 @@ class BudgetExhausted(BudgetUnavailable):
     """The configured daily request ceiling has been reached."""
 
 
+def _require_unsymlinked_ancestors(directory: Path) -> None:
+    """Reject symlinked directory components, including non-immediate parents."""
+    for ancestor in (directory, *directory.parents):
+        if ancestor.is_symlink():
+            raise BudgetUnavailable("Budget state directory ancestry must not contain symlinks")
+
+
 def reserve_request(db_path: Path, daily_limit: int, *, now: datetime | None = None) -> None:
     """Atomically count an attempt before any billable network request.
 
@@ -39,11 +46,9 @@ def reserve_request(db_path: Path, daily_limit: int, *, now: datetime | None = N
     fd = None
     try:
         parent = db_path.parent
-        if parent.is_symlink():
-            raise BudgetUnavailable("Budget state directory must not be a symlink")
+        _require_unsymlinked_ancestors(parent)
         parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        if parent.is_symlink():
-            raise BudgetUnavailable("Budget state directory must not be a symlink")
+        _require_unsymlinked_ancestors(parent)
         parent_stat = parent.stat()
         if (not stat.S_ISDIR(parent_stat.st_mode)
                 or stat.S_IMODE(parent_stat.st_mode) & 0o077
