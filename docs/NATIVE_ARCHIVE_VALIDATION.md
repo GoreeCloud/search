@@ -30,7 +30,7 @@ GTK4 and PyGObject must be supplied by the operating system's trusted package ma
 
 The GitHub CI no-skip suite includes six original packaging tests: deterministic archive SHA-256 equality, explicit safe file set, canonical metadata, refusal to overwrite or follow symlinks, a packaged launcher `--help` smoke, and absence of automatic installation and outbound-provider enablement. An additional native UI contract test requires explicit GTK accessible names for the search entry and results list.
 
-On the connected, authorized Linux development laptop, the archive builder produced a seven-file archive under an isolated `/tmp` test directory. A separate isolated GTK4/Xvfb smoke of the updated native application validated that a native window, search entry and private search result appeared, exiting 0. Nonfatal GPU and GTK focus warnings were observed and do not imply real desktop accessibility or visual acceptance.
+An earlier authorized Linux development smoke built a seven-file archive. After the shared public-HTTPS link policy became a direct dependency of the native catalog, the archive manifest was updated to include `lib/goreecloud_search/links.py` (eight regular files in total). The packaged launcher acceptance test caught the missing dependency in GitHub Actions and subsequently passed after the manifest fix. A separate isolated GTK4/Xvfb smoke of the updated native application validated that a native window, search entry and private search result appeared, exiting 0. Nonfatal GPU and GTK focus warnings were observed and do not imply real desktop accessibility or visual acceptance.
 
 Verify the workflow for the latest PR head before citing a definitive test count.
 
