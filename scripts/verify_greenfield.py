@@ -28,8 +28,9 @@ REQUIRED = (
     "tests/test_recovery.py",
     "tests/test_contrast.py",
     "tests/test_http_strict_json.py",
+    "tests/test_readiness.py",
 )
-MIN_TESTS = 78  # Previous 72 plus 6 strict JSON and request-framing contracts.
+MIN_TESTS = 82  # 78 prior tests plus 4 localhost catalog-readiness contracts.
 
 
 def main() -> int:
