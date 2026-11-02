@@ -35,7 +35,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 136  # Existing 133 plus three unread-GET-body framing regressions.
+MIN_TESTS = 139  # 136 prior plus three bounded POST Content-Length framing tests.
 
 
 def main() -> int:
