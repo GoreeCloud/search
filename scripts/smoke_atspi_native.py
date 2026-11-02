@@ -50,13 +50,19 @@ def main() -> int:
         environment = os.environ.copy()
         environment["GTK_A11Y"] = "atspi"
         environment["NO_AT_BRIDGE"] = "0"
-        app = subprocess.Popen(
-            [sys.executable, "-m", "goreecloud_search.native", "--db", str(db)],
-            cwd=ROOT, env=environment, stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        log_path = root / "native-startup.log"
+        log_file = log_path.open("w", encoding="utf-8")
+        try:
+            app = subprocess.Popen(
+                [sys.executable, "-m", "goreecloud_search.native", "--db", str(db)],
+                cwd=ROOT, env=environment, stdout=subprocess.DEVNULL,
+                stderr=log_file,
+            )
+        finally:
+            log_file.close()
         found = {}
         observed_app_names = set()
+        matched_pid = False
         try:
             deadline = time.monotonic() + 12
             while time.monotonic() < deadline and app.poll() is None:
@@ -69,8 +75,12 @@ def main() -> int:
                                 continue
                             name = candidate.get_name() or ""
                             observed_app_names.add(name)
-                            if "GoreeCloud Search" not in name and "python" not in name.lower():
+                            # Select only the freshly launched synthetic client.
+                            # AT-SPI application names are toolkit dependent.
+                            process_id = candidate.get_process_id()
+                            if process_id != app.pid and "GoreeCloud Search" not in name:
                                 continue
+                            matched_pid = True
                             stack = [(candidate, 0)]
                             while stack and len(found) < 60:
                                 node, depth = stack.pop()
@@ -101,6 +111,12 @@ def main() -> int:
                     app.wait(timeout=3)
         expected = ("Search local documents", "Search results")
         passed = all(name in found for name in expected)
+        print("AT-SPI native PID matched:", matched_pid)
+        print("AT-SPI client exit prior to shutdown:", app.returncode)
+        if not passed:
+            # Synthetic fixture process only; never emit genuine user data.
+            diagnostics = log_path.read_text(encoding="utf-8", errors="replace")
+            print("AT-SPI synthetic client diagnostics:", diagnostics[-600:])
         print("AT-SPI isolated app names:", sorted(observed_app_names)[:20])
         print("AT-SPI found label names:", sorted(found)[:40])
         print("AT-SPI isolated GTK4 labels:", {name: found.get(name) for name in expected})
