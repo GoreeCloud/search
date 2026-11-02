@@ -80,7 +80,16 @@ def main() -> int:
                 const consent = document.getElementById('share-query');
                 const status = document.getElementById('status');
                 const list = document.getElementById('result-list');
+                const root = document.documentElement;
+                const theme = document.getElementById('theme');
+                if (root.dataset.mode === 'dark') theme.click();
+                const lightCanvas = getComputedStyle(document.body).backgroundColor;
+                theme.click();
+                const darkCanvas = getComputedStyle(document.body).backgroundColor;
+                const switchWorked = root.dataset.mode === 'dark' && lightCanvas !== darkCanvas;
+                theme.click();
                 const checks = {
+                    actualLightDarkToggle: switchWorked && root.dataset.mode === 'light',
                     accessibleLabel: field.labels.length > 0,
                     sourceLabel: provider.labels.length > 0,
                     defaultLocal: provider.value === 'local',
