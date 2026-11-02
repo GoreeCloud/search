@@ -26,8 +26,9 @@ REQUIRED = (
     "tests/test_request_budget.py",
     "tests/test_native_archive.py",
     "tests/test_recovery.py",
+    "tests/test_contrast.py",
 )
-MIN_TESTS = 68  # Existing 58 + 9 recovery contracts + 1 native keyboard-focus test.
+MIN_TESTS = 72  # 68 prior + 4 computed GC UI contrast regression tests.
 
 
 def main() -> int:
