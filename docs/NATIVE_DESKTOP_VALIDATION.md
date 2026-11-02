@@ -41,6 +41,12 @@ A second isolated attempt explicitly set the temporary accessibility bus's `org.
 
 The diagnostic source was restricted to inspecting the newly launched synthetic child process by exact process ID; it does not intentionally read other desktop apps' labels or trees. Next qualify the client under a properly authorized full desktop session with an actual screen reader, inspect the AT-SPI/GTK bridge and its configuration, and record auditable spoken/focus behavior. Do **not** declare assistive-technology acceptance or Stable/Seal until independently verified.
 
+## Independent GTK/AT-SPI isolation comparison (November 2)
+
+To narrow the missing-tree blocker without inspecting any user's normal desktop, a disposable GTK4 `Gtk.Window` with one synthetic `Gtk.SearchEntry` was launched under the same temporary Xvfb and D-Bus infrastructure. The AT-SPI registry **did** list the minimal window's process ID, confirming that this environment can expose an accessible GTK window. A corresponding synthetic `Gtk.Application` + `Gtk.ApplicationWindow` experiment, tested with both `Gio.ApplicationFlags.NON_UNIQUE` and `DEFAULT_FLAGS`, did **not** appear in that isolated registry. The GoreeCloud native client exhibited the same missing-tree behavior in this environment.
+
+This distinguishes the two launch patterns but **does not yet prove which property causes the difference**; D-Bus registration, GTK4 application lifecycle, AT-SPI bridge startup, and window accessibility should be investigated with separate controlled comparisons. No production app behavior or permissions were changed, no user desktop accessibility tree was read, and no Orca speech test passed. This remains an **open release acceptance blocker**, not a defect closure.
+
 ## Remaining acceptance gates
 
 - Actual desktop visual inspection and GC UI typography/spacing/tokens, light/dark and high-contrast themes.
