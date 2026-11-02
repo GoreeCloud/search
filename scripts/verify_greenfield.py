@@ -35,7 +35,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 143  # 140 previous plus three provider integer configuration contracts.
+MIN_TESTS = 146  # 143 previous plus 3 strict provider response JSON contracts.
 
 
 def main() -> int:
