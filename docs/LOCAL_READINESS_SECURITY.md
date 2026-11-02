@@ -16,6 +16,8 @@ The POST-only `/api/search` endpoint uses an 8 KiB body limit and now fails clos
 - Duplicate JSON field names **at any object depth**, including duplicated provider selection or query-sharing consent.
 - Nonstandard JSON number literals such as NaN and Infinity.
 - Repeated Content-Type fields or requests with Transfer-Encoding present, including an empty header field.
+- Canonical, bounded `Content-Length` before integer conversion: zero-padded or multi-thousand-digit values fail closed without processing request bodies. Normal POST bodies remain capped at 8 KiB.
+- Exact-length request reads: a syntactically valid JSON prefix must still be rejected if it is shorter than the declared length; body read timeouts fail closed. Neither path may reach local or external search.
 - Early request rejection with unread body, where the service returns a connection-close signal to avoid HTTP/1.1 request desynchronization.
 
 GET endpoints also **reject declared unread bodies**: nonzero or malformed `Content-Length`, repeated length fields, and any `Transfer-Encoding`. Rejections close the HTTP/1.1 connection instead of treating leftover bytes as another request. Zero-length GETs and ordinary requests without body headers continue to work. Three loopback integration regressions verify these protections without sending request bodies or invoking a provider.
