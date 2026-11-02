@@ -109,20 +109,70 @@ def initialize(db_path: Path) -> None:
         )
 
 
+def _reject_duplicate_json_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Refuse duplicate fields, including nested objects and ambiguous URLs."""
+    record: dict[str, object] = {}
+    for name, value in pairs:
+        if name in record:
+            raise InvalidDocument("Duplicate JSON field")
+        record[name] = value
+    return record
+
+
+def _reject_json_constant(_value: str) -> None:
+    raise InvalidDocument("Nonstandard JSON numeric value")
+
+
+def _read_jsonl_snapshot(source_path: Path) -> str:
+    """Read at most MAX_IMPORT_BYTES from one opened regular source file.
+
+    The byte limit is enforced while reading, not just on a prior stat value.
+    No FIFO/device access, symlink following, or unbounded line iteration.
+    """
+    if source_path.is_symlink():
+        raise InvalidDocument("Symlinked import source refused")
+    flags = (os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+             | getattr(os, "O_NONBLOCK", 0))
+    fd = os.open(source_path, flags)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode):
+            raise InvalidDocument("Import source must be a regular file")
+        if info.st_size > MAX_IMPORT_BYTES:
+            raise InvalidDocument("Import exceeds size limit")
+        with os.fdopen(fd, "rb") as stream:
+            fd = -1
+            raw = stream.read(MAX_IMPORT_BYTES + 1)
+        if len(raw) > MAX_IMPORT_BYTES:
+            raise InvalidDocument("Import exceeds size limit")
+        try:
+            return raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise InvalidDocument("Import source must use UTF-8") from exc
+    finally:
+        if fd >= 0:
+            os.close(fd)
+
+
 def import_jsonl(db_path: Path, source_path: Path) -> int:
-    if source_path.stat().st_size > MAX_IMPORT_BYTES:
-        raise InvalidDocument("Import exceeds size limit")
+    snapshot = _read_jsonl_snapshot(source_path)
     documents: list[tuple[str, str, str, str]] = []
-    with source_path.open("r", encoding="utf-8") as stream:
-        for lineno, line in enumerate(stream, 1):
-            if not line.strip():
-                continue
-            if len(documents) >= MAX_RECORDS:
-                raise InvalidDocument("Import exceeds document limit")
-            try:
-                documents.append(normalize_document(json.loads(line)))
-            except (json.JSONDecodeError, InvalidDocument) as exc:
-                raise InvalidDocument(f"Invalid document at line {lineno}") from exc
+    # Split only on newline: str.splitlines() also splits Unicode separators
+    # that could appear within JSON strings.
+    for lineno, line in enumerate(snapshot.split("\n"), 1):
+        if not line.strip():
+            continue
+        if len(documents) >= MAX_RECORDS:
+            raise InvalidDocument("Import exceeds document limit")
+        try:
+            record = json.loads(
+                line,
+                object_pairs_hook=_reject_duplicate_json_fields,
+                parse_constant=_reject_json_constant,
+            )
+            documents.append(normalize_document(record))
+        except (json.JSONDecodeError, InvalidDocument) as exc:
+            raise InvalidDocument(f"Invalid document at line {lineno}") from exc
     with closing(connect(db_path)) as conn, conn:
         conn.execute("BEGIN IMMEDIATE")
         conn.execute("DELETE FROM documents")
