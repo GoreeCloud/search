@@ -102,6 +102,34 @@ class CatalogRecoveryTests(unittest.TestCase):
             snapshot_catalog(self.index, public / "copy.sqlite3")
         self.assertFalse((public / "copy.sqlite3").exists())
 
+    def test_nested_symlink_destination_ancestry_refused(self):
+        owned = self.folder / "owned"
+        private = owned / "private"
+        private.mkdir(parents=True, mode=0o700)
+        alias = self.folder / "alias"
+        alias.symlink_to(owned, target_is_directory=True)
+        output = alias / "private" / "new-catalog.sqlite3"
+        self.assertFalse(output.parent.is_symlink())
+        with self.assertRaises(RecoveryError):
+            snapshot_catalog(self.index, output)
+        self.assertFalse((private / "new-catalog.sqlite3").exists())
+
+    def test_nested_symlink_source_ancestry_refused(self):
+        owned = self.folder / "source-owned"
+        private = owned / "private"
+        private.mkdir(parents=True, mode=0o700)
+        source = private / "catalog.sqlite3"
+        source.write_bytes(self.index.read_bytes())
+        source.chmod(0o600)
+        alias = self.folder / "source-alias"
+        alias.symlink_to(owned, target_is_directory=True)
+        with self.assertRaises(RecoveryError):
+            inspect_catalog(alias / "private" / "catalog.sqlite3")
+        output = self.folder / "unsafe-source-snapshot.sqlite3"
+        with self.assertRaises(RecoveryError):
+            snapshot_catalog(alias / "private" / "catalog.sqlite3", output)
+        self.assertFalse(output.exists())
+
     def test_source_file_must_be_owner_private_and_not_symlink(self):
         public = self.folder / "public-index.sqlite3"
         public.write_bytes(self.index.read_bytes())
