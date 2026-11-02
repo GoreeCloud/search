@@ -19,6 +19,21 @@ CSP = (
 MAX_BODY = 8192
 
 
+def _reject_duplicate_fields(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Avoid ambiguous consent/provider fields at any JSON object depth."""
+    result: dict[str, Any] = {}
+    for name, value in pairs:
+        if name in result:
+            raise ValueError("Duplicate JSON field")
+        result[name] = value
+    return result
+
+
+def _reject_nonfinite_constant(_value: str) -> None:
+    """JSON allows no NaN or Infinity literals."""
+    raise ValueError("Nonstandard JSON numeric constant")
+
+
 class SearchServer(ThreadingHTTPServer):
     daemon_threads = True
 
@@ -44,6 +59,8 @@ class SearchHandler(BaseHTTPRequestHandler):
 
     def _send(self, status: int, data: bytes, media_type: str) -> None:
         self.send_response(status)
+        if self.close_connection:
+            self.send_header("Connection", "close")
         self.send_header("Content-Type", media_type)
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
@@ -111,7 +128,7 @@ class SearchHandler(BaseHTTPRequestHandler):
         if len(sites) > 1 or (sites and sites[0] not in ("none", "same-origin")):
             self._reject(403, "Cross-site searches disabled")
             return
-        if self.headers.get("Transfer-Encoding"):
+        if self.headers.get_all("Transfer-Encoding", []):
             self._reject(400, "Streaming bodies unsupported")
             return
         values = self.headers.get_all("Content-Length", [])
@@ -122,11 +139,17 @@ class SearchHandler(BaseHTTPRequestHandler):
         if size < 2 or size > MAX_BODY:
             self._reject(413, "Request too large or empty")
             return
-        if self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower() != "application/json":
+        content_types = self.headers.get_all("Content-Type", [])
+        if (len(content_types) != 1
+                or content_types[0].split(";", 1)[0].strip().lower() != "application/json"):
             self._reject(415, "JSON content required")
             return
         try:
-            payload = json.loads(self.rfile.read(size).decode("utf-8"))
+            payload = json.loads(
+                self.rfile.read(size).decode("utf-8"),
+                object_pairs_hook=_reject_duplicate_fields,
+                parse_constant=_reject_nonfinite_constant,
+            )
         except (ValueError, UnicodeError):
             self._json(400, {"error": "Invalid JSON"})
             return
