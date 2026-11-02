@@ -142,7 +142,7 @@ def main() -> int:
                 val = view.evaluate_javascript_finish(task).to_string()
                 state["focus"].append(val)
                 self.step += 1
-                if self.step < 10:
+                if self.step < 7:
                     GLib.timeout_add(90, self.next_tab)
                 else:
                     self.finish_focus()
@@ -168,8 +168,8 @@ def main() -> int:
         def on_reverse(self, view, task, _data):
             try:
                 state["reverse"] = view.evaluate_javascript_finish(task).to_string()
-                if state["reverse"] == state["focus"][-1]:
-                    raise AssertionError("Shift+Tab did not change keyboard focus")
+                if state["reverse"] != "source-select":
+                    raise AssertionError("Shift+Tab did not return from consent to source selector")
                 # Use focus on input to prepare text (not claiming typed-key verification),
                 # then send a real Enter key and assert the local-only response.
                 self.eval("""(() => { const q = document.getElementById('query');
@@ -191,12 +191,7 @@ def main() -> int:
                 self.quit()
 
         def inspect_result(self):
-            self.eval("""(() => ({
-                count: document.querySelectorAll('#result-list article').length,
-                status: document.getElementById('status').textContent,
-                source: document.getElementById('source-select').value,
-                consent: document.getElementById('share-query').checked,
-            }))() && JSON.stringify((() => ({
+            self.eval("""JSON.stringify((() => ({
                 count: document.querySelectorAll('#result-list article').length,
                 status: document.getElementById('status').textContent,
                 source: document.getElementById('source-select').value,
