@@ -32,7 +32,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 107  # 105 previous + 2 explicit SQLite read-only source contracts.
+MIN_TESTS = 109  # Existing 107 plus readonly-source and URI-filename recovery regressions.
 
 
 def main() -> int:
