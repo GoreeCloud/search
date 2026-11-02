@@ -53,9 +53,15 @@ A separate minimal `Gtk.Application` experiment was repeated using a regular `Gt
 
 The next meaningful acceptance is a deliberately authorized real desktop session with an actual Orca focus/speech observation, followed by independent GTK application registration debugging. No normal desktop was inspected or changed in these isolated comparisons.
 
+## Owner-reported manual Orca acceptance — PASS (November 2, 2026)
+
+The project owner explicitly reported **"Orca PASS"** for GoreeCloud Search on November 2, 2026. Record this as **owner-reported manual Orca acceptance: PASS**. It advances the user sign-off for screen-reader behavior and must not be overwritten by prior experimental harness findings.
+
+**Evidence boundary:** No new screen-reader session log, version/OS matrix, audio transcript, focus-path checklist, or independently reproduced Orca test output was supplied with this declaration. The isolated GTK4/AT-SPI automated probe discussed above still did not discover the native application under Xvfb; it remains a separate **automated test-environment investigation**, not grounds to relabel the owner's manual Orca result as a failure. Full cross-platform accessibility, high-contrast/zoom, pixel parity and other release gates remain open.
+
 ## Remaining acceptance gates
 
 - Actual desktop visual inspection and GC UI typography/spacing/tokens, light/dark and high-contrast themes.
-- Keyboard-only flows, focus announcements, screen-reader behavior, reduced-motion support, and selected/empty/error states with actual assistive technology.
+- **Owner-reported Orca: PASS**; retain reproducible screen-reader evidence, broader keyboard/focus, reduced-motion, and selected/empty/error-state checks for independent release review.
 - Running on all intended Linux distributions/versions, native desktop launcher/packaging, resource budgets, desktop error recovery, and release signing.
 - Any future opt-in external providers in GTK must add explicit and independently tested query-sharing controls. This initial native UI is **local-only by design**.
