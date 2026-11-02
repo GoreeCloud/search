@@ -52,6 +52,17 @@ class NativeArchiveTests(unittest.TestCase):
             self.assertEqual(next(item.mode for item in members if item.name.endswith(
                 "/bin/goreecloud-search-native")), 0o755)
 
+    def test_shared_public_link_dependency_is_bundled(self):
+        self.assertIn("goreecloud_search/links.py", SOURCE_PATHS)
+        output = self.create()
+        with tarfile.open(output, "r:gz") as archive:
+            record = archive.extractfile(
+                f"{PREFIX}/lib/goreecloud_search/links.py"
+            )
+            self.assertIsNotNone(record)
+            source = record.read().decode("utf-8")
+        self.assertIn("def public_https_url(", source)
+
     def test_reject_existing_or_symlinked_archive(self):
         existing = self.directory / "existing.tar.gz"
         existing.write_text("do not overwrite", encoding="utf-8")
