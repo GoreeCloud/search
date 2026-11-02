@@ -170,6 +170,52 @@ class DurableRequestBudgetTests(unittest.TestCase):
             with self.assertRaises(providers.ProviderConfigError):
                 providers.ProviderConfig.from_environment()
 
+    def test_oversized_brave_cap_fails_closed_before_integer_conversion(self):
+        for value in ("9" * 5000, "1" * 5000):
+            with self.subTest(prefix=value[:10]):
+                with patch.dict(os.environ, {
+                    "GC_SEARCH_EXTERNAL_ENABLED": "1",
+                    "GC_SEARCH_BRAVE_API_KEY": "dummy-not-a-secret",
+                    "GC_SEARCH_BRAVE_DAILY_CAP": value,
+                    "GC_SEARCH_BRAVE_BUDGET_DB": str(self.path),
+                }, clear=True):
+                    with self.assertRaises(providers.ProviderConfigError):
+                        providers.ProviderConfig.from_environment()
+        self.assertFalse(self.path.exists())
+
+    def test_oversized_searxng_port_fails_closed_without_network(self):
+        for value in ("9" * 5000, "65536", "１２３４"):
+            with self.subTest(value_prefix=value[:8]):
+                with patch.dict(os.environ, {
+                    "GC_SEARCH_EXTERNAL_ENABLED": "1",
+                    "GC_SEARCH_SEARXNG_PORT": value,
+                }, clear=True):
+                    with self.assertRaises(providers.ProviderConfigError):
+                        providers.ProviderConfig.from_environment()
+        with patch.object(providers.http.client, "HTTPConnection") as outgoing:
+            self.assertFalse(providers.ProviderConfig().availability()["searxng"])
+            outgoing.assert_not_called()
+
+    def test_leading_zero_provider_numbers_rejected_while_boundaries_work(self):
+        for key, number in (
+            ("GC_SEARCH_BRAVE_DAILY_CAP", "0001"),
+            ("GC_SEARCH_SEARXNG_PORT", "08080"),
+        ):
+            with self.subTest(key=key):
+                with patch.dict(os.environ, {key: number}, clear=True):
+                    with self.assertRaises(providers.ProviderConfigError):
+                        providers.ProviderConfig.from_environment()
+        with patch.dict(os.environ, {
+            "GC_SEARCH_BRAVE_DAILY_CAP": "10000",
+            "GC_SEARCH_SEARXNG_PORT": "65535",
+            "GC_SEARCH_EXTERNAL_ENABLED": "0",
+        }, clear=True):
+            config = providers.ProviderConfig.from_environment()
+        self.assertEqual(config.brave_daily_cap, 10000)
+        self.assertEqual(config.searxng_port, 65535)
+        self.assertFalse(config.availability()["brave"])
+        self.assertFalse(config.availability()["searxng"])
+
     def test_successful_mocked_brave_request_reserves_before_transport(self):
         config = providers.ProviderConfig(True, "dummy-not-a-secret", None, 1, self.path)
         with patch.object(providers.BRAVE_RATE_GATE, "reserve"):
