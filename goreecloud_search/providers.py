@@ -36,6 +36,17 @@ class ProviderConfigError(ValueError):
     """Reject incomplete or unsafe optional provider configuration."""
 
 
+def _bounded_config_integer(raw: str, label: str, ceiling: int) -> int:
+    """Parse optional provider settings without unbounded integer conversion."""
+    if (not raw or len(raw) > len(str(ceiling)) or not raw.isascii()
+            or not raw.isdecimal() or (len(raw) > 1 and raw[0] == "0")):
+        raise ProviderConfigError(f"{label} must be a canonical bounded decimal integer")
+    value = int(raw)
+    if not 1 <= value <= ceiling:
+        raise ProviderConfigError(f"{label} out of range")
+    return value
+
+
 @dataclass(frozen=True)
 class ProviderConfig:
     global_enabled: bool = False
@@ -51,22 +62,14 @@ class ProviderConfig:
         raw_port = os.getenv("GC_SEARCH_SEARXNG_PORT", "")
         port = None
         if raw_port:
-            if not raw_port.isascii() or not raw_port.isdecimal():
-                raise ProviderConfigError("SearXNG port must be a decimal integer")
-            port = int(raw_port)
-            if not 1 <= port <= 65535:
-                raise ProviderConfigError("SearXNG port out of range")
+            port = _bounded_config_integer(raw_port, "SearXNG port", 65535)
         if key and (len(key) > 256 or any(ord(ch) < 33 or ord(ch) > 126 for ch in key)):
             raise ProviderConfigError("Invalid provider credential configuration")
         raw_cap = os.getenv("GC_SEARCH_BRAVE_DAILY_CAP", "")
         cap = 0
         state_path = None
         if raw_cap:
-            if not raw_cap.isascii() or not raw_cap.isdecimal():
-                raise ProviderConfigError("Brave daily request cap must be a decimal integer")
-            cap = int(raw_cap)
-            if not 1 <= cap <= 10_000:
-                raise ProviderConfigError("Brave daily request cap out of range")
+            cap = _bounded_config_integer(raw_cap, "Brave daily request cap", 10_000)
             raw_path = os.getenv("GC_SEARCH_BRAVE_BUDGET_DB", "")
             state_path = (Path(raw_path) if raw_path
                           else Path.home() / ".local/state/goreecloud/search-brave-budget.sqlite3")
