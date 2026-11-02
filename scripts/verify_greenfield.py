@@ -35,7 +35,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 130  # Prior 128 plus two fail-closed empty-import preservation tests.
+MIN_TESTS = 133  # 130 prior plus three import-source ancestry and CLI-relative path checks.
 
 
 def main() -> int:
