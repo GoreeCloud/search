@@ -44,6 +44,38 @@ class StrictHTTPPayloadTests(unittest.TestCase):
         finally:
             connection.close()
 
+    def get_with_headers(self, headers):
+        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=3)
+        try:
+            connection.putrequest("GET", "/readyz")
+            for name, value in headers:
+                connection.putheader(name, value)
+            # No body is transmitted, so rejection must not block reading it.
+            connection.endheaders()
+            reply = connection.getresponse()
+            return reply.status, dict(reply.getheaders()), json.loads(reply.read())
+        finally:
+            connection.close()
+
+    def test_get_declared_body_rejected_without_waiting_for_unread_bytes(self):
+        status, headers, body = self.get_with_headers((("Content-Length", "2000"),))
+        self.assertEqual((status, body["error"]), (400, "GET request bodies unsupported"))
+        self.assertEqual(headers.get("Connection"), "close")
+
+    def test_get_rejects_transfer_encoding_even_without_body(self):
+        status, headers, body = self.get_with_headers((("Transfer-Encoding", "chunked"),))
+        self.assertEqual(status, 400)
+        self.assertEqual(headers.get("Connection"), "close")
+        self.assertEqual(body["error"], "GET request bodies unsupported")
+
+    def test_get_duplicate_zero_content_length_is_rejected(self):
+        status, headers, body = self.get_with_headers(
+            (("Content-Length", "0"), ("Content-Length", "0")),
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(headers.get("Connection"), "close")
+        self.assertEqual(body["error"], "GET request bodies unsupported")
+
     def test_duplicate_query_fields_fail_closed(self):
         with patch("goreecloud_search.server.federated_search") as remote:
             status, _, payload = self.raw(b'{"query":"first","query":"second"}')
