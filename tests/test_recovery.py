@@ -199,6 +199,29 @@ class CatalogRecoveryTests(unittest.TestCase):
         self.assertTrue(all(call.kwargs.get("uri") is True for call in source_opens))
         self.assertEqual(inspect_catalog(target), 1)
 
+    def test_owner_readonly_source_can_be_verified_and_snapshotted(self):
+        original_mode = stat.S_IMODE(self.index.stat().st_mode)
+        self.index.chmod(0o400)
+        self.addCleanup(lambda: self.index.chmod(original_mode)
+                        if self.index.exists() else None)
+        before = self.index.stat().st_mtime_ns
+        self.assertEqual(inspect_catalog(self.index), 1)
+        output = self.folder / "from-readonly.sqlite3"
+        self.assertEqual(snapshot_catalog(self.index, output), 1)
+        self.assertEqual(self.index.stat().st_mtime_ns, before)
+        self.assertEqual(stat.S_IMODE(self.index.stat().st_mode), 0o400)
+        self.assertEqual(stat.S_IMODE(output.stat().st_mode), 0o600)
+
+    def test_readonly_sqlite_uri_escapes_filename_metacharacters(self):
+        from shutil import copyfile
+        unusual = self.folder / "source #? % catalog.sqlite3"
+        copyfile(self.index, unusual)
+        unusual.chmod(0o600)
+        self.assertEqual(inspect_catalog(unusual), 1)
+        recovered = self.folder / "safe-recovered.sqlite3"
+        self.assertEqual(snapshot_catalog(unusual, recovered), 1)
+        self.assertEqual(inspect_catalog(recovered), 1)
+
     def test_cli_backup_verify_and_restore_copy_in_fresh_paths(self):
         backup = self.folder / "cli-snapshot.sqlite3"
         restored = self.folder / "cli-restored.sqlite3"
