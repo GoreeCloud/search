@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import gzip
+import hashlib
 import io
 import os
 import stat
@@ -14,6 +15,8 @@ import tarfile
 from pathlib import Path
 
 PREFIX = "goreecloud-search-native-dev"
+MAX_ARCHIVE_MEMBERS = 16
+MAX_MEMBER_BYTES = 2_000_000
 SOURCE_PATHS = (
     "goreecloud_search/__init__.py",
     "goreecloud_search/store.py",
@@ -96,6 +99,12 @@ def archive_members(root: Path) -> list[tuple[tarfile.TarInfo, bytes]]:
     for source in SOURCE_PATHS:
         destination = "lib/" + source if source.startswith("goreecloud_search/") else source
         files[destination] = _source_bytes(root, source)
+    if any(len(data) > MAX_MEMBER_BYTES for data in files.values()):
+        raise ValueError("Development source component exceeds archive size limit")
+    files["MANIFEST.sha256"] = "".join(
+        f"{hashlib.sha256(files[name]).hexdigest()}  {name}\n"
+        for name in sorted(files)
+    ).encode("ascii")
     return [
         _tar_member(name, files[name], executable=name.startswith("bin/"))
         for name in sorted(files)
@@ -123,16 +132,67 @@ def build_archive(root: Path, output: Path) -> None:
         output.unlink(missing_ok=True)
         raise
 
+
+def verify_archive(path: Path) -> int:
+    """Verify a trusted-format development archive without extracting files.
+
+    This proves internal byte consistency, NOT a publisher signature or
+    provenance. All members are checked against a fixed allowlist and size cap.
+    """
+    if not path.is_absolute() or path.is_symlink() or not path.is_file():
+        raise ValueError("Verification requires an existing regular archive path")
+    allowed = {
+        "README-DEV.txt", "LICENSE", "MANIFEST.sha256",
+        "bin/goreecloud-search-native",
+        "share/applications/com.goreecloud.Search.Development.desktop",
+        *(("lib/" + source) if source.startswith("goreecloud_search/")
+          else source for source in SOURCE_PATHS),
+    }
+    expected = {f"{PREFIX}/{name}" for name in allowed}
+    found: dict[str, bytes] = {}
+    with tarfile.open(path, "r|gz") as archive:
+        for member in archive:
+            if (len(found) >= MAX_ARCHIVE_MEMBERS or member.name not in expected
+                    or member.name in found or not member.isfile()
+                    or member.size > MAX_MEMBER_BYTES or member.size < 0
+                    or member.uid != 0 or member.gid != 0 or member.mtime != 0):
+                raise ValueError("Unexpected or unsafe archive member")
+            if member.mode != (0o755 if member.name.endswith("/bin/goreecloud-search-native") else 0o644):
+                raise ValueError("Unexpected archive permissions")
+            stream = archive.extractfile(member)
+            if stream is None:
+                raise ValueError("Unreadable archive member")
+            data = stream.read(MAX_MEMBER_BYTES + 1)
+            if len(data) != member.size:
+                raise ValueError("Archive member size mismatch")
+            found[member.name] = data
+    if found.keys() != expected:
+        raise ValueError("Archive is missing expected members")
+    recorded = found.pop(f"{PREFIX}/MANIFEST.sha256").decode("ascii")
+    expected_manifest = "".join(
+        f"{hashlib.sha256(found[f'{PREFIX}/{name}']).hexdigest()}  {name}\n"
+        for name in sorted(allowed - {"MANIFEST.sha256"})
+    )
+    if recorded != expected_manifest:
+        raise ValueError("Archive SHA-256 manifest mismatch")
+    return len(found)
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build source-only, no-install GTK4 development archive")
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
-    parser.add_argument("--output", type=Path, required=True)
+    operation = parser.add_mutually_exclusive_group(required=True)
+    operation.add_argument("--output", type=Path, help="Create new source-only archive")
+    operation.add_argument("--verify", type=Path, help="Read-only archive integrity check")
     args = parser.parse_args()
     try:
-        build_archive(args.root.resolve(strict=True), args.output)
-    except (OSError, ValueError, tarfile.TarError) as exc:
-        parser.error(f"Archive refused: {exc}")
-    print(f"Native development archive built: {args.output}")
+        if args.verify is not None:
+            count = verify_archive(args.verify)
+            print(f"Native archive SHA-256 checks passed: {count} source entries (unsigned)")
+        else:
+            build_archive(args.root.resolve(strict=True), args.output)
+            print(f"Native development archive built: {args.output}")
+    except (OSError, ValueError, UnicodeError, tarfile.TarError) as exc:
+        parser.error(f"Archive operation refused: {exc}")
     return 0
 
 if __name__ == "__main__":
