@@ -39,7 +39,7 @@ python3 -m goreecloud_search.native --db "$GC_SEARCH_DEMO_DIR/catalog.sqlite3"
 
 The directory created with `mktemp -d` is disposable development state. Treat its catalog as private and remove it manually when no longer needed; these commands never erase it automatically.
 
-The native client reads the private index **directly**; it does not start a web server or use Brave/SearXNG. The UI follows GC UI hierarchy and spacing principles using system GTK4 widgets; visual parity, keyboard/assistive-technology and packaging acceptance are still pending. The Python service and test suite do not require GTK.
+The native client reads the private index **directly**; it does not start a web server or use Brave/SearXNG. The UI follows GC UI hierarchy and spacing principles using system GTK4 widgets. **Manual Orca acceptance was reported PASS by the project owner**; independent automated AT-SPI enumeration, full visual parity, multi-platform and release packaging acceptance remain open. See [native acceptance evidence](docs/NATIVE_DESKTOP_VALIDATION.md). The Python service and test suite do not require GTK.
 
 ### Non-installing native development archive
 
@@ -83,7 +83,7 @@ python3 scripts/verify_greenfield.py
 
 For a consented external search, the POST JSON body uses `{"query":"example","providers":["local","brave"],"share_query":true}`; availability is discoverable at `GET /api/providers`. The browser offers the same controls and resets consent after each search. A configured provider can receive the search query, and Brave may incur charges. Keep external access disabled until consent, privacy and billing have been approved.
 
-See [architecture](docs/ARCHITECTURE.md), [connector status](docs/CONNECTOR_STATUS.md), [development roadmap](docs/ROADMAP.md), [XTest keyboard evidence](docs/KEYBOARD_ACCESSIBILITY_VALIDATION.md), [GC UI contrast checks](docs/ACCESSIBILITY_CONTRAST.md), [local readiness and HTTP security](docs/LOCAL_READINESS_SECURITY.md), and [historical secret-alert triage](docs/LEGACY_SECRET_ALERT_TRIAGE.md).
+See [private index access](docs/INDEX_PRIVACY.md), [architecture](docs/ARCHITECTURE.md), [connector status](docs/CONNECTOR_STATUS.md), [development roadmap](docs/ROADMAP.md), [XTest keyboard evidence](docs/KEYBOARD_ACCESSIBILITY_VALIDATION.md), [GC UI contrast checks](docs/ACCESSIBILITY_CONTRAST.md), [local readiness and HTTP security](docs/LOCAL_READINESS_SECURITY.md), and [historical secret-alert triage](docs/LEGACY_SECRET_ALERT_TRIAGE.md).
 
 ## Licensing
 
