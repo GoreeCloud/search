@@ -20,6 +20,7 @@ REQUIRED = (
     "web/app.js",
     "web/styles.css",
     "tests/test_search.py",
+    "tests/test_store_security.py",
     "tests/test_optional_providers.py",
     "tests/test_http_integration.py",
     "tests/test_ui_contract.py",
@@ -32,7 +33,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 109  # Existing 107 plus readonly-source and URI-filename recovery regressions.
+MIN_TESTS = 115  # 109 prior + 6 active private-index path and owner contracts.
 
 
 def main() -> int:
