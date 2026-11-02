@@ -148,8 +148,15 @@ class SearchHandler(BaseHTTPRequestHandler):
             self._reject(400, "Streaming bodies unsupported")
             return
         values = self.headers.get_all("Content-Length", [])
-        if len(values) != 1 or not values[0].isascii() or not values[0].isdigit():
-            self._reject(411, "Content-Length required")
+        if (len(values) != 1 or not values[0].isascii()
+                or not values[0].isdigit()
+                or (len(values[0]) > 1 and values[0].startswith("0"))):
+            self._reject(411, "Canonical Content-Length required")
+            return
+        # Cap the decimal representation before int(), including values
+        # thousands of digits long that may exceed Python's conversion guard.
+        if len(values[0]) > len(str(MAX_BODY)):
+            self._reject(413, "Request too large or empty")
             return
         size = int(values[0])
         if size < 2 or size > MAX_BODY:
