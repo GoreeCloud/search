@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import html
 import http.client
-import ipaddress
 import json
 import os
 from pathlib import Path
@@ -16,8 +15,9 @@ import time
 from collections import deque
 from dataclasses import dataclass
 from html.parser import HTMLParser
-from urllib.parse import urlencode, urlsplit
+from urllib.parse import urlencode
 
+from .links import public_https_url
 from .request_budget import BudgetUnavailable, reserve_request
 
 MAX_REPLY = 256_000
@@ -132,29 +132,8 @@ def _plain(value: object, cap: int) -> str:
 
 
 def _public_https(value: object) -> str | None:
-    if not isinstance(value, str) or len(value) > 2048:
-        return None
-    try:
-        uri = urlsplit(value)
-        hostname, port = uri.hostname, uri.port
-    except ValueError:
-        return None
-    if (uri.scheme != "https" or not hostname or uri.username or uri.password
-            or port not in (None, 443)):
-        return None
-    hostname = hostname.lower().rstrip(".")
-    if (hostname == "localhost" or hostname.endswith(".localhost")
-            or hostname.endswith((".local", ".internal", ".test"))
-            or "." not in hostname):
-        return None
-    try:
-        ip = ipaddress.ip_address(hostname)
-    except ValueError:
-        ip = None
-    if ip is not None and not ip.is_global:
-        return None
-    # The server never fetches result URLs; links are for client navigation only.
-    return value
+    """Share the same validated public-navigation policy as local results."""
+    return public_https_url(value)
 
 
 def normalize(payload: object, provider: str, limit: int) -> list[dict[str, str]]:
