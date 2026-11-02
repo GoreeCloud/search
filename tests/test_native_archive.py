@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import os
 import stat
 import subprocess
@@ -11,7 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.package_native import PREFIX, SOURCE_PATHS, build_archive
+from scripts.package_native import PREFIX, SOURCE_PATHS, build_archive, verify_archive
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -42,6 +43,7 @@ class NativeArchiveTests(unittest.TestCase):
                 f"{PREFIX}/share/applications/com.goreecloud.Search.Development.desktop",
                 f"{PREFIX}/README-DEV.txt",
                 f"{PREFIX}/LICENSE",
+                f"{PREFIX}/MANIFEST.sha256",
                 *(f"{PREFIX}/lib/{p}" for p in SOURCE_PATHS
                   if p.startswith("goreecloud_search/")),
             }
@@ -62,6 +64,57 @@ class NativeArchiveTests(unittest.TestCase):
             self.assertIsNotNone(record)
             source = record.read().decode("utf-8")
         self.assertIn("def public_https_url(", source)
+
+    def test_sha256_manifest_verifies_without_extracting(self):
+        archive = self.create()
+        with tarfile.open(archive, "r:gz") as pack:
+            manifest = pack.extractfile(f"{PREFIX}/MANIFEST.sha256").read().decode("ascii")
+            for member in pack:
+                if member.name.endswith("/MANIFEST.sha256"):
+                    continue
+                path = member.name[len(PREFIX) + 1:]
+                expected = hashlib.sha256(pack.extractfile(member).read()).hexdigest()
+                self.assertIn(f"{expected}  {path}\\n", manifest)
+        self.assertEqual(verify_archive(archive), len(SOURCE_PATHS) + 3)
+
+    def test_archive_verification_rejects_modified_content(self):
+        original = self.create()
+        tampered = self.directory / "modified.tar.gz"
+        with tarfile.open(original, "r:gz") as src:
+            with tarfile.open(tampered, "w:gz") as dest:
+                for entry in src:
+                    data = src.extractfile(entry).read()
+                    if entry.name.endswith("/README-DEV.txt"):
+                        data = data.replace(b"NOT installed", b"NOW installed")
+                        entry.size = len(data)
+                    dest.addfile(entry, io.BytesIO(data))
+        with self.assertRaisesRegex(ValueError, "manifest mismatch"):
+            verify_archive(tampered)
+
+    def test_archive_verification_rejects_undeclared_entry(self):
+        original = self.create()
+        unsafe = self.directory / "extra.tar.gz"
+        with tarfile.open(original, "r:gz") as src:
+            with tarfile.open(unsafe, "w:gz") as dest:
+                for entry in src:
+                    dest.addfile(entry, io.BytesIO(src.extractfile(entry).read()))
+                extra = tarfile.TarInfo(name=f"{PREFIX}/../outside.txt")
+                extra.size = 1
+                dest.addfile(extra, io.BytesIO(b"x"))
+        with self.assertRaisesRegex(ValueError, "Unexpected or unsafe"):
+            verify_archive(unsafe)
+
+    def test_read_only_cli_verification_of_built_archive(self):
+        original = self.create()
+        command = subprocess.run(
+            [sys.executable, str(ROOT / "scripts/package_native.py"),
+             "--verify", str(original)],
+            capture_output=True, text=True, timeout=10, check=False,
+            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+        )
+        self.assertEqual(command.returncode, 0, command.stderr)
+        self.assertIn("SHA-256 checks passed", command.stdout)
+        self.assertTrue(original.is_file())
 
     def test_reject_existing_or_symlinked_archive(self):
         existing = self.directory / "existing.tar.gz"
