@@ -183,8 +183,9 @@ def main() -> int:
             try:
                 if view.evaluate_javascript_finish(task).to_string() != "true":
                     raise AssertionError("Cannot focus search entry")
+                self.view.grab_focus()
                 key[0].key(0xFF0D)
-                GLib.timeout_add(500, self.inspect_result)
+                GLib.timeout_add(650, self.inspect_result)
             except Exception as exc:
                 state["error"] = str(exc)
                 self.quit()
