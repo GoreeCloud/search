@@ -35,7 +35,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 146  # 143 previous plus 3 strict provider response JSON contracts.
+MIN_TESTS = 147  # 146 prior plus paid-request ledger traversal regression.
 
 
 def main() -> int:
