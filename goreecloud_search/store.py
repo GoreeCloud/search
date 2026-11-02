@@ -129,8 +129,17 @@ def _read_jsonl_snapshot(source_path: Path) -> str:
     The byte limit is enforced while reading, not just on a prior stat value.
     No FIFO/device access, symlink following, or unbounded line iteration.
     """
-    if source_path.is_symlink():
-        raise InvalidDocument("Symlinked import source refused")
+    if not isinstance(source_path, Path) or ".." in source_path.parts:
+        raise InvalidDocument("Import source path traversal refused")
+    # Relative fixture paths are deliberately supported by the CLI. Expand
+    # against cwd lexically without resolving intermediate symlinks.
+    absolute_source = (
+        source_path if source_path.is_absolute() else Path.cwd() / source_path
+    )
+    if absolute_source.is_symlink() or any(
+        parent.is_symlink() for parent in absolute_source.parents
+    ):
+        raise InvalidDocument("Symlinked import source or directory refused")
     flags = (os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
              | getattr(os, "O_NONBLOCK", 0))
     fd = os.open(source_path, flags)
