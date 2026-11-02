@@ -27,8 +27,9 @@ REQUIRED = (
     "tests/test_native_archive.py",
     "tests/test_recovery.py",
     "tests/test_contrast.py",
+    "tests/test_http_strict_json.py",
 )
-MIN_TESTS = 72  # 68 prior + 4 computed GC UI contrast regression tests.
+MIN_TESTS = 78  # Previous 72 plus 6 strict JSON and request-framing contracts.
 
 
 def main() -> int:
