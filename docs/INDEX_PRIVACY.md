@@ -19,6 +19,14 @@ python3 -m goreecloud_search --db "$GC_SEARCH_DEMO_DIR/catalog.sqlite3" serve --
 
 The example is run from the trusted repository checkout on the same device. The direct `/tmp/index.sqlite3` pattern is deliberately refused because `/tmp` is a public parent directory. Remove disposable test directories only through intentional owner action, not by Search automation.
 
+## Transactional, bounded JSONL import
+
+The owner-supplied JSON Lines file is read from **one opened regular file** as a bounded (2,000,000-byte maximum) UTF-8 snapshot before parsing or index mutation. This prevents a changing file or nonregular input from bypassing a pre-open size check, blocks symlinked source files and FIFOs, and keeps decoding bounded without unbounded line iteration. Duplicate JSON keys (including inside nested objects), `NaN` and `Infinity` are rejected, as are malformed UTF-8 and any invalid document.
+
+The imported document count must be between **1 and 1,000**. **Zero-byte and whitespace-only files fail closed**, preserving the previous catalog. Deliberately clearing a catalog is not an import operation; do not substitute an empty JSONL file for a destructive reset. All records must validate successfully before a single transactional replacement begins. The `import-jsonl` command does not read or send third-party network content.
+
+Regression checks in `tests/test_import_security.py` exercise invalid sources, bounded reads even when a preliminary file size is misreported, strict JSON, valid UTF-8 and line endings, and failure preservation. These checks do not claim race-free protection against a malicious same-UID actor replacing an import path or guarantee that imported public links remain reachable.
+
 ## Verified offline regression evidence
 
 `tests/test_store_security.py` covers nested symlink ancestry, public directories, owner mismatches, traversal paths, non-regular files/symlinks, URI-special filenames, read-only search connections and explicit writable imports. `tests/test_quickstart.py` checks that README uses an owner-private directory and runs the actual CLI initialization/import/local-search flow with disposable records. Mandatory GitHub Actions runs Python 3.11 and 3.12 and fails on skipped tests.
