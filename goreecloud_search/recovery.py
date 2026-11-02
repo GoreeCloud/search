@@ -18,10 +18,18 @@ class RecoveryError(ValueError):
     """A catalog snapshot is unsafe, missing, or invalid."""
 
 
+def _check_directory_ancestry(path: Path) -> None:
+    """Reject a symlink anywhere in a private catalog's directory path."""
+    for directory in path.parents:
+        if directory.is_symlink():
+            raise RecoveryError("Catalog directory ancestry must not use symlinks")
+
+
 def inspect_catalog(path: Path) -> int:
     """Validate a private catalog, return document count; never modify it."""
     if not isinstance(path, Path) or not path.is_absolute() or path.is_symlink():
         raise RecoveryError("Catalog path must be an absolute non-symlink path")
+    _check_directory_ancestry(path)
     try:
         info = path.lstat()
         if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
@@ -54,13 +62,13 @@ def snapshot_catalog(source: Path, destination: Path) -> int:
         raise RecoveryError("Destination must be an absolute local path")
     if destination.is_symlink():
         raise RecoveryError("Symlinked destination refused")
+    _check_directory_ancestry(destination)
     parent = destination.parent
-    if parent.is_symlink():
-        raise RecoveryError("Symlinked destination directory refused")
     try:
         parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        _check_directory_ancestry(destination)
         info = parent.stat()
-        if (parent.is_symlink() or not stat.S_ISDIR(info.st_mode)
+        if (not stat.S_ISDIR(info.st_mode)
                 or info.st_uid != os.getuid()
                 or stat.S_IMODE(info.st_mode) & 0o077):
             raise RecoveryError("Destination folder must be owner-private")
