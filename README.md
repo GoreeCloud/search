@@ -19,9 +19,12 @@
 ## Run locally (Python 3.11+; no third-party dependencies)
 
 ```bash
-python3 -m goreecloud_search --db /tmp/gc-search-demo.sqlite3 init
-python3 -m goreecloud_search --db /tmp/gc-search-demo.sqlite3 import-jsonl --input examples/catalog.jsonl
-python3 -m goreecloud_search --db /tmp/gc-search-demo.sqlite3 serve --port 8787
+# Create an owner-private directory; the public /tmp directory is not accepted
+# as the direct parent of a sensitive SQLite index.
+GC_SEARCH_DEMO_DIR="$(mktemp -d /tmp/gc-search-demo.XXXXXXXX)"
+python3 -m goreecloud_search --db "$GC_SEARCH_DEMO_DIR/catalog.sqlite3" init
+python3 -m goreecloud_search --db "$GC_SEARCH_DEMO_DIR/catalog.sqlite3" import-jsonl --input examples/catalog.jsonl
+python3 -m goreecloud_search --db "$GC_SEARCH_DEMO_DIR/catalog.sqlite3" serve --port 8787
 # Open http://127.0.0.1:8787/ on the same device.
 ```
 
@@ -30,8 +33,11 @@ python3 -m goreecloud_search --db /tmp/gc-search-demo.sqlite3 serve --port 8787
 On a Linux desktop with GTK4 and PyGObject installed from the operating system's trusted package repository (for example, packages `python3-gi` and `gir1.2-gtk-4.0` on supported Debian/Ubuntu environments), initialize/import the catalog as above, then run:
 
 ```bash
-python3 -m goreecloud_search.native --db /tmp/gc-search-demo.sqlite3
+# Use the same GC_SEARCH_DEMO_DIR from the preceding setup in this shell.
+python3 -m goreecloud_search.native --db "$GC_SEARCH_DEMO_DIR/catalog.sqlite3"
 ```
+
+The directory created with `mktemp -d` is disposable development state. Treat its catalog as private and remove it manually when no longer needed; these commands never erase it automatically.
 
 The native client reads the private index **directly**; it does not start a web server or use Brave/SearXNG. The UI follows GC UI hierarchy and spacing principles using system GTK4 widgets; visual parity, keyboard/assistive-technology and packaging acceptance are still pending. The Python service and test suite do not require GTK.
 
