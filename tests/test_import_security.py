@@ -87,6 +87,35 @@ class SafeJSONLImportTests(unittest.TestCase):
             import_jsonl(self.db, alias)
         self.assert_original()
 
+    def test_import_source_rejects_nonimmediate_symlink_ancestor(self):
+        owned = self.root / "owned"
+        private = owned / "nested"
+        private.mkdir(parents=True, mode=0o700)
+        actual = private / "input.jsonl"
+        actual.write_bytes(self.source.read_bytes())
+        alias = self.root / "alias"
+        alias.symlink_to(owned, target_is_directory=True)
+        input_path = alias / "nested" / "input.jsonl"
+        self.assertFalse(input_path.parent.is_symlink())
+        with self.assertRaisesRegex(InvalidDocument, "Symlinked import"):
+            import_jsonl(self.db, input_path)
+        self.assert_original()
+
+    def test_import_source_rejects_lexical_parent_traversal(self):
+        container = self.root / "child"
+        container.mkdir(mode=0o700)
+        disguised = container / ".." / "source.jsonl"
+        with self.assertRaisesRegex(InvalidDocument, "traversal"):
+            import_jsonl(self.db, disguised)
+        self.assert_original()
+
+    def test_approved_relative_example_path_still_imports(self):
+        # The documented CLI path examples/catalog.jsonl is relative.
+        example = Path("examples/catalog.jsonl")
+        self.assertTrue(example.is_file(), "Run tests from the project checkout")
+        self.assertEqual(import_jsonl(self.db, example), 2)
+        self.assertTrue(search(self.db, "GoreeCloud"))
+
     def test_nonregular_fifo_source_is_rejected_without_blocking(self):
         fifo = self.root / "untrusted-pipe"
         os.mkfifo(fifo, 0o600)
