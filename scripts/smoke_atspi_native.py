@@ -61,7 +61,6 @@ def main() -> int:
         finally:
             log_file.close()
         found = {}
-        observed_app_names = set()
         matched_pid = False
         try:
             deadline = time.monotonic() + 12
@@ -73,12 +72,9 @@ def main() -> int:
                             candidate = desktop.get_child_at_index(i)
                             if candidate is None:
                                 continue
-                            name = candidate.get_name() or ""
-                            observed_app_names.add(name)
-                            # Select only the freshly launched synthetic client.
-                            # AT-SPI application names are toolkit dependent.
-                            process_id = candidate.get_process_id()
-                            if process_id != app.pid and "GoreeCloud Search" not in name:
+                            # Inspect only the synthetic child; do not collect
+                            # other desktop application names or accessibility trees.
+                            if candidate.get_process_id() != app.pid:
                                 continue
                             matched_pid = True
                             stack = [(candidate, 0)]
@@ -117,8 +113,7 @@ def main() -> int:
             # Synthetic fixture process only; never emit genuine user data.
             diagnostics = log_path.read_text(encoding="utf-8", errors="replace")
             print("AT-SPI synthetic client diagnostics:", diagnostics[-600:])
-        print("AT-SPI isolated app names:", sorted(observed_app_names)[:20])
-        print("AT-SPI found label names:", sorted(found)[:40])
+        print("AT-SPI synthetic-client label names:", sorted(found)[:40])
         print("AT-SPI isolated GTK4 labels:", {name: found.get(name) for name in expected})
         print("AT-SPI NATIVE", "PASS" if passed else "FAIL")
         return 0 if passed else 1
