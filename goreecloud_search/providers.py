@@ -139,6 +139,20 @@ def _public_https(value: object) -> str | None:
     return public_https_url(value)
 
 
+def _strict_reply_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Reject duplicate keys anywhere inside an optional provider reply."""
+    values: dict[str, object] = {}
+    for key, item in pairs:
+        if key in values:
+            raise ValueError("Ambiguous provider JSON")
+        values[key] = item
+    return values
+
+
+def _reject_reply_constant(_value: str) -> None:
+    raise ValueError("Nonstandard provider JSON value")
+
+
 def normalize(payload: object, provider: str, limit: int) -> list[dict[str, str]]:
     if not isinstance(payload, dict) or provider not in PROVIDER_IDS:
         raise ProviderUnavailable("Unrecognized response")
@@ -182,7 +196,11 @@ def _read_json(connection: http.client.HTTPConnection, method: str, path: str,
         if len(raw) > MAX_REPLY:
             raise ProviderUnavailable("Provider response exceeds maximum size")
         try:
-            return json.loads(raw.decode("utf-8"))
+            return json.loads(
+                raw.decode("utf-8"),
+                object_pairs_hook=_strict_reply_object,
+                parse_constant=_reject_reply_constant,
+            )
         except (UnicodeError, ValueError) as exc:
             raise ProviderUnavailable("Malformed provider response") from exc
     except (OSError, http.client.HTTPException) as exc:
