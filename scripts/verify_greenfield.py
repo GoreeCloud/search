@@ -35,7 +35,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 128  # Existing 120 plus eight strict bounded JSONL import regressions.
+MIN_TESTS = 130  # Prior 128 plus two fail-closed empty-import preservation tests.
 
 
 def main() -> int:
