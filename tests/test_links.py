@@ -40,6 +40,49 @@ class PublicLinkPolicyTests(unittest.TestCase):
                 with self.assertRaises(InvalidDocument):
                     safe_url(url)
 
+    def test_unicode_idna_compatibility_cannot_bypass_local_domains(self):
+        candidates = (
+            "https://router.ｌｏｃａｌ/",
+            "https://server.ＴＥＳＴ/",
+            "https://unit.ｉｎｔｅｒｎａｌ/",
+            "https://host.ｌａｎ/",
+            "https://ｌｏｃａｌｈｏｓｔ/",
+            "https://host.ｅｘａｍｐｌｅ/",
+            "https://router.ｈｏｍｅ.ａｒｐａ/",
+            "https://name。local/",
+        )
+        for url in candidates:
+            with self.subTest(url=url):
+                self.assertIsNone(public_https_url(url))
+                self.assertIsNone(_public_https(url))
+                with self.assertRaises(InvalidDocument):
+                    safe_url(url)
+
+    def test_unicode_digits_must_not_bypass_private_ip_filter(self):
+        for url in (
+            "https://１２７.０.０.１/",
+            "https://１９２.１６８.１.１/",
+            "https://１０.０.０.１/",
+            "https://２１３０７０６４３３/",
+        ):
+            with self.subTest(url=url):
+                self.assertIsNone(public_https_url(url))
+                with self.assertRaises(InvalidDocument):
+                    safe_url(url)
+
+    def test_noncanonical_controls_and_backslashes_are_rejected(self):
+        for url in (
+            "\thttps://example.org/",
+            "https://example.org/\npath",
+            "https://example.org/\rpath",
+            "https://example.org/\x7fpath",
+            "https://example.org/path\\private",
+        ):
+            with self.subTest(url=repr(url)):
+                self.assertIsNone(public_https_url(url))
+                with self.assertRaises(InvalidDocument):
+                    safe_url(url)
+
     def test_browser_numeric_private_hosts_are_refused(self):
         candidates = (
             "https://127.1/", "https://127.0.0.1./",
