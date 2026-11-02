@@ -88,6 +88,51 @@ class ActiveCatalogSecurityTests(unittest.TestCase):
             search(link, "hello")
         self.assertTrue(self.db.is_file())
 
+    def test_search_opens_sqlite_uri_readonly_and_forbids_writes(self):
+        from goreecloud_search.store import connect
+        original = sqlite3.connect
+        with patch("goreecloud_search.store.sqlite3.connect", wraps=original) as opened:
+            self.assertEqual(search(self.db, "nothing"), [])
+        self.assertEqual(opened.call_count, 1)
+        self.assertEqual(opened.call_args.args[0], self.db.as_uri() + "?mode=ro")
+        self.assertIs(opened.call_args.kwargs["uri"], True)
+        connection = connect(self.db, read_only=True)
+        try:
+            with self.assertRaises(sqlite3.OperationalError):
+                connection.execute(
+                    "INSERT INTO documents (title,description,url,source) VALUES (?,?,?,?)",
+                    ("Blocked", "No writes", "https://example.org/blocked", "local"),
+                )
+        finally:
+            connection.close()
+
+    def test_local_search_works_with_readonly_catalog_without_mutation(self):
+        data = self.root / "readonly.jsonl"
+        data.write_text(json.dumps({
+            "title": "Private Handbook", "description": "Safe local readonly catalog",
+            "url": "https://example.org/read-only"
+        }) + "\n", encoding="utf-8")
+        self.assertEqual(import_jsonl(self.db, data), 1)
+        old_mode = stat.S_IMODE(self.db.stat().st_mode)
+        self.db.chmod(0o400)
+        self.addCleanup(lambda: self.db.chmod(old_mode) if self.db.exists() else None)
+        before = self.db.stat().st_mtime_ns
+        self.assertEqual(search(self.db, "handbook")[0]["title"], "Private Handbook")
+        self.assertEqual(self.db.stat().st_mtime_ns, before)
+        self.assertEqual(stat.S_IMODE(self.db.stat().st_mode), 0o400)
+
+    def test_approved_import_remains_a_write_mode_operation(self):
+        data = self.root / "write.jsonl"
+        data.write_text(json.dumps({
+            "title": "Curated Knowledge", "description": "Explicit authorized import",
+            "url": "https://example.org/curated"
+        }) + "\n", encoding="utf-8")
+        original = sqlite3.connect
+        with patch("goreecloud_search.store.sqlite3.connect", wraps=original) as opened:
+            self.assertEqual(import_jsonl(self.db, data), 1)
+        self.assertEqual(opened.call_args.args[0], self.db.as_uri() + "?mode=rw")
+        self.assertEqual(search(self.db, "curated")[0]["title"], "Curated Knowledge")
+
     def test_uri_special_filename_roundtrip_and_private_file(self):
         special = self.root / "curated #? % index.sqlite3"
         initialize(special)
