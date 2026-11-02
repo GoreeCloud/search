@@ -35,7 +35,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 140  # Prior 139 plus truncated but valid JSON body-framing regression.
+MIN_TESTS = 143  # 140 previous plus three provider integer configuration contracts.
 
 
 def main() -> int:
