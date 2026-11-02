@@ -88,6 +88,13 @@ class SearchHandler(BaseHTTPRequestHandler):
         if not self._trusted_host():
             self._reject(421, "Invalid request host")
             return
+        # GET handlers do not consume request bodies. Refuse any declared
+        # body/stream to avoid misparsing leftover bytes as a new HTTP request.
+        lengths = self.headers.get_all("Content-Length", [])
+        if (self.headers.get_all("Transfer-Encoding", [])
+                or len(lengths) > 1 or (lengths and lengths[0] != "0")):
+            self._reject(400, "GET request bodies unsupported")
+            return
         if self.path == "/api/providers":
             self._json(200, {
                 "available": self.server.provider_config.availability(),
