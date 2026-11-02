@@ -9,6 +9,7 @@ const themeButton = document.getElementById("theme");
 const sourceSelect = document.getElementById("source-select");
 const shareQuery = document.getElementById("share-query");
 const INITIAL_STATUS = "Enter a query to search your local collection.";
+let searchPending = false;
 
 async function checkCatalogReadiness() {
   try {
@@ -87,6 +88,9 @@ function renderResult(entry) {
 
 form.addEventListener("submit", async event => {
   event.preventDefault();
+  // The submit button alone cannot block Enter/programmatic resubmission.
+  // Never issue two concurrent requests for the same opted-in provider query.
+  if (searchPending) return;
   const query = queryInput.value.trim();
   if (!query) return;
   const chosen = sourceSelect.value;
@@ -96,6 +100,7 @@ form.addEventListener("submit", async event => {
     shareQuery.focus();
     return;
   }
+  searchPending = true;
   const request = {
     query,
     providers: external ? ["local", chosen] : ["local"],
@@ -133,6 +138,7 @@ form.addEventListener("submit", async event => {
   } catch (_err) {
     status.textContent = "Search is unavailable. Check the local service and source configuration.";
   } finally {
+    searchPending = false;
     resultList.setAttribute("aria-busy", "false");
     shareQuery.checked = false;
     sourceSelect.value = "local";
