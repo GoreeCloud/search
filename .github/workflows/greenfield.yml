@@ -23,6 +23,6 @@ jobs:
         run: python -c 'import sqlite3; db=sqlite3.connect(":memory:"); db.execute("CREATE VIRTUAL TABLE t USING fts5(content)")'
       - name: Compile and test new implementation without network dependencies
         run: |
-          python -m compileall -q goreecloud_search
+          python -m compileall -q goreecloud_search scripts tests
           python scripts/verify_greenfield.py
           node --check web/app.js
