@@ -28,7 +28,9 @@ A SQLite `BEGIN IMMEDIATE` transaction serializes requests from concurrent threa
 
 ## Test evidence and release criteria
 
-`tests/test_request_budget.py` covers request ceilings across reopen, concurrent threads and processes, UTC-day boundaries, private file permissions, rejected symlinks, corrupt ledger data, invalid caps, provider availability, pre-transport reservations and blocked transport after exhaustion. `scripts/verify_greenfield.py` requires this suite and the existing app suites with zero skips. The provider HTTP transport tests are mocked; **no live/billable request was executed**.
+`tests/test_request_budget.py` covers request ceilings across reopen, concurrent threads and processes, UTC-day boundaries, private file permissions, rejected symlinks, corrupt ledger data, invalid caps, provider availability, pre-transport reservations and blocked transport after exhaustion. `scripts/verify_greenfield.py` requires this suite and the existing app suites with zero skips. Provider response JSON parsing is also strict: replies containing duplicate field names at any object depth or nonstandard numeric constants (`NaN`, `Infinity`) fail closed as a generic provider failure without exposing response internals. Three additional transport-mock tests enforce the rule. This is distinct from validating provider authenticity, provider pricing or account-wide spending controls.
+
+The provider HTTP transport tests are mocked; **no live/billable request was executed**.
 
 **Do not enable paid egress** before the legitimate account owner approves keys, pricing, scope and daily usage; verifies the provider's real-time plan controls and account-level hard spending limits where supported; reviews privacy and logging disclosures; qualifies outbound transport privately; and decides how to monitor usage across devices. This local safeguard reduces a specific failure mode, but cannot replace those gates.
 
