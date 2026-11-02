@@ -21,7 +21,7 @@ The example is run from the trusted repository checkout on the same device. The 
 
 ## Transactional, bounded JSONL import
 
-The owner-supplied JSON Lines file is read from **one opened regular file** as a bounded (2,000,000-byte maximum) UTF-8 snapshot before parsing or index mutation. This prevents a changing file or nonregular input from bypassing a pre-open size check, blocks symlinked source files and FIFOs, and keeps decoding bounded without unbounded line iteration. Duplicate JSON keys (including inside nested objects), `NaN` and `Infinity` are rejected, as are malformed UTF-8 and any invalid document.
+The owner-supplied JSON Lines file is read from **one opened regular file** as a bounded (2,000,000-byte maximum) UTF-8 snapshot before parsing or index mutation. This prevents a changing file or nonregular input from bypassing a pre-open size check, blocks symlinked source files, symlinked intermediate source directories, lexical `..` traversal paths and FIFOs, and keeps decoding bounded without unbounded line iteration. Legitimate relative paths such as `examples/catalog.jsonl` remain supported. Duplicate JSON keys (including inside nested objects), `NaN` and `Infinity` are rejected, as are malformed UTF-8 and any invalid document.
 
 The imported document count must be between **1 and 1,000**. **Zero-byte and whitespace-only files fail closed**, preserving the previous catalog. Deliberately clearing a catalog is not an import operation; do not substitute an empty JSONL file for a destructive reset. All records must validate successfully before a single transactional replacement begins. The `import-jsonl` command does not read or send third-party network content.
 
