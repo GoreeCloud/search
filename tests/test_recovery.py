@@ -130,6 +130,17 @@ class CatalogRecoveryTests(unittest.TestCase):
             snapshot_catalog(alias / "private" / "catalog.sqlite3", output)
         self.assertFalse(output.exists())
 
+    def test_parent_traversal_components_fail_closed(self):
+        private = self.folder / "private-sandbox"
+        private.mkdir(mode=0o700)
+        disguised_source = private / ".." / self.index.name
+        disguised_destination = private / ".." / "traversed-copy.sqlite3"
+        with self.assertRaises(RecoveryError):
+            inspect_catalog(disguised_source)
+        with self.assertRaises(RecoveryError):
+            snapshot_catalog(self.index, disguised_destination)
+        self.assertFalse((self.folder / "traversed-copy.sqlite3").exists())
+
     def test_source_file_must_be_owner_private_and_not_symlink(self):
         public = self.folder / "public-index.sqlite3"
         public.write_bytes(self.index.read_bytes())
