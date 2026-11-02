@@ -19,7 +19,9 @@ class RecoveryError(ValueError):
 
 
 def _check_directory_ancestry(path: Path) -> None:
-    """Reject a symlink anywhere in a private catalog's directory path."""
+    """Refuse path traversal or symlinks in private catalog ancestry."""
+    if ".." in path.parts:
+        raise RecoveryError("Catalog path traversal is not permitted")
     for directory in path.parents:
         if directory.is_symlink():
             raise RecoveryError("Catalog directory ancestry must not use symlinks")
