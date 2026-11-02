@@ -143,9 +143,78 @@ def main() -> int:
                 assert data["busy"] == "false", data
                 assert data["count"] == "1 result", data
                 assert data["consent"] is False and data["source"] == "local", data
-                state["passed"] = True
+                self.eval_script("""
+                    (() => {
+                        const originalFetch = window.fetch;
+                        const tracker = {count: 0, body: null, resolve: null};
+                        window.__gcSingleFlightTest = tracker;
+                        window.fetch = (url, options) => {
+                            if (url !== '/api/search') return originalFetch(url, options);
+                            tracker.count += 1;
+                            tracker.body = JSON.parse(options.body);
+                            return new Promise(resolve => { tracker.resolve = resolve; });
+                        };
+                        const provider = document.getElementById('source-select');
+                        provider.querySelector('[value="brave"]').disabled = false;
+                        provider.value = 'brave';
+                        document.getElementById('share-query').checked = true;
+                        document.getElementById('query').value = 'synthetic duplicate query';
+                        const form = document.getElementById('search-form');
+                        form.requestSubmit();
+                        form.requestSubmit();
+                        const checks = {
+                            count: tracker.count,
+                            provider: tracker.body?.providers?.[1],
+                            consent: tracker.body?.share_query,
+                            pending: document.getElementById('result-list')
+                                .getAttribute('aria-busy') === 'true',
+                        };
+                        tracker.resolve({
+                            ok: true,
+                            json: async () => ({results: [], warnings: [], count: 0}),
+                        });
+                        return JSON.stringify(checks);
+                    })();
+                """, self.on_singleflight)
             except Exception as exc:
                 state["error"] = "Search results: " + str(exc)
+                state["complete"] = True
+                self.quit()
+
+        def on_singleflight(self, view, task, _data):
+            try:
+                observed = json.loads(view.evaluate_javascript_finish(task).to_string())
+                assert observed == {
+                    "count": 1, "provider": "brave", "consent": True, "pending": True
+                }, observed
+                GLib.timeout_add(200, self.inspect_resolved)
+            except Exception as exc:
+                state["error"] = "Single-flight submission: " + str(exc)
+                state["complete"] = True
+                self.quit()
+
+        def inspect_resolved(self):
+            self.eval_script("""
+                JSON.stringify({
+                    count: window.__gcSingleFlightTest.count,
+                    source: document.getElementById('source-select').value,
+                    consent: document.getElementById('share-query').checked,
+                    busy: document.getElementById('result-list').getAttribute('aria-busy'),
+                    submit: document.getElementById('submit').disabled,
+                })
+            """, self.on_resolved)
+            return GLib.SOURCE_REMOVE
+
+        def on_resolved(self, view, task, _data):
+            try:
+                result = json.loads(view.evaluate_javascript_finish(task).to_string())
+                assert result == {
+                    "count": 1, "source": "local", "consent": False,
+                    "busy": "false", "submit": False
+                }, result
+                state["passed"] = True
+            except Exception as exc:
+                state["error"] = "Single-flight completion: " + str(exc)
             finally:
                 state["complete"] = True
                 self.quit()
@@ -163,7 +232,7 @@ def main() -> int:
         worker.join(timeout=4)
         temp.cleanup()
     if state["passed"] and result == 0:
-        print("WEBKIT6 SMOKE PASS: controls, local privacy, mobile width, results, live status")
+        print("WEBKIT6 SMOKE PASS: local privacy, mobile layout, live status, single-flight external consent mock")
         return 0
     print("WEBKIT6 SMOKE FAIL:", state["error"] or f"app result {result}", file=sys.stderr)
     return 1
