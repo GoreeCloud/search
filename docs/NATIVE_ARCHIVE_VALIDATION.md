@@ -10,6 +10,7 @@ From a trusted checkout of the active greenfield source branch:
 
 ```bash
 python3 scripts/package_native.py --output /absolute/private/path/search-native-dev.tar.gz
+python3 scripts/package_native.py --verify /absolute/private/path/search-native-dev.tar.gz
 tar -tzf /absolute/private/path/search-native-dev.tar.gz
 sha256sum /absolute/private/path/search-native-dev.tar.gz
 ```
@@ -33,6 +34,14 @@ The GitHub CI no-skip suite includes six original packaging tests: deterministic
 An earlier authorized Linux development smoke built a seven-file archive. After the shared public-HTTPS link policy became a direct dependency of the native catalog, the archive manifest was updated to include `lib/goreecloud_search/links.py` (eight regular files in total). The packaged launcher acceptance test caught the missing dependency in GitHub Actions and subsequently passed after the manifest fix. A separate isolated GTK4/Xvfb smoke of the updated native application validated that a native window, search entry and private search result appeared, exiting 0. Nonfatal GPU and GTK focus warnings were observed and do not imply real desktop accessibility or visual acceptance.
 
 Verify the workflow for the latest PR head before citing a definitive test count.
+
+## Reproducible hash manifest and independent Linux verification (November 2)
+
+The source archive now contains `MANIFEST.sha256` with the SHA-256 of each of the other **eight** allowlisted source/launcher/template/license files. The `--verify` operation is read-only and does not extract files, start GTK, install software, or contact third parties. It refuses unexpected member names (including traversal paths), duplicate members, symlinks, incorrect file modes, unexpected ownership/timestamps and oversized members, and checks the recorded hashes against the included bytes.
+
+Four additional offline regression tests exercise the complete manifest, tampering, undeclared members and the command-line verifier. The mandatory test count is now at least 99. An independent authorized Linux laptop check at commit `14b1eb8` successfully built the archive, verified **eight files**, and produced the archive SHA-256 `51c623ceea89acc058028705e7d006c7961fb2acae562b44436c5d6591c45360` under an isolated temporary directory. This fingerprint refers only to that synthetic development archive, not a signed release or deployed package.
+
+**Security limit:** An attacker who can replace the archive can also replace its SHA-256 manifest. These checks detect accidental corruption or inconsistency; they **do not establish publisher identity, authenticity or release signing**. The first-party code and included source must still be reviewed, with a trusted verified release signature and policy before distribution.
 
 ## Still required before release
 
