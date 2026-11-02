@@ -37,8 +37,9 @@ def reserve_request(db_path: Path, daily_limit: int, *, now: datetime | None = N
     """
     if type(daily_limit) is not int or not 1 <= daily_limit <= 10_000:
         raise BudgetUnavailable("Invalid configured request cap")
-    if not isinstance(db_path, Path) or not db_path.is_absolute():
-        raise BudgetUnavailable("Budget state must use an absolute local path")
+    if (not isinstance(db_path, Path) or not db_path.is_absolute()
+            or ".." in db_path.parts):
+        raise BudgetUnavailable("Budget state must use an absolute non-traversing path")
     current = now or datetime.now(timezone.utc)
     if current.tzinfo is None:
         raise BudgetUnavailable("Budget clock must have a timezone")
