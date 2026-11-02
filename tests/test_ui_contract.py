@@ -74,7 +74,7 @@ class UIContractTests(unittest.TestCase):
 
     def test_single_flight_resets_on_errors_and_clears_consent(self):
         js = (ROOT / "web/app.js").read_text(encoding="utf-8")
-        self.assertIn("} finally {\\n    searchPending = false;", js)
+        self.assertIn("} finally {" + chr(10) + "    searchPending = false;", js)
         self.assertIn("shareQuery.checked = false;", js)
         self.assertIn('sourceSelect.value = "local";', js)
 
