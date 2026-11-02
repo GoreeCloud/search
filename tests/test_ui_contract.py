@@ -62,6 +62,22 @@ class UIContractTests(unittest.TestCase):
         self.assertIn("INITIAL_STATUS", js)
         self.assertNotIn('submit.disabled = true;\n  try {\n    const response = await fetch("/readyz"', js)
 
+    def test_consent_guard_blocks_overlapping_submits_before_network(self):
+        js = (ROOT / "web/app.js").read_text(encoding="utf-8")
+        self.assertIn("let searchPending = false;", js)
+        self.assertIn("if (searchPending) return;", js)
+        self.assertIn("searchPending = true;", js)
+        self.assertLess(js.index("if (searchPending) return;"),
+                        js.index("const query = queryInput.value.trim();"))
+        self.assertLess(js.index("searchPending = true;"),
+                        js.index('fetch("/api/search"'))
+
+    def test_single_flight_resets_on_errors_and_clears_consent(self):
+        js = (ROOT / "web/app.js").read_text(encoding="utf-8")
+        self.assertIn("} finally {\\n    searchPending = false;", js)
+        self.assertIn("shareQuery.checked = false;", js)
+        self.assertIn('sourceSelect.value = "local";', js)
+
     def test_ui_uses_semantic_design_tokens_and_no_remote_script(self):
         css = (ROOT / "web/styles.css").read_text(encoding="utf-8")
         html = (ROOT / "web/index.html").read_text(encoding="utf-8")
