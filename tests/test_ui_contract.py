@@ -91,6 +91,16 @@ class UIContractTests(unittest.TestCase):
         self.assertIn("shareQuery.checked = false;", js)
         self.assertIn('sourceSelect.value = "local";', js)
 
+    def test_enlarged_text_preserves_responsive_reflow_contract(self):
+        css = (ROOT / "web/styles.css").read_text(encoding="utf-8")
+        self.assertIn(".masthead { flex-wrap: wrap; }", css)
+        self.assertIn(".brand > span:last-child { min-width: 0; overflow-wrap: anywhere; }", css)
+        self.assertIn(".result-list { grid-template-columns: minmax(0, 1fr); }", css)
+        self.assertIn(".results-header { flex-wrap: wrap; gap: 12px; }", css)
+        self.assertIn(".intro, .results-header, .results-header > *, footer {", css)
+        self.assertIn("overflow-wrap: anywhere;", css)
+        self.assertNotIn("overflow-x: hidden", css)
+
     def test_ui_uses_semantic_design_tokens_and_no_remote_script(self):
         css = (ROOT / "web/styles.css").read_text(encoding="utf-8")
         html = (ROOT / "web/index.html").read_text(encoding="utf-8")
