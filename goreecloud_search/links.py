@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 
 SPECIAL_SUFFIXES = (
     ".localhost", ".local", ".lan", ".internal", ".test", ".invalid",
-    ".example", ".home.arpa",
+    ".example", ".home.arpa", ".onion", ".alt",
 )
 SPECIAL_HOSTS = {"localhost", "localhost.localdomain"}
 HOST_LABEL = re.compile(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\Z")
