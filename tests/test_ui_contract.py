@@ -41,6 +41,19 @@ class UIContractTests(unittest.TestCase):
         self.assertIn('results found.', js)
         self.assertNotIn('data.count ? ""', js)
 
+    def test_results_container_uses_its_named_parent_region(self):
+        html = (ROOT / "web/index.html").read_text(encoding="utf-8")
+        self.assertIn('id="results" aria-labelledby="results-heading"', html)
+        self.assertIn('<h2 id="results-heading">Results</h2>', html)
+        self.assertIn('id="result-list" class="result-list" aria-busy="false"', html)
+        # aria-label on an unroled div is prohibited in empty/error states.
+        # The parent Results section already provides the accessible name.
+        import re
+        tag = re.search(r'<div\\b[^>]*\\bid="result-list"[^>]*>', html)
+        self.assertIsNotNone(tag)
+        if not re.search(r'\\brole=', tag.group(0)):
+            self.assertNotIn('aria-label=', tag.group(0))
+
     def test_malformed_result_cannot_break_sibling_rendering(self):
         js = (ROOT / "web/app.js").read_text(encoding="utf-8")
         self.assertIn('try {\n    url = new URL(entry.url);', js)
