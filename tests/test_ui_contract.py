@@ -49,9 +49,9 @@ class UIContractTests(unittest.TestCase):
         # aria-label on an unroled div is prohibited in empty/error states.
         # The parent Results section already provides the accessible name.
         import re
-        tag = re.search(r'<div\\b[^>]*\\bid="result-list"[^>]*>', html)
+        tag = re.search(r'<div\b[^>]*\bid="result-list"[^>]*>', html)
         self.assertIsNotNone(tag)
-        if not re.search(r'\\brole=', tag.group(0)):
+        if not re.search(r'\brole=', tag.group(0)):
             self.assertNotIn('aria-label=', tag.group(0))
 
     def test_malformed_result_cannot_break_sibling_rendering(self):
