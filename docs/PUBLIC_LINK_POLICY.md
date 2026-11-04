@@ -6,7 +6,7 @@
 
 `goreecloud_search/links.py` contains `public_https_url`. The private catalog `safe_url` and optional Brave/SearXNG normalization both call this same function, rather than maintaining separate hostname rules.
 
-The function accepts a bounded (at most 2048-character), uncredentialed **HTTPS** navigation URL on the standard port 443, without network or DNS lookups. It returns the original URL unchanged when accepted. It rejects non-HTTPS schemes, embedded username/password, unsupported port numbers, bad authority encodings, local or special-use domains, single-label hostnames, malformed DNS names, non-global IP literals and ambiguous numeric-host forms that a browser could interpret as an IP address.
+The function accepts a bounded (at most 2048-character), uncredentialed **HTTPS** navigation URL on the standard port 443, without network or DNS lookups. It returns the original URL unchanged when accepted. It rejects non-HTTPS schemes, embedded username/password, unsupported port numbers, bad authority encodings, local or special-use domains (including alternate namespaces `.onion` and `.alt`), single-label hostnames, malformed DNS names, non-global IP literals and ambiguous numeric-host forms that a browser could interpret as an IP address.
 
 The policy is **not** proof that an apparently public DNS hostname cannot resolve to a private address later. DNS rebinding and downstream browser navigation/network policy remain outside this validator's guarantee. Neither the HTTP search backend nor these adapters fetches a result URL: the link is displayed for a user's explicit navigation.
 
