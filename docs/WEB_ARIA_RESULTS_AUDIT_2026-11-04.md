@@ -30,3 +30,13 @@ No changes were made to query handling, provider availability, external-consent 
 - Run the browser/contrast and keyboard matrix against the actual local `SearchServer`, including real WebKitGTK and native GTK4 as permitted by the authorized test environment.
 - Human AT/Orca announcement walkthroughs, zoom, contrast/incomplete adjudication, focus outlines, device rendering, and visual GC UI parity.
 - Qualified review and owner approval before merging greenfield PR #2 or publishing a build.
+
+## Additional enlarged-text reflow regression — November 4
+
+A second independent check of the same Search preview deliberately increased the **root HTML font size** to **200% and 400%** (CSS text scaling, **not genuine browser/page zoom**) after loading a synthetic one-result page. Chromium and Firefox each tested 320, 390 and 768 CSS-pixel widths in light and dark mode: **24 independent browser/viewport/theme/scale scenarios**.
+
+Before the CSS correction, **12/24 scenarios** scrolled horizontally: all four 320px × 200% and 320px × 400% cases, plus all four 390px × 400% cases. DOM investigation traced it to the non-wrapping mobile masthead, unbroken enlarged hero/intro strings, the minimum-content width of the result grid/card, and non-wrapping result-count/footer text; a small internal search-input scroll was also observed but did **not** require clipping or changing its native input behavior.
+
+The **CSS-only** correction wraps the narrow masthead, gives its brand a shrinkable text container, permits long-word wrapping where necessary, uses a zero-min-width result grid column/card, and allows result-counter, intro and footer text to wrap. It does **not** introduce `overflow-x:hidden` or discard information. Rerunning the identical 24 scenarios gave **24/24 with no document-level overflow**, no off-viewport essential block among the selected heading/input/submit/source/status/result/footer elements, and no browser JS errors. Representative top-of-viewport 320px screenshots at both text scales were inspected. Additional `tests/test_ui_contract.py` source-level guards protect the reflow decisions.
+
+The complete **64-state axe run was repeated after this CSS change**: still **zero confirmed violations**, with **96 accumulated inconclusive color-contrast observations** across overlapping scenarios, not independently adjudicated. This strengthens bounded browser reflow evidence; it **does not** claim user-controlled Chromium/Firefox zoom, OS text scaling, physical-device keyboard/AT/Orca equivalence, all-page visual acceptance, WCAG 1.4.10 certification or ready-to-ship status.
