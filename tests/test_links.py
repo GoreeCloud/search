@@ -32,6 +32,7 @@ class PublicLinkPolicyTests(unittest.TestCase):
             "https://workstation.lan/", "https://host.internal/",
             "https://host.test/", "https://host.invalid/",
             "https://host.example/", "https://router.home.arpa/",
+            "https://service.onion/", "https://network.alt/",
         )
         for url in candidates:
             with self.subTest(url=url):
@@ -49,6 +50,7 @@ class PublicLinkPolicyTests(unittest.TestCase):
             "https://ｌｏｃａｌｈｏｓｔ/",
             "https://host.ｅｘａｍｐｌｅ/",
             "https://router.ｈｏｍｅ.ａｒｐａ/",
+            "https://hidden.ｏｎｉｏｎ/", "https://service.ａｌｔ/",
             "https://name。local/",
         )
         for url in candidates:
