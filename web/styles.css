@@ -102,3 +102,20 @@ footer { text-align: center; font-size: .78rem; color: var(--gc-text-soft); bord
   gap: 10px; padding: 7px 0; cursor: pointer; }
 .provider-fields input[type=checkbox] { min-width: 20px; min-height: 20px;
   flex-shrink: 0; accent-color: var(--gc-brand); }
+
+/* GC UI experimental text-resize reflow: avoid min-content overflow. */
+h1, h1 span, .result-card h3 { overflow-wrap: anywhere; }
+.results-header { flex-wrap: wrap; gap: 12px; }
+.result-list { grid-template-columns: minmax(0, 1fr); }
+.result-card { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 540px) {
+  .masthead { flex-wrap: wrap; }
+  .brand { min-width: 0; max-width: 100%; }
+  .brand > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+}
+
+/* Preserve long-word legibility without expanding the page at large text sizes. */
+.intro, .results-header, .results-header > *, footer {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
