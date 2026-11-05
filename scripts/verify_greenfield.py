@@ -1,6 +1,7 @@
 """Fail-closed offline greenfield integration gate (no live providers)."""
 from __future__ import annotations
 
+import ast
 import sys
 import unittest
 from pathlib import Path
@@ -37,8 +38,62 @@ REQUIRED = (
 )
 MIN_TESTS = 150  # Enforce current integrated regression baseline including localdomain isolation.
 
+# The rejected Search recovery tree must not return as a second implementation.
+# Explicit source roots are guarded without banning documentation that discusses
+# the historical incident or the separately hosted SearXNG HTTP connector.
+RETIRED_ROOTS = frozenset({
+    "searx", "searxng", "searxng-docker", "searx-recovery",
+    "legacy-search", "recovered-search", "legacy_search",
+})
+RETIRED_IMPORTS = frozenset({"searx", "searxng"})
+
+
+def legacy_source_violations(root: Path) -> list[str]:
+    """Detect known forbidden source roots and direct retired package imports.
+
+    This is a narrow regression gate, not a proof of intellectual-property
+    provenance or a comprehensive software composition audit.
+    """
+    problems: list[str] = []
+    try:
+        for item in root.iterdir():
+            if item.name.casefold() in RETIRED_ROOTS:
+                problems.append("Retired Search source root detected: " + item.name)
+    except OSError:
+        return ["Cannot inspect Search source root"]
+
+    package = root / "goreecloud_search"
+    if package.is_symlink() or not package.is_dir():
+        return problems + ["Missing or symlinked first-party Search package"]
+    for source in sorted(package.rglob("*.py")):
+        label = source.relative_to(root).as_posix()
+        if source.is_symlink():
+            problems.append("Symlinked Search source: " + label)
+            continue
+        try:
+            syntax = ast.parse(source.read_text(encoding="utf-8"), filename=label)
+        except (OSError, UnicodeError, SyntaxError):
+            problems.append("Unreadable or invalid Search source: " + label)
+            continue
+        for node in ast.walk(syntax):
+            if isinstance(node, ast.Import):
+                imports = (item.name for item in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.level == 0:
+                imports = (node.module or "",)
+            else:
+                continue
+            if any(module.split(".", 1)[0] in RETIRED_IMPORTS for module in imports):
+                problems.append("Retired package import: " + label)
+                break
+    return problems
+
 
 def main() -> int:
+    violations = legacy_source_violations(ROOT)
+    if violations:
+        for issue in violations:
+            print(issue, file=sys.stderr)
+        return 2
     for name in REQUIRED:
         target = ROOT / name
         if not target.is_file() or target.is_symlink():
