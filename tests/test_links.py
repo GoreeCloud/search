@@ -41,6 +41,22 @@ class PublicLinkPolicyTests(unittest.TestCase):
                 with self.assertRaises(InvalidDocument):
                     safe_url(url)
 
+    def test_localdomain_namespace_is_not_a_public_navigation_target(self):
+        # Common local resolver domains must not become trusted public results.
+        candidates = (
+            "https://router.localdomain/admin",
+            "https://nested.router.localdomain/",
+            "https://localhost.localdomain/",
+            "https://router.ｌｏｃａｌｄｏｍａｉｎ/",
+            "https://nested.router.localdomain./",
+        )
+        for url in candidates:
+            with self.subTest(url=url):
+                self.assertIsNone(public_https_url(url))
+                self.assertIsNone(_public_https(url))
+                with self.assertRaises(InvalidDocument):
+                    safe_url(url)
+
     def test_unicode_idna_compatibility_cannot_bypass_local_domains(self):
         candidates = (
             "https://router.ｌｏｃａｌ/",

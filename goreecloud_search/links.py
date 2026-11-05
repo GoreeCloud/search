@@ -10,7 +10,7 @@ import re
 from urllib.parse import urlsplit
 
 SPECIAL_SUFFIXES = (
-    ".localhost", ".local", ".lan", ".internal", ".test", ".invalid",
+    ".localhost", ".localdomain", ".local", ".lan", ".internal", ".test", ".invalid",
     ".example", ".home.arpa", ".onion", ".alt",
 )
 SPECIAL_HOSTS = {"localhost", "localhost.localdomain"}

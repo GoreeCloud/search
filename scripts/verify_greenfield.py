@@ -35,7 +35,7 @@ REQUIRED = (
     "tests/test_readiness.py",
     "tests/test_links.py",
 )
-MIN_TESTS = 147  # 146 prior plus paid-request ledger traversal regression.
+MIN_TESTS = 150  # Enforce current integrated regression baseline including localdomain isolation.
 
 
 def main() -> int:
