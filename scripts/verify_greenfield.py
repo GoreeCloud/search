@@ -35,6 +35,7 @@ REQUIRED = (
     "tests/test_http_strict_json.py",
     "tests/test_readiness.py",
     "tests/test_links.py",
+    "tests/test_greenfield_provenance.py",
 )
 MIN_TESTS = 150  # Enforce current integrated regression baseline including localdomain isolation.
 
