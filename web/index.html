@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en" data-mode="light" data-accent="lagoon">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>GoreeCloud Search — local development</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#results">Skip to results</a>
+  <div class="shell">
+    <header class="masthead">
+      <a class="brand" href="/" aria-label="GoreeCloud Search home">
+        <span class="logo" aria-hidden="true">G</span><span>GoreeCloud <strong>Search</strong></span>
+      </a>
+      <button type="button" id="theme" class="theme-toggle" aria-label="Switch to dark theme">Dark mode</button>
+    </header>
+    <main>
+      <section class="hero" aria-labelledby="heading">
+        <p class="eyebrow">NEW • ORIGINAL • PRIVATE BY DEFAULT</p>
+        <h1 id="heading">Find what matters.<br><span>Keep your search yours.</span></h1>
+        <p class="intro">A new GoreeCloud Search foundation. Search your approved local collection without sending queries to third parties.</p>
+        <form id="search-form" role="search" class="search-form">
+          <label for="query">Search your private catalog</label>
+          <div class="search-field">
+            <input id="query" name="query" type="search" aria-controls="result-list" placeholder="Try a topic or document title" maxlength="160" autocomplete="off" spellcheck="false" required>
+            <button type="submit" id="submit">Search</button>
+          </div>
+          <fieldset class="provider-fields">
+            <legend>Search source</legend>
+            <label for="source-select">Include an external search provider</label>
+            <select id="source-select" aria-describedby="provider-notice">
+              <option value="local">Local collection only</option>
+              <option value="brave" disabled>Brave Search API — not configured</option>
+              <option value="searxng" disabled>Self-hosted SearXNG — not configured</option>
+            </select>
+            <p id="provider-notice">Local search stays private. Brave sends the query to Brave and may incur API charges. SearXNG sends it to your separately operated local instance, which may contact external search engines. No external connection is made unless you explicitly approve that query.</p>
+            <label class="consent" for="share-query"><input type="checkbox" id="share-query" aria-describedby="provider-notice"> I consent to sending this search query to the selected external provider.</label>
+          </fieldset>
+        </form>
+        <p class="privacy"><span aria-hidden="true">●</span> Local by default · No query history · External sources require opt-in</p>
+      </section>
+      <section class="results-section" id="results" aria-labelledby="results-heading" tabindex="-1">
+        <div class="results-header"><h2 id="results-heading">Results</h2><span id="counter" class="count">Local collection</span></div>
+        <p id="status" class="status" role="status" aria-live="polite" aria-atomic="true">Enter a query to search your local collection.</p>
+        <div id="result-list" class="result-list" aria-busy="false"></div>
+      </section>
+    </main>
+    <footer>GoreeCloud Search · Greenfield Development · Built on GoreeCloud UI foundations</footer>
+  </div>
+</body>
+</html>

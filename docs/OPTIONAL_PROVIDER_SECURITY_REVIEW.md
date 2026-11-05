@@ -1,0 +1,7 @@
+# Optional provider integration security review
+
+GoreeCloud Search remains a native, first-party greenfield implementation. Brave Search API and separately managed SearXNG are potential opt-in connectors; neither is a bundled search implementation. External egress must be disabled by default; allowlist exact destinations and request methods, keep credentials server-side, require explicit per-query consent, and return normalized, attributed results without leaking errors. No external provider is verified live. Historical recovery code remains excluded. Integration and release require no-skip CI, security review, real-browser acceptance, and approved staging.
+
+## Credential-safe configuration diagnostics
+
+The optional Brave API token is stored only in the server-side provider configuration and must never be serialized into client-visible payloads or logs. `ProviderConfig` excludes its `brave_key` from the automatically generated Python dataclass representation, so a routine `repr(config)` or `str(config)` does not display the credential. The key remains accessible to the deliberately opt-in authenticated provider transport, and the dedicated offline regression test uses a synthetic sentinel to verify redaction. This is diagnostic-output hardening, **not** key encryption, a network request, credential rotation, or evidence that the historical rejected Search credential alert was remediated.
