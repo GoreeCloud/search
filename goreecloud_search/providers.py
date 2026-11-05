@@ -13,7 +13,7 @@ from pathlib import Path
 import threading
 import time
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from urllib.parse import urlencode
 
@@ -50,7 +50,7 @@ def _bounded_config_integer(raw: str, label: str, ceiling: int) -> int:
 @dataclass(frozen=True)
 class ProviderConfig:
     global_enabled: bool = False
-    brave_key: str = ""
+    brave_key: str = field(default="", repr=False)
     searxng_port: int | None = None
     brave_daily_cap: int = 0
     brave_budget_db: Path | None = None
