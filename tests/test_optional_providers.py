@@ -52,6 +52,16 @@ class OptionalProviderTests(unittest.TestCase):
             "local": True, "brave": False, "searxng": False,
         })
 
+    def test_secret_omitted_from_provider_config_diagnostics(self):
+        key = "synthetic-brave-key-only-for-this-test-42"
+        with patch.dict(os.environ, {"GC_SEARCH_BRAVE_API_KEY": key}, clear=True):
+            config = providers.ProviderConfig.from_environment()
+        self.assertEqual(config.brave_key, key)
+        self.assertNotIn(key, repr(config))
+        self.assertNotIn("brave_key", repr(config))
+        self.assertIn("global_enabled=False", repr(config))
+        self.assertNotIn(key, str(config))
+
     def test_invalid_configuration_fails_closed(self):
         for value in ("0", "65536", "localhost:8888", "127.0.0.1:8888", "-1"):
             with self.subTest(port=value):
