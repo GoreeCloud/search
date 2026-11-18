@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "goreecloud-search"
+version = "0.1.0a0"
+description = "Independent, privacy-first public web search engine"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "GoreeCloud" }]
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.30,<1",
+  "opensearch-py>=2.8,<4",
+  "Scrapy==2.20.0",
+  "trafilatura==2.3.1",
+  "psycopg[binary]>=3.2,<4",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<10", "httpx>=0.27,<1", "ruff>=0.9,<1"]
+
+[project.scripts]
+goree-search = "goree_search.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["goree_search"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
