@@ -1,0 +1,30 @@
+# Disposable developer services ONLY. OpenSearch security is disabled;
+# both ports are loopback-bound and must never be Internet-exposed.
+services:
+  postgres:
+    image: postgres:18.7
+    environment:
+      POSTGRES_DB: goree_search
+      POSTGRES_USER: goree_search
+      POSTGRES_PASSWORD: local_dev_only_change_me
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - frontier_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U goree_search"]
+      interval: 10s
+      retries: 5
+  opensearch:
+    image: opensearchproject/opensearch:3.10.0
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "127.0.0.1:9200:9200"
+    volumes:
+      - index_data:/usr/share/opensearch/data
+volumes:
+  frontier_data:
+  index_data:
