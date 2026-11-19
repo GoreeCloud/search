@@ -8,9 +8,17 @@ def test_robots_exclusions():
 
 
 def test_extraction_returns_document():
-    html = "<html><title>Goree</title><body><article><p>" + (
-        "Public web search is useful when we control how content is indexed. " * 6
-    ) + "</p></article></body></html>"
+    paragraphs = [
+        "Public search engines collect links from eligible web pages and build a searchable index with useful titles and descriptions.",
+        "A careful crawler checks a site's robots policy before fetching and follows appropriate limits for traffic, file sizes and timeouts.",
+        "The indexing pipeline extracts readable article content and creates deterministic identifiers so repeated updates do not create duplicates.",
+        "People can search this independent collection without depending on another company to provide the underlying search results.",
+    ]
+    html = (
+        "<html><head><title>Goree</title></head><body><main><article>"
+        + "".join("<p>" + paragraph + "</p>" for paragraph in paragraphs)
+        + "</article></main></body></html>"
+    )
     item = extract_document(html, "https://example.org/a", "Goree", "")
     assert item is not None
     assert item["title"] == "Goree"
