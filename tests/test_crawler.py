@@ -12,7 +12,7 @@ def test_spider_indexes_document_and_discovery_with_frontier():
     spider = WebSpider(["https://example.org/seed"], frontier=frontier)
     html = (
         "<html><head><title>My page</title></head><body>"
-        "<article><p>" + "Search engine open web crawl. " * 25 + "</p></article>"
+        "<article><p>" + "Public web search is useful when we control how content is indexed. " * 6 + "</p></article>"
         '<a href="/next">Next</a></body></html>'
     )
     request = Request("https://example.org/seed", meta={"frontier_url": "https://example.org/seed"})
