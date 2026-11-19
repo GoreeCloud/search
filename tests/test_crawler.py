@@ -16,7 +16,7 @@ def test_spider_indexes_document_and_discovery_with_frontier():
         '<a href="/next">Next</a></body></html>'
     )
     request = Request("https://example.org/seed", meta={"frontier_url": "https://example.org/seed"})
-    response = HtmlResponse(url=request.url, body=html.encode(), encoding="utf-8", request=request)
+    response = HtmlResponse(url=request.url, body=html.encode(), encoding="utf-8", request=request, headers={b"Content-Type": b"text/html; charset=utf-8"})
     outputs = list(spider.parse(response))
     docs = [value for value in outputs if isinstance(value, dict)]
     next_requests = [value for value in outputs if isinstance(value, scrapy.Request)]
@@ -31,7 +31,7 @@ def test_nofollow_prevents_discovery():
     spider = WebSpider(["https://example.org/seed"], frontier=frontier)
     html = '<html><head><meta name="robots" content="nofollow"></head><body><a href="/next">Next</a></body></html>'
     request = Request("https://example.org/seed", meta={"frontier_url": "https://example.org/seed"})
-    response = HtmlResponse(url=request.url, body=html.encode(), encoding="utf-8", request=request)
+    response = HtmlResponse(url=request.url, body=html.encode(), encoding="utf-8", request=request, headers={b"Content-Type": b"text/html; charset=utf-8"})
     assert list(spider.parse(response)) == []
     frontier.enqueue.assert_not_called()
 
