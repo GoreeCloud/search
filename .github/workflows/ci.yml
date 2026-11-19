@@ -2,7 +2,7 @@ name: Search CI
 on:
   pull_request:
   push:
-    branches: [main, feat/independent-search-mvp]
+    branches: [main]
 permissions:
   contents: read
 jobs:
@@ -10,6 +10,20 @@ jobs:
     name: python-tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18.7
+        env:
+          POSTGRES_DB: goree_search
+          POSTGRES_USER: goree_search
+          POSTGRES_PASSWORD: ci_test_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U goree_search"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      TEST_DATABASE_URL: postgresql://goree_search:ci_test_only@localhost:5432/goree_search
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -31,6 +45,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run build

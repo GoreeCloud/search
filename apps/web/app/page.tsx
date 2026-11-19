@@ -49,7 +49,7 @@ export default async function Home({ searchParams }: PageProps) {
     <div className="shell">
       <header className="topbar">
         <a href="/" className="brand" aria-label="GoreeCloud Search home">
-          <span className="brandmark" aria-hidden="true">✦</span>
+          <span className="brandmark" aria-hidden="true">⌕</span>
           <span>GoreeCloud <b>Search</b></span>
         </a>
         <div className="headerlinks">

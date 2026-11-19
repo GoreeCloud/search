@@ -79,9 +79,8 @@ Do not copy into VPS, reverse proxy, or public deployment configurations.
     python -m compileall -q goree_search
     cd apps/web && npm install && npm run typecheck && npm run build
 
-GitHub Actions runs both groups automatically on reviewable PRs. The initial
-web dependency tree has no committed npm lockfile yet and must receive one
-before any reproducible production build. Runtime, DNS/egress, crawl
+GitHub Actions runs both groups automatically on reviewable PRs. The web dependency tree is locked with package-lock.json; transitive security
+and reproducibility reviews remain production acceptance gates. Runtime, DNS/egress, crawl
 integration and restoration checks remain release blockers.
 
 ## Governance and platform integration

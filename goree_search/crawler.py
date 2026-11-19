@@ -44,10 +44,10 @@ class IndexPipeline:
             index_document(self.client, item)
         except Exception:
             if spider.frontier:
-                spider.frontier.fail(item["url"], "index write failed")
+                spider.frontier.fail(item.get("_frontier_url", item["url"]), "index write failed")
             raise
         if spider.frontier:
-            spider.frontier.finish(item["url"])
+            spider.frontier.finish(item.get("_frontier_url", item["url"]))
         return item
 
 
@@ -62,26 +62,27 @@ class WebSpider(scrapy.Spider):
 
     async def start(self):
         for url in self.urls:
-            yield scrapy.Request(url, callback=self.parse, errback=self.on_error)
+            yield scrapy.Request(url, callback=self.parse, errback=self.on_error, meta={"frontier_url": url})
 
     def on_error(self, failure):
         request = failure.request
         if self.frontier:
-            self.frontier.fail(request.url)
+            self.frontier.fail(request.meta.get("frontier_url", request.url))
         logger.warning("Fetch failed for host %s", hostname(request.url))
 
     def parse(self, response):
         url = normalize_url(response.url)
+        source_url = response.meta.get("frontier_url", url)
         if response.status != 200 or "text/html" not in response.headers.get(
             "Content-Type", b"").decode("latin-1").lower():
             if self.frontier:
-                self.frontier.finish(url, excluded=True)
+                self.frontier.finish(source_url, excluded=True)
             return
         meta = response.css("meta[name='robots']::attr(content)").getall()
         x_robots = response.headers.get("X-Robots-Tag", b"").decode("latin-1")
         if excludes_index(meta, x_robots):
             if self.frontier:
-                self.frontier.finish(url, excluded=True)
+                self.frontier.finish(source_url, excluded=True)
         else:
             title = response.css("title::text").get() or ""
             description = response.css(
@@ -89,9 +90,13 @@ class WebSpider(scrapy.Spider):
             ).get() or ""
             item = extract_document(response.text, url, title, description)
             if item:
+                item["_frontier_url"] = source_url
                 yield item
             elif self.frontier:
-                self.frontier.finish(url, excluded=True)
+                self.frontier.finish(source_url, excluded=True)
+        directives = ",".join(meta + [x_robots]).lower()
+        if "nofollow" in directives or "none" in directives:
+            return
         for href in response.css("a[href]::attr(href)").getall():
             try:
                 target = normalize_url(response.urljoin(href))
@@ -101,7 +106,7 @@ class WebSpider(scrapy.Spider):
                 continue
             if self.frontier:
                 self.frontier.enqueue([target])
-            yield response.follow(target, callback=self.parse, errback=self.on_error)
+            yield response.follow(target, callback=self.parse, errback=self.on_error, meta={"frontier_url": target})
 
 
 def crawl(urls: list[str], frontier: Frontier | None = None, max_pages: int = 200) -> None:

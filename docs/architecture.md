@@ -35,7 +35,7 @@ Components currently in repository:
 - Do not conflate search snippets with an auditable content archive. WARC,
   sitemap ingestion, PDF/Tika, language-specific analyzers and authority reranking
   are planned, not built.
-- Next.js dependency lockfile and production CSP / reverse proxy rules need acceptance.
+- Next.js has a committed dependency lockfile, but production CSP and proxy rules need acceptance.
 - OpenSearch alpha mapping uses one shard and no replicas for local development.
   Scaling and snapshots require workload-specific design.
 - GoreeShield privacy, Wardveil security, GoreeCloud Mesh integration and
