@@ -11,6 +11,7 @@ from .egress_proxy import local_https_proxy
 from .extraction import excludes_index, extract_document
 from .frontier import Frontier, _https_url
 from .indexing import delete_document, ensure_index, index_document, make_client
+from .robots_policy import USER_AGENT, robots_decision
 from .security import hostname, public_host
 
 logger = logging.getLogger(__name__)
@@ -142,9 +143,24 @@ def crawl(urls: list[str], frontier: Frontier | None = None, max_pages: int = 20
     # Fail closed against DNS rebinding: HTTPS CONNECT resolves once, checks
     # globally routable IPs and opens TCP to the validated IP, not the hostname.
     with local_https_proxy({hostname(url) for url in urls}) as proxy:
+        approved = []
+        for url in urls:
+            decision = robots_decision(url, proxy)
+            if decision is True:
+                approved.append(url)
+            elif frontier is not None:
+                if decision is False:
+                    # Explicit disallow: exclude scheduled URL and purge old hits.
+                    frontier.finish(url, excluded=True)
+                    delete_document(make_client(), url)
+                else:
+                    # Network/policy uncertainty: postpone; never fetch the page.
+                    frontier.fail(url, "robots policy unavailable")
+        if not approved:
+            raise ValueError("No URLs passed fail-closed robots preflight")
         process = CrawlerProcess({
             "BOT_NAME": "GoreeCloudSearch",
-            "USER_AGENT": "GoreeCloudSearchBot/0.1 (+https://github.com/GoreeCloud/search)",
+            "USER_AGENT": USER_AGENT,
             "ROBOTSTXT_OBEY": True,
             "CONCURRENT_REQUESTS": 4,
             "CONCURRENT_REQUESTS_PER_DOMAIN": 1,
@@ -168,5 +184,5 @@ def crawl(urls: list[str], frontier: Frontier | None = None, max_pages: int = 20
             "ITEM_PIPELINES": {"goree_search.crawler.IndexPipeline": 300},
             "LOG_LEVEL": "INFO",
         })
-        process.crawl(WebSpider, urls=urls, frontier=frontier)
+        process.crawl(WebSpider, urls=approved, frontier=frontier)
         process.start()
