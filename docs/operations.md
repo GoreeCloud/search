@@ -8,6 +8,9 @@ The following are developer procedures; no production deployment is verified.
    never expose it on the public interface.
 2. Configure DATABASE_URL and OPENSEARCH_URL explicitly in your shell.
 3. Run goree-search init once to create/update frontier tables.
+   An optional reviewed local XML or XML.GZ URLSET may be imported with
+   goree-search import-sitemap ./approved-sitemap.xml --host www.python.org.
+   This imports URLs only; it never downloads nested sitemap references.
 4. Seed approved HTTPS URLs only. Do not crawl private/intranet sites.
 5. Run goree-search crawl --claim 5 --host-delay 5 --max-pages 20.
    A robots preflight runs first, and unknown robot policy results postpone the

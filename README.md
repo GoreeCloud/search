@@ -9,7 +9,8 @@ GoreeCloud Index is a separate local desktop search product.
 
 ## Implemented
 
-- HTTPS-only operator-reviewed seeds and durable PostgreSQL URL scheduling.
+- HTTPS-only operator-reviewed seeds, bounded offline XML/XML.GZ URLSET
+  sitemap import and durable PostgreSQL URL scheduling.
 - One leased URL per host and shared host cooldown across workers, with
   exponential failure backoff and timed recrawl eligibility.
 - Fail-closed HTTPS robots.txt preflight (network errors and oversized files
@@ -48,6 +49,8 @@ services publicly or deploy this example on an unrestricted trusted network.
 Review the site's robots policy and your authorization before seeding. Example:
 
     goree-search seed https://www.python.org/
+    # Optional: first review and download a trusted same-host sitemap locally
+    goree-search import-sitemap ./approved-sitemap.xml --host www.python.org
     goree-search crawl --claim 1 --host-delay 5 --max-pages 20
 
 Discovered links are queued and require a later invocation. The program does
@@ -101,7 +104,7 @@ Production gates: host/network egress firewall, live-site robots policy checks,
 verified owner removal workflows, index consistency under concurrent deletion,
 production TLS and admin authentication, backups/restores, crawled-site test
 fixtures, relevance benchmarks, workload testing, and privacy at all proxy
-layers. Full-web indexing, Tika/PDF, WARC, embeddings, PageRank, sitemap import,
+layers. Full-web indexing, Tika/PDF, WARC, embeddings, PageRank, network sitemap crawling,
 distributed operations and native clients remain planned, not implemented.
 
 The mandatory GoreeCloud systems have distinct responsibilities: GoreeShield

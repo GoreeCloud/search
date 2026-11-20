@@ -18,6 +18,9 @@
   connections are bounded by idle time, concurrency and tunnel byte budget.
 - The SQL frontier serializes URL claims by host and applies cooldowns shared
   by concurrent worker instances.
+- Offline sitemap importer refuses nested sitemap indexes, DTDs/entities,
+  symlinks, oversized source/inflated XML, non-HTTPS URLs, and host escapes;
+  it performs no network requests. Reviewed URLs still require robots checks.
 
 **Important:** This reduces the precheck DNS-rebinding problem but does not
 replace an operating-system sandbox. Run in a non-root account/container with
