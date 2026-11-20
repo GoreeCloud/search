@@ -1,4 +1,4 @@
-"""Search index mapping, deterministic ingestion and safe candidate retrieval."""
+"""OpenSearch mappings, idempotent ingestion, document deletion and retrieval."""
 from __future__ import annotations
 
 import hashlib
@@ -6,6 +6,7 @@ import os
 from typing import Any
 
 from opensearchpy import OpenSearch
+from opensearchpy.exceptions import NotFoundError
 
 from .security import normalize_url
 
@@ -37,7 +38,8 @@ def make_client() -> OpenSearch:
 
 def ensure_index(client: OpenSearch) -> None:
     if not client.indices.exists(index=INDEX_NAME):
-        client.indices.create(index=INDEX_NAME, body=INDEX_MAPPING, ignore=400)
+        # Never silently ignore mapping errors during initialization.
+        client.indices.create(index=INDEX_NAME, body=INDEX_MAPPING)
 
 
 def document_id(url: str) -> str:
@@ -47,6 +49,15 @@ def document_id(url: str) -> str:
 def index_document(client: OpenSearch, document: dict[str, Any]) -> None:
     doc = {name: document[name] for name in INDEX_MAPPING["mappings"]["properties"]}
     client.index(index=INDEX_NAME, id=document_id(document["url"]), body=doc, refresh=False)
+
+
+def delete_document(client: OpenSearch, url: str) -> bool:
+    """Remove indexed URL and wait for a search-visible refresh. Safe to repeat."""
+    try:
+        result = client.delete(index=INDEX_NAME, id=document_id(url), refresh="wait_for")
+    except NotFoundError:
+        return False
+    return result.get("result") != "not_found"
 
 
 def search_documents(client: OpenSearch, query: str, limit: int, offset: int) -> dict[str, Any]:
