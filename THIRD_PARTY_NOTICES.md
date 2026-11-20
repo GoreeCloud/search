@@ -8,6 +8,7 @@ copyright holders, and are installed separately.
 | --- | --- | --- |
 | Scrapy | https://github.com/scrapy/scrapy | BSD-3-Clause |
 | Trafilatura | https://github.com/adbar/trafilatura | Apache-2.0 |
+| defusedxml | https://github.com/tiran/defusedxml | Python Software Foundation License |
 | OpenSearch | https://github.com/opensearch-project/OpenSearch | Apache-2.0 |
 | opensearch-py | https://github.com/opensearch-project/opensearch-py | Apache-2.0 |
 | FastAPI | https://github.com/fastapi/fastapi | MIT |

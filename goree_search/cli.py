@@ -6,6 +6,7 @@ import argparse
 from .crawler import crawl
 from .frontier import Frontier, _https_url
 from .indexing import delete_document, make_client
+from .sitemaps import read_sitemap_file
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -15,6 +16,9 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("init", help="Initialize/additively migrate PostgreSQL frontier tables")
     seed = sub.add_parser("seed", help="Enqueue curated HTTPS URLs")
     seed.add_argument("urls", nargs="+")
+    sitemap = sub.add_parser("import-sitemap", help="Import a bounded local HTTPS URLSET XML file")
+    sitemap.add_argument("file_path")
+    sitemap.add_argument("--host", required=True, help="Exact approved public hostname")
     run = sub.add_parser("crawl", help="Fetch claimed URLs via localhost pinned-IP HTTPS proxy")
     run.add_argument("--url", action="append", default=[], help="One curated HTTPS seed URL")
     run.add_argument("--claim", type=int, default=20)
@@ -30,6 +34,10 @@ def main(argv: list[str] | None = None) -> None:
     elif args.command == "seed":
         count = Frontier().enqueue(args.urls)
         print(f"New URLs queued: {count}")
+    elif args.command == "import-sitemap":
+        urls = read_sitemap_file(args.file_path, host=args.host)
+        count = Frontier().enqueue(urls)
+        print(f"Sitemap URLs queued: {count}")
     elif args.command == "crawl":
         if args.url:
             urls = [_https_url(url) for url in args.url]

@@ -21,6 +21,9 @@ metasearch API is in its critical request path.
 - Parsing: Trafilatura extracts HTML, yielding URL, title, body and hash.
 - Discovery: links on allowed HTTPS hosts enqueue into the SQL frontier; they
   are not immediately downloaded, ensuring every crawl goes through claims.
+- Offline sitemap intake: a bounded defusedxml parser accepts only operator
+  supplied URLSET XML/XML.GZ, rejects external entities and non-HTTPS or
+  off-host URLs, and queues each unique URL through the same frontier.
 - Index: OpenSearch lexical fields, deterministic URL hash IDs. A noindex or
   non-HTML/non-200 response generates a deletion item.
 - Serving: FastAPI GET /v1/search, GET /v1/health; Next.js web search form
@@ -44,5 +47,6 @@ A crawler-specific proxy is not a process/host firewall. Production hosts must
 independently deny internal and metadata network destinations. Robots-fetch
 failure behavior and large-site policy acceptance require additional tests.
 
-Not implemented: sitemap import, PDF parsing, WARC archival, distributed link
+Not implemented: remote sitemap crawling or sitemap-index recursion, PDF parsing,
+WARC archival, distributed link
 ranking, semantic retrieval, full-web crawl, or an installed daemon.
