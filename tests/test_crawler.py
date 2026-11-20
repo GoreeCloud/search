@@ -99,3 +99,52 @@ def test_middleware_fails_closed_without_proxy():
         SafeNetworkMiddleware("").process_request(
             Request("https://example.org/robots.txt"), spider
         )
+
+
+from contextlib import nullcontext
+from goree_search.crawler import crawl
+
+
+def test_robots_unknown_prevents_any_page_fetch(monkeypatch):
+    frontier = MagicMock()
+    monkeypatch.setattr(
+        "goree_search.crawler.local_https_proxy",
+        lambda hosts: nullcontext("http://127.0.0.1:12345"),
+    )
+    monkeypatch.setattr("goree_search.crawler.robots_decision", lambda url, proxy: None)
+    with pytest.raises(ValueError, match="robots preflight"):
+        crawl(["https://example.org/seed"], frontier=frontier)
+    frontier.fail.assert_called_once_with(
+        "https://example.org/seed", "robots policy unavailable"
+    )
+
+
+def test_robots_forbidden_excludes_and_purges_old_index(monkeypatch):
+    frontier = MagicMock()
+    delete = MagicMock()
+    monkeypatch.setattr(
+        "goree_search.crawler.local_https_proxy",
+        lambda hosts: nullcontext("http://127.0.0.1:12345"),
+    )
+    monkeypatch.setattr("goree_search.crawler.robots_decision", lambda url, proxy: False)
+    monkeypatch.setattr("goree_search.crawler.make_client", MagicMock())
+    monkeypatch.setattr("goree_search.crawler.delete_document", delete)
+    with pytest.raises(ValueError, match="robots preflight"):
+        crawl(["https://example.org/seed"], frontier=frontier)
+    frontier.finish.assert_called_once_with("https://example.org/seed", excluded=True)
+    delete.assert_called_once()
+
+
+def test_robots_allowed_then_crawler_starts(monkeypatch):
+    instance = MagicMock()
+    factory = MagicMock(return_value=instance)
+    monkeypatch.setattr(
+        "goree_search.crawler.local_https_proxy",
+        lambda hosts: nullcontext("http://127.0.0.1:12345"),
+    )
+    monkeypatch.setattr("goree_search.crawler.robots_decision", lambda url, proxy: True)
+    monkeypatch.setattr("goree_search.crawler.CrawlerProcess", factory)
+    crawl(["https://example.org/seed"], max_pages=2)
+    instance.crawl.assert_called_once()
+    assert instance.crawl.call_args.kwargs["urls"] == ["https://example.org/seed"]
+    instance.start.assert_called_once()

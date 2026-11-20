@@ -10,6 +10,10 @@
   re-resolved hostname; the client verifies HTTPS certificates end-to-end.
 - Cross-host HTTP redirects and client-side meta-refresh are disabled.
   Local files, data URIs and FTP download handlers are disabled explicitly.
+- A separate robots.txt preflight runs over the scoped proxy before each
+  page fetch. It fails closed on network, redirect, oversized and server
+  failures; 404/410 means robots absent, and explicit disallow prevents
+  fetching. Scrapy also independently enforces robots during the crawl.
 - Requests are bounded by time, page size, concurrency, depth and retry count;
   connections are bounded by idle time, concurrency and tunnel byte budget.
 - The SQL frontier serializes URL claims by host and applies cooldowns shared

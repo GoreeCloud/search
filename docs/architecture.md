@@ -12,8 +12,12 @@ metasearch API is in its critical request path.
 - Network layer: HTTPS CONNECT proxy listens only on loopback, resolves all
   DNS addresses, refuses any non-global address and connects to the selected
   validated IP. Scrapy performs hostname-based end-to-end TLS.
-- Crawling: Scrapy robots-aware workers, fixed size and time limits, no
-  automatic redirects, per-domain delay, optional single-seed mode.
+- Robots preflight: fetch robots.txt through the same restricted HTTPS proxy.
+  Unknown/oversized/5xx/redirect responses prevent page fetch; explicit
+  disallow stops crawling and purges old indexed results. Scrapy independently
+  checks robots rules during actual requests.
+- Crawling: Scrapy workers, fixed size and time limits, no automatic
+  redirects, per-domain delay, optional single-seed mode.
 - Parsing: Trafilatura extracts HTML, yielding URL, title, body and hash.
 - Discovery: links on allowed HTTPS hosts enqueue into the SQL frontier; they
   are not immediately downloaded, ensuring every crawl goes through claims.

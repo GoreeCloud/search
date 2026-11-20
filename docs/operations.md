@@ -10,6 +10,9 @@ The following are developer procedures; no production deployment is verified.
 3. Run goree-search init once to create/update frontier tables.
 4. Seed approved HTTPS URLs only. Do not crawl private/intranet sites.
 5. Run goree-search crawl --claim 5 --host-delay 5 --max-pages 20.
+   A robots preflight runs first, and unknown robot policy results postpone the
+   crawl instead of allowing the request. An explicit robots disallow can
+   mark the URL excluded and remove older indexed results.
 6. Every run leases one due URL per host; discovered links are queued for
    later runs. Seven-day recrawl is due-based, not a scheduled service.
 7. Use Uvicorn with --no-access-log and Next.js for the local search UI.

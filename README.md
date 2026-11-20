@@ -12,8 +12,9 @@ GoreeCloud Index is a separate local desktop search product.
 - HTTPS-only operator-reviewed seeds and durable PostgreSQL URL scheduling.
 - One leased URL per host and shared host cooldown across workers, with
   exponential failure backoff and timed recrawl eligibility.
-- Scrapy robots-aware HTTPS crawling, conservative fetch limits and
-  same-host link discovery **queued for future runs**, not fetched directly.
+- Fail-closed HTTPS robots.txt preflight (network errors and oversized files
+  prevent content fetch), plus Scrapy robots-aware crawling and conservative
+  fetch limits. Same-host links are queued for later scheduled runs.
 - Internal loopback HTTPS CONNECT proxy with DNS answer validation and
   IP-pinned TCP connections to reduce DNS-rebinding exposure. Redirect,
   file/data/FTP and meta-refresh fetching are disabled.
@@ -96,7 +97,7 @@ is proof of safe unrestricted crawling, production recovery or performance.
 - [Operator procedures](docs/operations.md)
 - [Public API](docs/api.md)
 
-Production gates: host/network egress firewall, robots failure-policy checks,
+Production gates: host/network egress firewall, live-site robots policy checks,
 verified owner removal workflows, index consistency under concurrent deletion,
 production TLS and admin authentication, backups/restores, crawled-site test
 fixtures, relevance benchmarks, workload testing, and privacy at all proxy
