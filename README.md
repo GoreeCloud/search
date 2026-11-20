@@ -1,103 +1,117 @@
 # GoreeCloud Search
 
-A **development-stage, independent public-web search engine**: first-party
-crawl scheduling, retrieval API and web UX, using separately licensed
-Scrapy, Trafilatura, PostgreSQL, OpenSearch, FastAPI and Next.js.
+Independent, privacy-first **public-web search engine alpha**. First-party
+scheduling, crawling security, search API and web interface combine with
+open-source Scrapy, Trafilatura, PostgreSQL, OpenSearch, FastAPI and Next.js.
 
-**Status:** 0.1.0-alpha source preview. Not Stable, not production deployed,
-not a full-web-scale index. Source is not a SearXNG fork or metasearch proxy.
-The historical GitHub secret scanning alert requires separate verification
-before restoring old source.
+**Status:** development-source alpha; not Stable, deployed, or web-scale.
+GoreeCloud Index is a separate local desktop search product.
 
-## What currently works in source
+## Implemented
 
-- Public-web HTTP(S) URL normalization and allowlist checks.
-- PostgreSQL lease-based crawl frontier and idempotent seed registration.
-- Scrapy crawler with robots.txt obedience, conservative politeness,
-  bounded depth/page counts and same-host hyperlink discovery.
-- Trafilatura HTML text extraction, X-Robots-Tag/meta robots noindex exclusion.
-- OpenSearch document ingestion and independent BM25-style lexical search.
-- FastAPI GET /v1/search and /v1/health, plus responsive Next.js search UI.
-- Python API/security/extraction/indexing tests and GitHub CI source workflows.
+- HTTPS-only operator-reviewed seeds and durable PostgreSQL URL scheduling.
+- One leased URL per host and shared host cooldown across workers, with
+  exponential failure backoff and timed recrawl eligibility.
+- Scrapy robots-aware HTTPS crawling, conservative fetch limits and
+  same-host link discovery **queued for future runs**, not fetched directly.
+- Internal loopback HTTPS CONNECT proxy with DNS answer validation and
+  IP-pinned TCP connections to reduce DNS-rebinding exposure. Redirect,
+  file/data/FTP and meta-refresh fetching are disabled.
+- Trafilatura extraction, duplicate URL IDs and OpenSearch lexical results.
+- Deletion from the existing index when an indexed URL becomes noindex or
+  receives a non-200 or non-HTML response.
+- Operator exclusion tombstone and idempotent indexed-document purge command.
+- Public read-only FastAPI and a responsive Next.js search UI using
+  GoreeCloud UI alpha semantic colors.
+- GitHub CI with PostgreSQL lease tests, disposable OpenSearch lifecycle
+  smoke tests, Python tests and Next.js build.
 
-No external commercial search API is used to return results. Current source
-does **not** implement: Google-like comprehensive web coverage, WARC archives,
-PDF extraction, semantic reranking, PageRank, suggestion API, owner removals,
-multi-host distribution, production secure administration or deployment.
+No commercial search provider supplies the results. The corpus is only the
+set of pages that the operator has legitimately indexed.
 
-## Local developer setup (not a production deployment)
+## Local development
 
-Requires Python 3.11+, Node 22+, Docker Compose (development compatibility
-only) and a disposable machine with at least several GiB of free RAM. Review
-[security restrictions](docs/security.md) before enabling any external network
-crawler requests. Do **not** run the crawler on an unrestricted trusted network.
+Prerequisites: Python 3.11+, Node 22+, npm and Docker Compose.
+The following demo credentials and disabled OpenSearch security plugin are
+**local development ONLY**. Bindings are loopback only; never expose these
+services publicly or deploy this example on an unrestricted trusted network.
 
-1. From the repository root, start isolated **development-only** backing services:
+    docker compose -f compose.dev.yaml up -d
+    python3 -m venv .venv
+    . .venv/bin/activate
+    python -m pip install -e ".[test]"
+    export DATABASE_URL=postgresql://goree_search:local_dev_only_change_me@127.0.0.1:5432/goree_search
+    export OPENSEARCH_URL=http://127.0.0.1:9200
+    goree-search init
 
-       docker compose -f compose.dev.yaml up -d
+Review the site's robots policy and your authorization before seeding. Example:
 
-2. Install the Python package into a virtual environment:
+    goree-search seed https://www.python.org/
+    goree-search crawl --claim 1 --host-delay 5 --max-pages 20
 
-       python3 -m venv .venv
-       . .venv/bin/activate
-       python -m pip install -e ".[test]"
+Discovered links are queued and require a later invocation. The program does
+not create an always-on scheduler, daemon or recurring crawl. A single
+operator-selected HTTPS page can be fetched independently with:
 
-3. Set the values in .env.example in your development shell (the app does not
-   automatically load .env files). Then initialize and seed selected PUBLIC
-   sites; always review robots policies and obtain appropriate permission:
+    goree-search crawl --url https://www.python.org/ --max-pages 1
 
-       export DATABASE_URL=postgresql://goree_search:local_dev_only_change_me@127.0.0.1:5432/goree_search
-       export OPENSEARCH_URL=http://127.0.0.1:9200
-       goree-search init
-       goree-search seed https://www.python.org/
-       goree-search crawl --claim 10 --max-pages 50
+Start the read-only API:
 
-4. Start the private-loopback API, deliberately without access logs:
+    uvicorn goree_search.api:app --host 127.0.0.1 --port 8000 --no-access-log
 
-       uvicorn goree_search.api:app --host 127.0.0.1 --port 8000 --no-access-log
+Start the web interface separately:
 
-5. Separately start the web frontend:
+    cd apps/web
+    npm ci
+    npm run dev
 
-       cd apps/web
-       npm install
-       npm run dev
+Open http://localhost:3000. It searches only already indexed content.
 
-6. Visit http://localhost:3000 to search **only** pages indexed by this crawl.
+### Operator exclusion / removal
 
-To run a one-off crawl without PostgreSQL frontier, use:
+Stop all crawler workers first. Verify the exact destination and authority.
 
-    goree-search crawl --url https://www.python.org/ --max-pages 30
+    goree-search remove https://example.org/old --reason "Verified operator request"
 
-The OpenSearch and PostgreSQL credentials in compose.dev.yaml are **intentionally
-insecure local development examples**. All exposed ports bind to 127.0.0.1.
-Do not copy into VPS, reverse proxy, or public deployment configurations.
+The command first stores a permanent PostgreSQL exclusion and then removes
+the indexed document with a search-visible refresh. If the index is offline,
+retry the same command. Verify the URL is absent before restarting workers.
+No public site-owner verification or automatic appeals are implemented.
 
-## Tests
+## Validation
 
     python -m pip install -e ".[test]"
+    python -m compileall -q goree_search tests
     python -m pytest -q
-    python -m compileall -q goree_search
-    cd apps/web && npm install && npm run typecheck && npm run build
+    cd apps/web && npm ci && npm run typecheck && npm run build
 
-GitHub Actions runs both groups automatically on reviewable PRs. The web dependency tree is locked with package-lock.json; transitive security
-and reproducibility reviews remain production acceptance gates. Runtime, DNS/egress, crawl
-integration and restoration checks remain release blockers.
+PostgreSQL test coverage requires TEST_DATABASE_URL and OpenSearch lifecycle
+tests require TEST_OPENSEARCH_URL; CI provisions disposable services. Neither
+is proof of safe unrestricted crawling, production recovery or performance.
 
-## Governance and platform integration
+## Documentation and release boundaries
 
-- GoreeShield: minimizes query collection and defines privacy retention.
-- Wardveil: crawler threat model, security controls and response.
-- GoreeCloud Mesh: future opt-in API interoperability, not a deployed connector.
-- GoreeCloud UI: approved alpha semantic tokens and accessible interaction.
-- GoreeCloud Identity: future authenticated administration, not public search login.
+- [Architecture](docs/architecture.md)
+- [Security and privacy](docs/security.md)
+- [Operator procedures](docs/operations.md)
+- [Public API](docs/api.md)
 
-GoreeCloud Index is the distinct **local desktop search** product; this
-repository targets the **public web**. See [architecture](docs/architecture.md)
-and [security/privacy](docs/security.md).
+Production gates: host/network egress firewall, robots failure-policy checks,
+verified owner removal workflows, index consistency under concurrent deletion,
+production TLS and admin authentication, backups/restores, crawled-site test
+fixtures, relevance benchmarks, workload testing, and privacy at all proxy
+layers. Full-web indexing, Tika/PDF, WARC, embeddings, PageRank, sitemap import,
+distributed operations and native clients remain planned, not implemented.
 
-## License and origin
+The mandatory GoreeCloud systems have distinct responsibilities: GoreeShield
+privacy; Wardveil cybersecurity; GoreeCloud Mesh integration; GoreeCloud UI
+design language; GoreeCloud Identity authorization. Their integration is not
+certified or deployed by these source files.
 
-Original GoreeCloud source in this repository: [MIT](LICENSE), copyright 2026
-GoreeCloud. The upstream frameworks, libraries, engines and token sources
-retain their respective copyright and license terms;
-see [third-party notices](THIRD_PARTY_NOTICES.md).
+## Open-source origin
+
+Original GoreeCloud source: [MIT](LICENSE), copyright 2026 GoreeCloud.
+Third-party frameworks and engines retain their own licenses and notices:
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). No historical SearXNG
+code was imported, and a reported historical GitHub secret-scanning alert
+continues to require independent evidence-based review.

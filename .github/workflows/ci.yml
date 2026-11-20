@@ -33,6 +33,44 @@ jobs:
       - run: python -m pip install -e ".[test]"
       - run: python -m compileall -q goree_search
       - run: python -m pytest -q
+  index:
+    name: index-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      opensearch:
+        image: opensearchproject/opensearch:3.10.0
+        env:
+          discovery.type: single-node
+          DISABLE_SECURITY_PLUGIN: "true"
+          OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+        ports:
+          - 9200:9200
+    env:
+      TEST_OPENSEARCH_URL: http://127.0.0.1:9200
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e ".[test]"
+      - name: Confirm disposable OpenSearch service is ready
+        run: |
+          python - <<'PY'
+          import time
+          from opensearchpy import OpenSearch
+          client = OpenSearch(["http://127.0.0.1:9200"], timeout=2, max_retries=0)
+          for attempt in range(60):
+              try:
+                  if client.ping():
+                      break
+              except Exception:
+                  pass
+              time.sleep(2)
+          else:
+              raise SystemExit("Disposable OpenSearch did not become ready")
+          PY
+      - run: python -m pytest -q tests/test_index_smoke.py
   web:
     name: web-build
     runs-on: ubuntu-latest

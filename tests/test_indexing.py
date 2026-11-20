@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from goree_search.indexing import document_id, search_documents
+from goree_search.indexing import delete_document, document_id, search_documents
 
 
 def test_stable_id():
@@ -20,3 +20,16 @@ def test_rank_query_and_result_projection():
     assert result["results"][0]["title"] == "Title"
     body = client.search.call_args.kwargs["body"]
     assert body["query"]["multi_match"]["query"] == "goree cloud"
+
+
+def test_delete_idempotent_response():
+    client = MagicMock()
+    client.delete.return_value = {"result": "deleted"}
+    assert delete_document(client, "https://example.org/") is True
+    client.delete.assert_called_once_with(
+        index="goree-web-v1",
+        id=document_id("https://example.org/"),
+        refresh="wait_for",
+    )
+    client.delete.return_value = {"result": "not_found"}
+    assert delete_document(client, "https://example.org/") is False
